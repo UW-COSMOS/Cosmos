@@ -63,7 +63,8 @@ def generate_split(input_path,output_path ,frac):
     image_identifiers = get_image_identifiers(input_path)
     random.shuffle(image_identifiers)
     index = round(frac*len(image_identifiers))
-    train = image_identifiers[:index]
+    index = int(index)
+    train = image_identifiers[0:index]
     evaluate = image_identifiers[index:]
     train_handle = open("{}/ImageSets/Main/train.txt".format(output_path), "w+")
     for name in train:

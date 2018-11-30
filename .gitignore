@@ -1,2 +1,7 @@
 */__pycache__
 exp/model/*
+**.zip
+data-utils/Train
+data-utils/VOC
+data-utils/Test
+data-utils/VOC-test

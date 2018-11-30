@@ -4,7 +4,7 @@ from voc_utils import load_from_file
 import numpy as np
 
 class PageDataset(utils.Dataset):
-	def load_page(self, split):
+	def load_page(self,path, split):
 		self.split = split
 		path = "/experiment/pvoc_utils/{}"
 		if split == "test":
