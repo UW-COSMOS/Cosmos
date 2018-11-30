@@ -1,0 +1,16 @@
+from mrcnn.config import Config
+
+class PageConfig(Config):
+	BACKBONE = "resnet50"
+	NAME = "pages"
+	GPU_COUNT = 1
+	IMAGES_PER_GPU = 3
+	NUM_CLASSES = 4
+	IMAGE_MIN_DIM = 1920
+	IMAGE_MAX_DIM = 1920
+	RPN_ANCHOR_SCALES = (32,64,256, 512, 1024)
+	TRAIN_ROIS_PER_IMAGE = 100
+	LEARNING_RATE = 0.00005
+	MAX_GT_INSTANCES = 15
+	USE_MINI_MASK = True
+
