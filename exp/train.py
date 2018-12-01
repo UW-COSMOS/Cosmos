@@ -16,7 +16,7 @@ if data_dir[-1] != '/':
 data_dir += '{}'
 data_train = None
 data_val = None
-    data_train = PageDataset('train', path=args.data_dir)
+data_train = PageDataset('train', path=args.data_dir)
 
 data_train.load_page()
 data_train.prepare()
