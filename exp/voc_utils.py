@@ -4,6 +4,23 @@ and return a list of object annotations
 """
 import xml.etree.ElementTree as ET
 
+ICDAR_convert = {
+    'Figure Note':'Figure',
+    'Figure Caption':'Figure',
+    'Figure':'Figure',
+    'Table Note':'Table',
+    'Table Caption':'Table',
+    'Table':'Table',
+    'Body Text':'Body Text',
+    'Page Footer':'Body Text',
+    'Page Header':'Body Text',
+    'Equation':'Equation',
+    'Equation':'Equation label',
+    'Section Header':'Body Text',
+    'Abstract':'Body Text',
+    'Reference text':'Body Text'
+}
+
 def load_from_file(path):
     """
     entry point for the application
@@ -34,11 +51,20 @@ class Annotation:
 
     def __str__(self):
         f = "Annnotation:\n" \
-        "- Image size: {}\n".format(self.size)\
+            "- Image size: {}\n".format(self.size)
 
         for name, coords in self.objects:
-             f+= "- {} at position {}\n".format(name, coords)
+            f += "- {} at position {}\n".format(name, coords)
         return f
+
+    def collapse_classes_icdar(self):
+        new_objs = []
+        for obj in self.objects:
+            name, coords = obj
+            new_name = ICDAR_convert[name]
+            new_objs.append(new_name, coords)
+        self.objects = new_objs
+
 
 if __name__ == "__main__":
     annotation = load_from_file("data/voc_annotation.xml")
