@@ -7,20 +7,22 @@ parser = ArgumentParser(description="train a Mask-RCNN model")
 parser.add_argument("save_dir", type=str, default='weights/', help="weights loading/saving directory")
 parser.add_argument("epochs", type=int, help="total number of epochs")
 parser.add_argument("data_dir", type=str, default='/experiment/pvoc_utils/', help="path to training VOC set")
+parser.add_argument('collapse', type=int, default=0, help='Collapse to ICDAR classes + body text')
+
 args = parser.parse_args()
 
 data_dir = args.data_dir
+collapse = bool(args.collapse)
 # just in case
 if data_dir[-1] != '/':
     data_dir += '/'
 data_dir += '{}'
 data_train = None
 data_val = None
-data_train = PageDataset('train', path=args.data_dir)
-
+data_train = PageDataset('train', data_dir, collapse)
 data_train.load_page()
 data_train.prepare()
-data_train = PageDataset('val', path=args.data_dir)
+data_train = PageDataset('val', data_dir, collapse)
 data_val.load_page()
 data_val.prepare()
 config = PageConfig()

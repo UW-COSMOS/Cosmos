@@ -5,10 +5,11 @@ import numpy as np
 
 class PageDataset(utils.Dataset):
 
-    def __init__(self, split, path):
+    def __init__(self, split, path, collapse):
         super()
         self.split = split
         self.path = path
+        self.collapse = collapse
 
     def load_page(self, test_dir='VOC_test', train_dir='VOC', classes='default'):
         if classes == 'default':
@@ -37,10 +38,11 @@ class PageDataset(utils.Dataset):
         anno_path = "Annotations/{}.xml".format(str_id)
         anno_path = os.path.join(self.path, anno_path)
         annotation = load_from_file(anno_path)
+        if self.collapse:
+            annotation.collapse_classes_icdar()
         w,h = annotation.size
         objs = annotation.objects
         mask = np.zeros([w, h, len(objs)])
-        class_ids = []
         for i, obj in enumerate(objs):
             coords = obj[1]
             mask[coords[1]:coords[3], coords[0]:coords[2], i] = 1
