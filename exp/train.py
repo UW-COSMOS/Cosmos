@@ -4,9 +4,9 @@ from argparse import ArgumentParser
 from dataset import PageDataset
 
 parser = ArgumentParser(description="train a Mask-RCNN model")
-parser.add_argument("save_dir", type=str, help="weights loading/saving directory")
+parser.add_argument("save_dir", type=str, default='weights/', help="weights loading/saving directory")
 parser.add_argument("epochs", type=int, help="total number of epochs")
-parser.add_argument("data_dir", type=str, help="path to training VOC set")
+parser.add_argument("data_dir", type=str, default='data/', help="path to training VOC set")
 args = parser.parse_args()
 
 
