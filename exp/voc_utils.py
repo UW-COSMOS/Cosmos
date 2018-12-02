@@ -30,23 +30,27 @@ def load_from_file(path):
     tree = ET.parse(path)
     root = tree.getroot()
     size_el = root.find("size")
-    width = size_el.find("width")
-    width = int(width.text)
-    height = size_el.find("height")
-    height = int(height.text)
+    #width = size_el.find("width")
+    #width = int(width.text)
+    #height = size_el.find("height")
+    #height = int(height.text)
     object_els = root.findall("object")
     objs = []
     for obj in object_els:
         bnd = obj.find("bndbox")
         coords = ["xmin", "ymin", "xmax", "ymax"]
-        objs.append((obj.find("name").text ,[int(bnd.find(coord).text) for coord in coords]))
-    return Annotation((width, height), objs)
+        objs.append((obj.find("name").text ,[int(float(bnd.find(coord).text)) for coord in coords]))
+    return Annotation(objs)
 
 
 class Annotation:
     def __init__(self, size, objects):
         self.size = size
         # list of tuples (class, [xmin, ymin, xmax,  ymax])
+        self.objects = objects
+
+    def __init__(self, objects):
+        self.size = None
         self.objects = objects
 
     def __str__(self):
@@ -62,7 +66,7 @@ class Annotation:
         for obj in self.objects:
             name, coords = obj
             new_name = ICDAR_convert[name]
-            new_objs.append(new_name, coords)
+            new_objs.append((new_name, coords))
         self.objects = new_objs
 
 

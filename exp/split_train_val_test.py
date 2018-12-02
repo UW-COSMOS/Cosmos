@@ -11,6 +11,7 @@ if __name__ == '__main__':
         files.remove('README.md')
     except ValueError:
         pass
+    files = [f[:-4] for f in files]
     shuffle(files)
     # Split is 70/10/20
     filelen = len(files)
