@@ -7,6 +7,10 @@ from random import shuffle
 
 if __name__ == '__main__':
     files = os.listdir('data/images')
+    try:
+        files.remove('README.md')
+    except ValueError:
+        pass
     shuffle(files)
     # Split is 70/10/20
     filelen = len(files)
