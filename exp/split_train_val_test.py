@@ -10,7 +10,7 @@ if __name__ == '__main__':
     shuffle(files)
     # Split is 70/10/20
     filelen = len(files)
-    train = int(.8 * filelen)
+    train = int(.7 * filelen)
     val = int(.1 * filelen)
     train_filelist = files[:train]
     val_filelist = files[train:train+val]
