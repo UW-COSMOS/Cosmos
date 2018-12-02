@@ -17,11 +17,10 @@ def rewrite_annotation(path, ratio):
 	tree = ET.parse(path)
 	root = tree.getroot()
 	for obj in root.findall("object"):
-		print(obj.find("bndbox"))
 		for coord in obj.find("bndbox"):
 			new_coord = round(float(coord.text)*ratio)
 			coord.text = str(int(new_coord))
-	tree.write("test.xml")
+	tree.write(path)
 			
 
 def get_image_ids(path):
@@ -33,12 +32,10 @@ def get_image_ids(path):
 def main(img_dir,anno_dir, height):
 	image_ids = get_image_ids(img_dir)
 	for image_id in tqdm(image_ids):
-		print(image_id)
 		image_path = os.path.join(img_dir, f"{image_id}.png")
 		anno_path = os.path.join(anno_dir, f"{image_id}.xml")
 		ratio = resize_image(image_path, height)
 		rewrite_annotation(anno_path, ratio)
-		exit()
 
 if __name__ == "__main__":
 	parser = ArgumentParser(description="resize a set of images and rewrite their associated xml files")
