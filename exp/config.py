@@ -4,7 +4,7 @@ class PageConfig(Config):
 	BACKBONE = "resnet50"
 	NAME = "pages"
 	GPU_COUNT = 1
-	IMAGES_PER_GPU = 3
+	IMAGES_PER_GPU = 2
 	NUM_CLASSES = 5
 	IMAGE_MIN_DIM = 1920
 	IMAGE_MAX_DIM = 1920
