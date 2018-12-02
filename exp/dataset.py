@@ -2,6 +2,7 @@ from mrcnn import utils
 import os
 from voc_utils import load_from_file
 import numpy as np
+from PIL import Image
 
 class PageDataset(utils.Dataset):
 
@@ -29,7 +30,13 @@ class PageDataset(utils.Dataset):
                 for line in fh:
                     cnt += 1
                     image_id = line.strip()
-                    self.add_image("page", image_id=image_id, str_id=image_id, path=self.image_path(image_id))
+                    ipath = self.image_path(image_id)
+                    im = Image.open(ipath)
+                    # We're going to read the resolution from the image for now since the dimensions don't come from
+                    # the annotations
+                    self.add_image("page", image_id=image_id, str_id=image_id, path=ipath, width=im.size[0], height=im.size[1])
+                    # We're going to read the resolution from the image for now since the dimensions don't come from
+                    # the annotations
                 print("loaded {} images\n".format(cnt))
         except EnvironmentError:
             print('Something went wrong with loading the file list at: {}\n'
@@ -46,7 +53,7 @@ class PageDataset(utils.Dataset):
         annotation = load_from_file(anno_path)
         if self.collapse:
             annotation.collapse_classes_icdar()
-        w,h = annotation.size
+        w, h = self.image_info[image_id]['width'], self.image_info[image_id]['height']
         objs = annotation.objects
         mask = np.zeros([w, h, len(objs)])
         for i, obj in enumerate(objs):
