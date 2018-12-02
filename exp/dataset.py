@@ -6,18 +6,18 @@ import numpy as np
 class PageDataset(utils.Dataset):
 
     def __init__(self, split, path, collapse):
-        super()
+        super(PageDataset, self).__init__()
         self.split = split
         self.path = path
         self.collapse = collapse
 
-    def load_page(self, test_dir='VOC_test', train_dir='VOC', classes='default'):
+    def load_page(self, test_dir='', train_dir='', classes='default'):
         if classes == 'default':
             classes = ["figureRegion", "formulaRegion", "tableRegion"]
         if self.split == "test":
-            self.path = self.path.format(test_dir)
+            self.path += test_dir
         else:
-            self.path = self.path.format(train_dir)
+            self.path += train_dir
         for idx, cls in enumerate(classes):
             self.add_class("page", idx, cls)
         # now load identifiers
