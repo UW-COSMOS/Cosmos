@@ -29,7 +29,7 @@ model = modellib.MaskRCNN(mode="training", config=config,
 
 model_path = model.find_last()
 print("reloading wieghts from {}".format(model_path))
-model.load_weights(model_path, by_name=True)
+model.load_weights(model_path, by_name=True, exclude=['mrcnn_bbox_fc', 'mrcnn_class_logits', 'mrcnn_mask'])
 
 model.train(data_train, data_val, 
             learning_rate=config.LEARNING_RATE, 
