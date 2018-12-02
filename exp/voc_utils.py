@@ -5,20 +5,20 @@ and return a list of object annotations
 import xml.etree.ElementTree as ET
 
 ICDAR_convert = {
-    'Figure Note':'Figure',
-    'Figure Caption':'Figure',
-    'Figure':'Figure',
-    'Table Note':'Table',
-    'Table Caption':'Table',
-    'Table':'Table',
-    'Body Text':'Body Text',
-    'Page Footer':'Body Text',
-    'Page Header':'Body Text',
-    'Equation':'Equation',
-    'Equation':'Equation label',
-    'Section Header':'Body Text',
-    'Abstract':'Body Text',
-    'Reference text':'Body Text'
+    'Figure Note': 'Figure',
+    'Figure Caption': 'Figure',
+    'Figure': 'Figure',
+    'Table Note': 'Table',
+    'Table Caption': 'Table',
+    'Table': 'Table',
+    'Body Text': 'Body Text',
+    'Page Footer': 'Body Text',
+    'Page Header': 'Body Text',
+    'Equation': 'Equation',
+    'Equation label': 'Equation',
+    'Section Header': 'Body Text',
+    'Abstract': 'Body Text',
+    'Reference text': 'Body Text'
 }
 
 def load_from_file(path):

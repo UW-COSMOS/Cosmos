@@ -1,0 +1,11 @@
+numpy
+scipy
+Pillow
+cython
+matplotlib
+scikit-image
+tensorflow==1.12
+keras==2.2.4
+h5py
+ipython
+tqdm
