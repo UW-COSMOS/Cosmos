@@ -3,3 +3,5 @@ exp/weights/*
 .idea/
 !exp/data/README.md
 !exp/weights/README.md
+*.zip
+*.png
