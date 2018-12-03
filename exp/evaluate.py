@@ -10,14 +10,15 @@ from mrcnn import visualize
 from tqdm import tqdm
 from config import PageConfig
 from random import sample
-MODEL_DIR = "/experiment/m_rcnn/model"
+from voc_utils import ICDAR_convert
+MODEL_DIR = "/users/ankurgos/MaskMount/Mask-RCNN-exp/exp/weights"
 class InferenceConfig(Config):
 	NAME = "pages"
 	BACKBONE = "resnet50"
 	GPU_COUNT = 1
 	IMAGE_MAX_DIM = 1920
 	RPN_ANCHOR_SCALES = (32,64, 256, 512,1024)
-	NUM_CLASSES = 4
+	NUM_CLASSES = 15
 	IMAGES_PER_GPU = 1
 def draw_image(name, path, rois, classes):
 	im = Image.open(path)
@@ -40,8 +41,8 @@ model_path = model.find_last()
 
 print("Loading weights from ", model_path)
 model.load_weights(model_path, by_name=True)
-data_test = PageDataset()
-data_test.load_page("test")
+data_test = PageDataset('test', '/users/ankurgos/MaskMount/Mask-RCNN-exp/exp/data', 0)
+data_test.load_page(classes=list(ICDAR_convert.keys()))
 data_test.prepare()
 image_ids = data_test.image_ids
 APs = dict([(cls, []) for cls in data_test.class_names])

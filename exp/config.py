@@ -2,10 +2,10 @@ from mrcnn.config import Config
 
 class PageConfig(Config):
 	BACKBONE = "resnet50"
-	NAME = "pages"
+	NAME = "pages_uncollapsed"
 	GPU_COUNT = 1
 	IMAGES_PER_GPU = 2
-	NUM_CLASSES = 5
+	NUM_CLASSES = 15
 	IMAGE_MIN_DIM = 1920
 	IMAGE_MAX_DIM = 1920
 	RPN_ANCHOR_SCALES = (32,64,256, 512, 1024)
