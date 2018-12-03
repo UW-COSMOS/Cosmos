@@ -9,3 +9,4 @@ keras==2.2.4
 h5py
 ipython
 tqdm
+jupyter
