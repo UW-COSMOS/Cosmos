@@ -90,7 +90,7 @@ def transform_place_images(input_path, output_path, shape):
     print("padding images")
     identifiers = get_image_identifiers(input_path)
     for identifier in tqdm(identifiers):
-        path = "{}/Image/{}.bmp".format(input_path, identifier)
+        path = "{}/Image/{}.jpg".format(input_path, identifier)
         im = Image.open(path)
         im = pad_image(im , shape)
         out = "{}/JPEGImages/{}.jpg".format(output_path, identifier)
