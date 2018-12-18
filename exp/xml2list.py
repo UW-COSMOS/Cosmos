@@ -22,6 +22,8 @@ def xml2list(fp):
     tree = ET.parse(fp)
     root = tree.getroot()
     objects = root.findall("object")
-    return [mapper(obj) for obj in objects].sort(key=lambda x: x[1])
+    lst =[mapper(obj) for obj in objects]
+    lst.sort(key=lambda x: x[1])
+    return lst
 
 
