@@ -9,7 +9,7 @@ import pytesseract
 from PIL import Image
 
 
-def list2html(input_list, image_name, image_dir, output_dir):
+def list2html(input_list, image_name, image_dir, output_dir, hocr_f=False):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         os.makedirs(os.path.join(output_dir, 'img'))
@@ -34,14 +34,23 @@ def list2html(input_list, image_name, image_dir, output_dir):
                 os.makedirs(output_hocr_path)
             crop_path = os.path.join(output_img_path, image_name[:-4],  f'{input_id}.png')
             cropped.save(crop_path)
-            hocr = pytesseract.image_to_pdf_or_hocr(crop_path, extension='hocr')
-            with open(os.path.join(output_dir, 'hocr', f'{input_id}.html'), 'wb') as wf:
-                wf.write(hocr)
+            txt = None
+            hocr = None
+            if hocr_f:
+                hocr = pytesseract.image_to_pdf_or_hocr(cropped, extension='hocr')
+            else:
+                txt = pytesseract.image_to_string(cropped, lang='eng')
+            if hocr_f:
+                with open(os.path.join(output_dir, 'hocr', f'{input_id}.html'), 'wb') as wf:
+                    wf.write(hocr)
             d = div(id=input_id, cls=str(t))
             crop_img_path = os.path.join('img', image_name[:-4], f'{input_id}.png')
             with d:
                 dominate.tags.img(src=crop_img_path)
-                div(data_include=f'{input_id}')
+                if hocr_f:
+                    div(data_include=f'{input_id}')
+                else:
+                    div(txt)
     with open(os.path.join(output_dir, f'{image_name[:-4]}.html'), 'w') as wf:
         wf.write(doc.render())
     
