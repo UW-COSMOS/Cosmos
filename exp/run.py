@@ -79,6 +79,8 @@ for xml_f in os.listdir('xml'):
     l = xml2list(xpath)
     list2html(l, f'{xml_f[:-4]}.png', 'tmp/images', 'html')
     
+shutil.rmtree('xml')
+shutil.rmtree('tmp')
 
 
 
