@@ -15,6 +15,7 @@ from xml2list import xml2list
 from list2html import list2html
 from tqdm import tqdm
 import shutil
+import preprocess as pp
 
 # PDF directory path
 
@@ -31,6 +32,8 @@ for pdf_f in os.listdir(args.pdfdir):
                     '-sharpen', '0x1.0', os.path.join('tmp','images', f'{pdf_f}-%04d.png')])
 for img_f in os.listdir('tmp/images'):
     subprocess.run(['convert', '-flatten', os.path.join('tmp', 'images', img_f), os.path.join('tmp', 'images', img_f)])
+    pth, padded_img = pp.pad_image(os.path.join('tmp', 'images', img_f))
+    padded_img.save(pth)
 
 with open('test.txt', 'w') as wf:
     for f in os.listdir('tmp/images'):
