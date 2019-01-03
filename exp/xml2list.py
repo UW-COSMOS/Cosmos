@@ -23,13 +23,9 @@ def non_max_suppression_fast(boxes, overlapThresh):
     :param overlapThresh: Overlapping threshold
     :return: List of merged boxes
     """
-    print(boxes)
-    print('------')
     if len(boxes) == 0:
         return []
-    np_boxes = [np.array(x) for x in boxes]
-    new_boxes = np_boxes.stack(np_boxes, axis=0)
-    print(new_boxes)
+    new_boxes = np.array([np.array(x) for x in boxes])
 
     # if the bounding boxes integers, convert them to floats --
     # this is important since we'll be doing a bunch of divisions
