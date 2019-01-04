@@ -19,6 +19,7 @@ def merge_below(objs, xtres=10):
     """
     This merge algo only merges objects that overlap a lot in the x axis and any amount in the y axis
     :param objs: list of (type, coords)
+    :param xtres: Treshold for x buckets
     :return: list of (type, coords), merged
     """
     cls_map = {}
