@@ -114,6 +114,25 @@ def test_merge_below():
         print('Test 3 fails')
 
 
+def feather_list(objs, feather_x=30, feather_y=10, max_x=1920, max_y=1920):
+    """
+    Feather the input coordinates by some amount
+    :param objs: [(t, coords)]
+    :param feather_x: Feather x by this much
+    :param feather_y: Feather y by this much
+    :param max_x: Document X
+    :param max_y: Document Y
+    :return: [(t, feathered_coords)]
+    """
+    new_objs = []
+    for obj in objs:
+        t, coords = obj
+        new_coords = (max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
+                      min(coords[2]+feather_x, max_x), min(coords[3]+feather_y, max_y))
+        new_objs.append((t, new_coords))
+    return new_objs
+
+
 def xml2list(fp):
     """
     convert VOC XML to a list
@@ -124,8 +143,10 @@ def xml2list(fp):
     root = tree.getroot()
     objects = root.findall("object")
     lst =[mapper(obj) for obj in objects]
-    lst.sort(key=lambda x: x[1])
-    return lst
+    new_lst = merge_below(lst)
+    feathered_new_lst = feather_list(new_lst)
+    feathered_new_lst.sort(key=lambda x: x[1])
+    return feathered_new_lst
 
 
 if __name__ == '__main__':
