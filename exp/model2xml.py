@@ -31,11 +31,14 @@ def reorder(lst):
 	"""
 	return (lst[1], lst[0], lst[3], lst[2])
 
-def model2xml(name, output_dir,size, rois, class_names):
-	writer = Writer(f"{name}.jpg")
-	for roi in rois:
-		name = class_names[roi[0]]
-		pts = reorder(rois[1])	
-		writer.addObject(name, *pts)
+def model2xml(name, output_dir,size, rois, class_names, scores, roi_score_tres=0.8):
+	writer = Writer(f"{name}.png")
+	for ind, roi in enumerate(rois):
+		# Only write scores above the provided treshold
+		score = scores[ind]
+		if score >= roi_score_tres:
+			name = class_names[roi[0]]
+			pts = reorder(rois[1])
+			writer.addObject(name, *pts)
 	writer.save(f"{os.path.join(output_dir, name)}.xml")
 

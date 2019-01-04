@@ -61,5 +61,5 @@ for idx, image_id in enumerate(tqdm(image_ids)):
     results = model.detect([image], verbose=0)
     r = results[0]
     info = data_test.image_info[image_id]
-    model2xml(info["name"], 'xml', [1920, 1920], r["rois"], data_test.class_names)
+    model2xml(info["name"], 'xml', [1920, 1920], r["rois"], data_test.class_names, r['scores'])
 
