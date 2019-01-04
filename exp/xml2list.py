@@ -69,6 +69,10 @@ def merge_below(objs, xtres=10):
                 elif ymin > curr_ymax:
                     curr_ymax = ymax
                     curr_ymax_ind = ind
+                # Box is subsumed
+                if ymax < curr_ymax:
+                    # Add it to the list of items to skip when handling non merges
+                    in_merge_list.add(ind)
             for merge in merge_list:
                 t, b = merge
                 t_item = grouping_coords[t]
@@ -84,6 +88,32 @@ def merge_below(objs, xtres=10):
     return final_list
 
 
+def test_merge_below():
+    parameter = [('x', (10, 10, 40, 200)), ('x', (15, 190, 45, 220))]
+    expected = [('x', (10, 10, 45, 220))]
+    actual = merge_below(parameter)
+    if expected == actual:
+        print('Test 1 passes')
+    else:
+        print('Test 1 fails')
+    parameter = [('x', (10, 10, 40, 200))]
+    expected = [('x', (10, 10, 40, 200))]
+    actual = merge_below(parameter)
+    if expected == actual:
+        print('Test 2 passes')
+    else:
+        print('Test 2 fails')
+
+    parameter = []
+    expected = []
+    actual = merge_below(parameter)
+
+    if expected == actual:
+        print('Test 3 passes')
+    else:
+        print('Test 3 fails')
+
+
 def xml2list(fp):
     """
     convert VOC XML to a list
@@ -96,5 +126,9 @@ def xml2list(fp):
     lst =[mapper(obj) for obj in objects]
     lst.sort(key=lambda x: x[1])
     return lst
+
+
+if __name__ == '__main__':
+    test_merge_below()
 
 
