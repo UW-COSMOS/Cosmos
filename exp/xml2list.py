@@ -100,7 +100,7 @@ def xml2list(fp):
     new_lst = []
     for key in cl_map:
         coords_list = cl_map[key]
-        new_coords = non_max_suppression_fast(coords_list, 20)
+        new_coords = non_max_suppression_fast(coords_list, 0.1)
         for coord in new_coords:
             new_lst.append((key, coord))
 
