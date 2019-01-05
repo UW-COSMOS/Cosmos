@@ -5,3 +5,5 @@ exp/weights/*
 !exp/weights/README.md
 *.zip
 *.png
+.ipynb_checkpoints/
+pdfs/
