@@ -33,13 +33,12 @@ def reorder(lst):
 
 def model2xml(name, output_dir, size, rois, class_names, scores, roi_score_tres=0.8):
     writer = Writer(f"{name}.png", height=size[0], width=size[1])
-    for roi in rois:
-	for ind, roi in enumerate(rois):
-            # Only write scores above the provided treshold
-            score = scores[ind]
-            if score >= roi_score_tres:
-                cl_name = class_names[roi[0]]
-                pts = reorder(roi[1])	
-                writer.addObject(cl_name, *pts)
+    for ind, roi in enumerate(rois):
+        # Only write scores above the provided treshold
+        score = scores[ind]
+        if score >= roi_score_tres:
+            cl_name = class_names[roi[0]]
+            pts = reorder(roi[1])	
+            writer.addObject(cl_name, *pts)
     writer.save(f"{os.path.join(output_dir, name)}.xml")
 
