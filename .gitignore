@@ -7,3 +7,5 @@ exp/weights/*
 *.png
 .ipynb_checkpoints/
 pdfs/
+__pycache__/
+html/
