@@ -18,7 +18,8 @@ ICDAR_convert = {
     'Equation label': 'Equation',
     'Section Header': 'Body Text',
     'Abstract': 'Body Text',
-    'Reference text': 'Body Text'
+    'Reference text': 'Body Text',
+    'Other': 'Body Text'
 }
 
 def load_from_file(path):
