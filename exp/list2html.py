@@ -42,8 +42,8 @@ def list2html(input_list, image_name, image_dir, output_dir):
                 dominate.tags.img(src=crop_img_path)
                 if b_text:
                     # We do a quick loading and deloading to properly convert encodings
-                    div(raw(b_text), id='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
-                div(txt, id='rawtext')
+                    div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                div(txt, cls='rawtext')
     with open(os.path.join(output_dir, f'{image_name[:-4]}.html'), 'w') as wf:
         wf.write(doc.render())
     
