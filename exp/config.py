@@ -5,7 +5,7 @@ class PageConfig(Config):
 	NAME = "pages_uncollapsed"
 	GPU_COUNT = 1
 	IMAGES_PER_GPU = 2
-	NUM_CLASSES = 15
+	NUM_CLASSES = 16
 	IMAGE_MIN_DIM = 1920
 	IMAGE_MAX_DIM = 1920
 	RPN_ANCHOR_SCALES = (32,64,256, 512, 1024)
