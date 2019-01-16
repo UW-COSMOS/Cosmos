@@ -11,7 +11,8 @@ def mapper(obj):
     :param obj: an Etree node
     :return: (type, (x1, y1, x2, y2), score)
     """
-    score = float(obj.find("difficult").text)
+    diff = obj.find("difficult")
+    score = float(diff.text) if diff is not None else 0
     bnd = obj.find("bndbox")
     coords = ["xmin", "ymin", "xmax", "ymax"]
     return obj.find("name").text, [int(float(bnd.find(coord).text)) for coord in coords], score
