@@ -21,7 +21,7 @@ def list2html(input_list, image_name, image_dir, output_dir):
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
     with doc:
         for ind, inp in enumerate(input_list):
-            t, coords = inp
+            t, coords, score = inp
             input_id = str(t) + str(ind)
             cropped = img.crop(coords)
             if not os.path.exists(inter_path):
