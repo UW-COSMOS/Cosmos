@@ -129,7 +129,7 @@ def feather_list(objs, feather_x=30, feather_y=10, max_x=1920, max_y=1920):
     """
     new_objs = []
     for obj in objs:
-        t, coords = obj
+        t, coords, score = obj
         new_coords = (max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
                       min(coords[2]+feather_x, max_x), min(coords[3]+feather_y, max_y))
         new_objs.append((t, new_coords))
@@ -211,7 +211,7 @@ def xml2list(fp, tres=0):
     root = tree.getroot()
     objects = root.findall("object")
     lst = [mapper(obj) for obj in objects]
-    new_lst = [l for l in lst if l[2] > tres]
+    new_lst = [l for l in lst if l[2] >= tres]
     feathered_new_lst = feather_list(new_lst)
     feathered_new_lst.sort(key=lambda x: x[1])
     return feathered_new_lst
