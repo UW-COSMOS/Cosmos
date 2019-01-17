@@ -22,6 +22,8 @@ ICDAR_convert = {
     'Other': 'Body Text'
 }
 
+similar_class_sets = [set(['Figure Note', 'Figure Caption', 'Table Note', 'Table Caption', 'Body Text', 'Page Footer', 'Page Header', 'Equation label', 'Section Header', 'Abstract', 'Reference text']), set(['Figure']), set(['Table']), set(['Equation']), set(['Other'])]
+
 def load_from_file(path):
     """
     entry point for the application
