@@ -135,7 +135,6 @@ def match_lists(predict_list, target_list):
 
 def run_evaluate(predict_dir, target_dir):
     fp_list = []
-    tp_num = 0
     for predict_f in os.listdir(predict_dir):
         predict_path = os.path.join(predict_dir, predict_f)
         target_path = os.path.join(target_dir, predict_f)
@@ -155,7 +154,8 @@ def run_evaluate(predict_dir, target_dir):
                 if iou < 0.5:
                     fp_list.append((predict, 'localization'))
                     continue
-                tp_num += 1
+                fp_list.append((predict, 'correct'))
+                continue
             else:
                 sim = False
                 for s in similar_class_sets:
@@ -167,8 +167,40 @@ def run_evaluate(predict_dir, target_dir):
                 else:
                     fp_list.append((predict, 'other'))
     fp_list.sort(key=lambda x: x[0][2])
+    tp_num = 0
+    fp_num = 0
+    current_class = None
+    roc_tp = [0]
+    roc_fp = [0]
+    for p in fp_list:
+        predict, category = p
+        is_tp = category == 'correct'
+        if is_tp:
+            if current_class is None:
+                current_class = True
+                continue
+            if not current_class:
+                roc_tp.append(tp_num)
+                roc_fp.append(fp_num)
+            tp_num += 1
+        else:
+            if current_class is None:
+                current_class = False
+                continue
+            if current_class:
+                roc_tp.append(tp_num)
+                roc_fp.append(fp_num)
+            fp_num += 1
+    roc_tp.append(tp_num)
+    roc_fp.append(fp_num)
+    normalized_tp = [x / tp_num for x in roc_tp]
+    normalized_fp = [x / fp_num for x in roc_fp]
+    make_roc_chart(normalized_tp, normalized_fp)
+
+    filtered_fp_list = [fp for fp in fp_list if fp[1] != 'correct']
     print(f'True Positives: {tp_num}')
-    return fp_list
+    print(f'False Positives: {fp_num}')
+    return filtered_fp_list
 
 def calculate_statistics_map(fp_list):
     statistics = {
@@ -186,6 +218,14 @@ def calculate_statistics_map(fp_list):
         stats_map['all'][fp_type] += 1
         stats_map[p_cls][fp_type] += 1
     return stats_map
+
+
+def make_roc_chart(tp_rate, fp_rate):
+    fig1, ax1 = plt.subplots()
+    ax1.plot(fp_rate, tp_rate)
+    ax1.axis([0, 1, 0, 1])
+    ax1.set_title('ROC Curve')
+    plt.savefig('charts/roc_curve.png')
 
 
 def make_pie_charts(stats_map):
