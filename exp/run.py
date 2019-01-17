@@ -106,3 +106,6 @@ for xml_f in os.listdir('xml'):
     list2html(l, f'{xml_f[:-4]}.png', 'tmp/images', 'html')
     
 
+shutil.rmtree('xml')
+shutil.rmtree('tmp')
+

@@ -132,7 +132,7 @@ def feather_list(objs, feather_x=30, feather_y=10, max_x=1920, max_y=1920):
         t, coords, score = obj
         new_coords = (max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
                       min(coords[2]+feather_x, max_x), min(coords[3]+feather_y, max_y))
-        new_objs.append((t, new_coords))
+        new_objs.append((t, new_coords, score))
     return new_objs
 
 
