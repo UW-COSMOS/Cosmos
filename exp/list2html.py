@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 from dominate.util import raw
 
 
-def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True, tesseract_text=True, include_image=True):
+def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True, tesseract_text=True, include_image=False):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         os.makedirs(os.path.join(output_dir, 'img'))
@@ -46,7 +46,7 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
                 if tesseract_text:
                     txt = pytesseract.image_to_string(cropped, lang='eng')
                     div(txt, cls='rawtext')
-    with open(os.path.join(output_dir, f'{image_name[:-4]}.html'), 'w') as wf:
+    with open(os.path.join(output_dir, f'{image_name[:-4]}.html'), 'w', encoding='utf-8') as wf:
         wf.write(doc.render())
     
     

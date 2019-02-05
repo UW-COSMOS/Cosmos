@@ -55,19 +55,19 @@ def pdf2png(input_dir, tmp_dir):
         call(["./ghost.sh", name, f"{join(input_dir,name)}.pdf", tmp_dir])
 
 
-def pad_image(path, size=1920):
+def resize_png(path, size=1920):
     im = Image.open(path).convert('RGB')
     w, h = im.size
-    print(f'Path: {path}, w: {w}, h: {h}')
-    print('----')
     if w >= size or h >= size:
-        print('Image larger than expected.')
         maxsize = (1920, 1920)
         im.thumbnail(maxsize, Image.ANTIALIAS)
     else:
         im = resize_image(im, size)
-    w, h = im.size
+    return path,im
 
+def pad_image(path, image=None, size=1920):
+    im = Image.open(path).convert('RGB') if image is None else image
+    w, h = im.size
     d_w = size - w
     d_h = size - h
     if d_h < 0 or d_w < 0:
