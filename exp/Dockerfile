@@ -1,4 +1,4 @@
-FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
+FROM ubuntu:16.04
 
 # Install some basic utilities
 RUN apt-get update && apt-get install -y \
@@ -48,7 +48,7 @@ ENV PATH=$CONDA_PREFIX/bin:$PATH
 #    torchvision=0.2.1 \
 # && conda clean -ya
 #
-RUN conda install pytorch torchvision cuda90 -c pytorch
+RUN conda install pytorch-cpu torchvision-cpu -c pytorch
 
 # Install HDF5 Python bindings
 RUN conda install -y h5py=2.8.0 \
