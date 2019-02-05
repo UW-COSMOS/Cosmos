@@ -1,4 +1,4 @@
-FROM nvidia/cuda:9.0-devel-ubuntu16.04
+FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 
 # Install some basic utilities
 RUN apt-get update && apt-get install -y \
@@ -47,6 +47,8 @@ ENV PATH=$CONDA_PREFIX/bin:$PATH
 #    "pytorch=1.0.0=py3.6_cuda10.0.130_cudnn7.4.1_1" \
 #    torchvision=0.2.1 \
 # && conda clean -ya
+#
+RUN conda install pytorch torchvision cuda90 -c pytorch
 
 # Install HDF5 Python bindings
 RUN conda install -y h5py=2.8.0 \
@@ -87,6 +89,14 @@ USER user
 RUN pip install -r requirements.txt --user
 
 RUN pip install -r c_requirements.txt --user
+
+RUN git clone https://github.com/josmcg/Mask_RCNN.git
+
+WORKDIR Mask_RCNN
+
+RUN python setup.py install --user
+
+WORKDIR /vol
 
 USER root
 
