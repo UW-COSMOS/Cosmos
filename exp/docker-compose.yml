@@ -1,0 +1,10 @@
+version: "2.3"
+services:
+    test:
+        build: .
+        runtime: nvidia
+        ipc: host
+        volumes:
+            - .:/vol/
+
+
