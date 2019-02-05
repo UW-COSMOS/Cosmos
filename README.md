@@ -4,20 +4,17 @@ Interface for applying Mask-RCNN to document segmentation
 # Running the model
 
 1. Switch to the exp directory
-2. ```
+2. Build the docker image
+```
 docker-compose build
 ```
-3. ```
+3. Create a docker bash env
+```
 docker-compose run test bash
 ```
-4a. To run with CPU (untested, might need to finagle with docker image):
-```
-CUDA_VISIBLE_DEVICES="" python run.py [PDF_DIR] -w [PATH_TO_WEIGHTS_FILE] -t [NUM_THREADS]
-```
-
-4b. To run with GPU:
-
+4a. Now run (Currently set to CPU mode)
 ```
 python run.py [PDF_DIR] -w [PATH_TO_WEIGHTS_FILE] -t [NUM_THREADS]
 ```
+
 
