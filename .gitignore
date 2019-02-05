@@ -1,5 +1,7 @@
 exp/data/*
 exp/weights/*
+xml/
+tmp/
 .idea/
 !exp/data/README.md
 !exp/weights/README.md
@@ -9,3 +11,4 @@ exp/weights/*
 pdfs/
 __pycache__/
 html/
+*.swp
