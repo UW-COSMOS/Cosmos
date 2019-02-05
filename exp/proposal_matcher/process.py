@@ -16,7 +16,6 @@ def load_xml(xml_path):
     return df
 
 def load_proposal(proposal_path):
-    print(proposal_path)
     data = np.genfromtxt(proposal_path, delimiter=",", encoding='utf-8')
     N, _ = data.shape
     data_dict = {
