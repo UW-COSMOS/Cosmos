@@ -3,11 +3,6 @@ from fonduer.parser.preprocessors import HTMLDocPreprocessor
 from fonduer.parser import Parser
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--html_location', default='out/html/')
-parser.add_argument('--database', default='postgres://postgres:password@localhost:5432/cosmos')
-args = parser.parse_args()
-
 
 def parse(html_location, database):
     session = Meta.init(database).Session()
@@ -17,4 +12,8 @@ def parse(html_location, database):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--html_location', default='out/html/')
+    parser.add_argument('--database', default='postgres://postgres:password@localhost:5432/cosmos')
+    args = parser.parse_args()
     parse(args.html_location, args.database)
