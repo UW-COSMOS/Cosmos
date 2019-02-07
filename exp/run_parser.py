@@ -1,5 +1,4 @@
 import os
-# contains only the html source files and nothing else
 from Parser.pagemerger import pagemerger
 from Parser.preprocess import preprocess
 from Parser.parse import parse
