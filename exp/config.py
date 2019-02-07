@@ -14,3 +14,15 @@ class PageConfig(Config):
 	MAX_GT_INSTANCES = 15
 	USE_MINI_MASK = True
 
+
+## POSTGRES INGESTION FILE SETTINGS
+ingestion_settings = {
+    'input_folder'           : '/home/paulluh/Cosmos/exp/data4parser/html/files/',
+    'merge_folder'           : '/home/paulluh/Cosmos/exp/data4parser/html/merged/',
+    'output_html'            : '/home/paulluh/Cosmos/exp/data4parser_out/html/',
+    'output_words'           : '/home/paulluh/Cosmos/exp/data4parser_out/words/',
+    'db_connect_str'         : 'postgres://postgres:password@localhost:5432/cosmos7'
+    'strip_tags'             : ['strong', 'em'],
+    'ignored_file_when_link' : [],
+}
+
