@@ -82,6 +82,11 @@ USER root
 
 RUN apt-get update && apt-get -y install gcc g++ vim imagemagick tesseract-ocr libtesseract-dev
 
+RUN apt install libxml2-dev libxslt-dev python3-dev
+RUN apt build-dep python-matplotlib
+RUN apt install poppler-utils
+RUN apt install postgresql
+
 COPY . .
 
 USER user
