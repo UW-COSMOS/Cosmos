@@ -1,6 +1,7 @@
 exp/data/*
 exp/weights/*
 xml/
+*.pyc
 tmp/
 .idea/
 !exp/data/README.md
@@ -12,3 +13,4 @@ pdfs/
 __pycache__/
 html/
 *.swp
+*.DS_Store
