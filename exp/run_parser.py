@@ -13,4 +13,4 @@ if __name__ == '__main__':
     strip_tags = ['strong', 'em']
     ignored_file_when_link = []
 
-    parse_html_to_postgres(input_folder, output_html, merge_folder, output_html, db_connect_str, ignored_file_when_link)
+    parse_html_to_postgres(input_folder, output_html, merge_folder, output_html, db_connect_str, strip_tags, ignored_file_when_link)

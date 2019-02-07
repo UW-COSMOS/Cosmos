@@ -5,11 +5,11 @@ from Parser.link import link
 from Parser.pagemerger import pagemerger
 from Parser.parse import parse
 from Parser.preprocess import preprocess
-from run_parser import strip_tags
+
 
 
 def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, db_connect_str,
-                           ignored_file_when_link, store_into_postgres=True):
+                           strip_tags, ignored_file_when_link, store_into_postgres=True):
     assert os.path.isabs(input_folder)
     assert os.path.isabs(output_html)
     assert os.path.isabs(merge_folder)
