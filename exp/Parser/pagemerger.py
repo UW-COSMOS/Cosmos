@@ -6,15 +6,9 @@ from itertools import groupby
 
 from Parser.preprocess import load_file_to_tree
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--rawfolder', default='data/html/files')
-parser.add_argument('--outputfolder', default='data/html/merged')
-args = parser.parse_args()
-
-PAGENAME_NUMBER_PATTERN = re.compile("(.*)-([0-9]+).html")
-
 
 def pagemerger(rawfolder, outputfolder):
+    PAGENAME_NUMBER_PATTERN = re.compile("(.*)-([0-9]+).html")
     def get_filename(filename):
         page_match = PAGENAME_NUMBER_PATTERN.search(filename)
         return page_match.group(1)
@@ -40,4 +34,8 @@ def pagemerger(rawfolder, outputfolder):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--rawfolder', default='data/html/files')
+    parser.add_argument('--outputfolder', default='data/html/merged')
+    args = parser.parse_args()
     pagemerger(args.rawfolder, args.outputfolder)
