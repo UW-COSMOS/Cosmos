@@ -1,0 +1,85 @@
+import os
+# contains only the html source files and nothing else
+from Parser.pagemerger import pagemerger
+from Parser.preprocess import preprocess
+from Parser.parse import parse
+from Parser.link import link
+import shutil
+
+
+def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, db_connect_str,
+                           ignored_file_when_link, store_into_postgres=True):
+    assert os.path.isabs(input_folder)
+    assert os.path.isabs(output_html)
+    assert os.path.isabs(merge_folder)
+    assert os.path.isabs(output_words)
+
+    """
+    # 1. group files by file name
+    merge.stamp: pagemerger.py
+        rm -r -f $(merge_folder)
+        mkdir -p $(merge_folder)
+        python pagemerger.py --rawfolder $(input_folder) --outputfolder $(merge_folder)
+        @touch merge.stamp
+    """
+    if os.path.exists(merge_folder):
+        shutil.rmtree(merge_folder)
+    os.makedirs(merge_folder, exist_ok=True)
+    pagemerger(input_folder, merge_folder)
+
+    """
+    # 2. preprocess the input html and store intermediate json and html in the output folder declared above.
+    preprocess.stamp: preprocess.py merge.stamp
+        rm -r -f $(output_html)
+        rm -r -f $(output_words)
+        mkdir -p $(output_html)
+        mkdir -p $(output_words)
+        @$(foreach file,$(all_inputs),\
+        python preprocess.py --input $(merge_folder)$(file) --output_words $(output_words)$(file).json --output_html $(output_html)$(file);)
+        @touch preprocess.stamp
+    """
+    if os.path.exists(output_html):
+        shutil.rmtree(output_html)
+    if os.path.exists(output_words):
+        shutil.rmtree(output_words)
+    os.makedirs(output_html, exist_ok=True)
+    os.makedirs(output_words, exist_ok=True)
+
+    all_inputs = [f for f in os.listdir(merge_folder)]
+    for html_file in all_inputs:
+        preprocess(os.path.join(merge_folder, html_file), "%s.json" % (os.path.join(output_words, html_file)),
+                   os.path.join(output_html, html_file), strip_tags)
+
+    if store_into_postgres:
+        """
+        # 3. run the fonduer parser on the generated html file. This will fill in the postgres dabase with everything
+        # fonduer can understand except the coordinate information.
+        parse.stamp: preprocess.stamp parse.py
+        python parse.py --html_location $(output_html) --database $(db_connect_str)
+        @touch parse.stamp
+        """
+        parse(output_html, db_connect_str)
+
+        """
+        # 4. run the link file to insert coordinate information into fonduer based on the information from the json output folder (aka. hocr)
+        link.stamp: parse.stamp link.py
+            python link.py --words_location $(output_words) --database $(db_connect_str)
+            @touch link.stamp
+        """
+        link(output_words, db_connect_str, ignored_file_when_link)
+
+
+if __name__ == '__main__':
+    input_folder = '/home/paulluh/Cosmos/exp/data4parser/html/files/'
+
+    # intermediate folder location (will be auto-generated)
+    merge_folder = '/home/paulluh/Cosmos/exp/data4parser/html/merged/'
+    output_html = '/home/paulluh/Cosmos/exp/data4parser_out/html/'
+    output_words = '/home/paulluh/Cosmos/exp/data4parser_out/words/'
+
+    db_connect_str = 'postgres://postgres:password@localhost:5432/cosmos7'
+
+    strip_tags = ['strong', 'em']
+    ignored_file_when_link = []
+
+    parse_html_to_postgres(input_folder, output_html, merge_folder, output_html, db_connect_str, ignored_file_when_link)
