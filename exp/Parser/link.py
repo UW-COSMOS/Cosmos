@@ -80,8 +80,8 @@ def link(words_location, db_connect_str, ignored_files=[]):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--words_location', default='out/words/')
-    parser.add_argument('--database', default='postgres://postgres:password@localhost:5432/cosmos')
-    parser.add_argument('--ignored_files', nargs='+', default=[])
+    parser.add_argument('--words_location', help='location of word coordinate JSON file', default='out/words/')
+    parser.add_argument('--database', help='database connection string', default='postgres://postgres:password@localhost:5432/cosmos')
+    parser.add_argument('--ignored_files', help='files to be ignored', nargs='+', default=[])
     args = parser.parse_args()
     link(args.words_location, args.database, args.ignored_files)
