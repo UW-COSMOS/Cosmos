@@ -82,10 +82,10 @@ USER root
 
 RUN apt-get update && apt-get -y install gcc g++ vim imagemagick tesseract-ocr libtesseract-dev
 
-RUN apt install libxml2-dev libxslt-dev python3-dev
-RUN apt build-dep python-matplotlib
-RUN apt install poppler-utils
-RUN apt install postgresql
+RUN apt-get -y install libxml2-dev libxslt-dev python3-dev
+# RUN apt-get -y build-dep python-matplotlib
+RUN apt-get -y install poppler-utils
+RUN apt-get -y install postgresql
 
 COPY . .
 
@@ -97,12 +97,20 @@ RUN pip install -r c_requirements.txt --user
 
 RUN git clone https://github.com/josmcg/Mask_RCNN.git
 
+USER root
+
+RUN cp pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
+
+USER user
+
 WORKDIR Mask_RCNN
 
 RUN python setup.py install --user
 
+USER root
+
 WORKDIR /vol
 
-USER root
+
 
 
