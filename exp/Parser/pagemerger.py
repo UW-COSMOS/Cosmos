@@ -8,16 +8,19 @@ from Parser.preprocess import load_file_to_tree
 
 
 def pagemerger(rawfolder, outputfolder):
-    PAGENAME_NUMBER_PATTERN = re.compile("(.*)-([0-9]+).html")
+    PAGENAME_NUMBER_PATTERN = re.compile("(.*)_([0-9]+).html")
     def get_filename(filename):
         page_match = PAGENAME_NUMBER_PATTERN.search(filename)
-        return page_match.group(1)
+        return page_match.group(1) if page_match is not None else None
 
     def get_page_number(filename):
         page_match = PAGENAME_NUMBER_PATTERN.search(filename)
-        return page_match.group(2)
+        return page_match.group(2) if page_match is not None else None
+
 
     for key, group in groupby(sorted(listdir(rawfolder)), key=get_filename):
+        if group is None or key is None:
+            continue
 
         html = etree.Element('html')
         root = etree.SubElement(html, 'body')

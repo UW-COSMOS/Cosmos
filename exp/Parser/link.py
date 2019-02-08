@@ -11,7 +11,7 @@ def link(words_location, db_connect_str, ignored_files=[]):
     session = Meta.init(db_connect_str).Session()
 
     def get_word_bag(html_source):
-        with open(words_location + html_source + '.html.json') as words:
+        with open(words_location + html_source + '.html.json', encoding='utf-8') as words:
             return json.load(words)
 
     def get_all_documents():
@@ -32,8 +32,8 @@ def link(words_location, db_connect_str, ignored_files=[]):
         all_words_from_db = list(chain(*[sent.text.split() for sent in sentences]))
 
         assert len(all_words_from_db) >= len(word_bag)
-        open('db_words.txt', 'w').write('\n'.join(all_words_from_db))
-        open('json_words.txt', 'w').write('\n'.join(map(lambda x: x['text'], word_bag)))
+        open('db_words.txt', 'w', encoding='utf-8').write('\n'.join(all_words_from_db))
+        open('json_words.txt', 'w',encoding='utf-8').write('\n'.join(map(lambda x: x['text'], word_bag)))
         str_buffer = ''
         for sent in sentences:
             coordinates_record = defaultdict(list)

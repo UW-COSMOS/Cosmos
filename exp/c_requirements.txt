@@ -4,8 +4,8 @@ Pillow
 cython
 matplotlib
 scikit-image
-tensorflow==1.12
-keras==2.2.4
+tensorflow==1.8
+keras==2.1.6
 h5py
 ipython
 tqdm

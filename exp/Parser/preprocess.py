@@ -25,7 +25,7 @@ def get_data_coordinate_pattern(data_coordinate_str):
 
 
 def load_file_to_tree(path):
-    with open(path, 'r') as in_f:
+    with open(path, 'r', encoding='utf-8') as in_f:
         doc_str = in_f.read()
         try:
             loaded = etree.fromstring(doc_str)
