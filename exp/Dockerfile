@@ -85,7 +85,6 @@ RUN apt-get update && apt-get -y install gcc g++ vim imagemagick tesseract-ocr l
 RUN apt-get -y install libxml2-dev libxslt-dev python3-dev
 # RUN apt-get -y build-dep python-matplotlib
 RUN apt-get -y install poppler-utils
-RUN apt-get -y install postgresql
 
 COPY . .
 
@@ -99,9 +98,6 @@ RUN pip install -r c_requirements.txt
 RUN git clone https://github.com/josmcg/Mask_RCNN.git
 
 USER root
-
-RUN cp pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
-
 
 WORKDIR Mask_RCNN
 
