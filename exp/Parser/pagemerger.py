@@ -1,10 +1,12 @@
 import argparse
 from lxml import etree
 from os import listdir, path
+import sys, os
+sys.path.append(os.path.dirname(__file__))
 import re
 from itertools import groupby
 
-from preprocess import load_file_to_tree
+from parse_preprocess import load_file_to_tree
 
 
 def pagemerger(rawfolder, outputfolder):

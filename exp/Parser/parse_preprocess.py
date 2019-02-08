@@ -1,5 +1,7 @@
 from lxml import html, etree
 import re
+import os, sys
+sys.path.append(os.path.dirname(__file__))
 import json
 import argparse
 import loguru
