@@ -1,10 +1,10 @@
 import os
 import shutil
 
-from Parser.link import link
-from Parser.pagemerger import pagemerger
-from Parser.parse import parse
-from Parser.preprocess import preprocess
+from link import link
+from pagemerger import pagemerger
+from parse import parse
+from preprocess import preprocess
 
 
 
