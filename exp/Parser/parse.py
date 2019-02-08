@@ -3,7 +3,6 @@ from fonduer.parser.preprocessors import HTMLDocPreprocessor
 from fonduer.parser import Parser
 import argparse
 
-
 def parse(html_location, database):
     session = Meta.init(database).Session()
     doc_preprocessor = HTMLDocPreprocessor(html_location)

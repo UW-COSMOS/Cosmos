@@ -145,9 +145,9 @@ def preprocess(input_file, output_word, output_html, strip_tags):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', default='data/html/merged/10.4319_lo.1991.36.5.1066.pdf.html')
-    parser.add_argument('--output_words', default='out/words/10.4319_lo.1991.36.5.1066.pdf.html.json')
-    parser.add_argument('--output_html', default='out/html/10.4319_lo.1991.36.5.1066.pdf.html')
-    parser.add_argument('--strip_tags', nargs='+', default=['strong', 'em'])
+    parser.add_argument('--input', help="source html", default='data/html/merged/10.4319_lo.1991.36.5.1066.pdf.html')
+    parser.add_argument('--output_words', help='location of JSON file that records word and its coordinate', default='out/words/10.4319_lo.1991.36.5.1066.pdf.html.json')
+    parser.add_argument('--output_html', help='location of HTML file that has been processed', default='out/html/10.4319_lo.1991.36.5.1066.pdf.html')
+    parser.add_argument('--strip_tags', help='Tags to be striped while parsing', nargs='+', default=['strong', 'em'])
     args = parser.parse_args()
     preprocess(args.input, args.outpu_word, args.output_html, args.strip_tags)
