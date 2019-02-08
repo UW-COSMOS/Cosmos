@@ -4,8 +4,8 @@ from fonduer.parser import Parser
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--html_location', default='out/html/')
-parser.add_argument('--database', default='postgres://postgres:password@localhost:5432/cosmos')
+parser.add_argument('--html_location', help='location of source html files', default='out/html/')
+parser.add_argument('--database', help='database connection string', default='postgres://postgres:password@localhost:5432/cosmos')
 args = parser.parse_args()
 
 
