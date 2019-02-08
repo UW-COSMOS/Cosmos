@@ -31,6 +31,7 @@ parser.add_argument('-d', "--weightsdir", default='weights', type=str, help="Pat
 parser.add_argument('-w', "--weights", type=str, help='Path to weights file', required=True)
 parser.add_argument('-t', "--threads", default=160, type=int, help="Number of threads to use")
 parser.add_argument('-n', "--noingest", help="Ingest html documents and create postgres database")
+parser.add_argument('-o', "--output", help="Output directory")
 
 args = parser.parse_args()
 #if not os.path.exists('tmp'):
@@ -190,3 +191,7 @@ else:
 #shutil.rmtree('xml')
 shutil.rmtree('tmp')
 
+if args.output is not None:
+    shutil.move("xml/", args.output)
+    shutil.move("html/", args.output)
+    shutil.move("html_out/", args.output)
