@@ -4,3 +4,6 @@ imgaug
 dominate
 pytesseract
 pandas
+fonduer
+lxml
+loguru

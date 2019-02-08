@@ -3,11 +3,13 @@
 Script to run an end to end pipeline
 """
 
+from Parser.parse_html_to_postgres import parse_html_to_postgres
 import multiprocessing as mp
 from mrcnn.config import Config
 from argparse import ArgumentParser
 import mrcnn.model as modellib
 from config import PageConfig
+from config import ingestion_settings
 from dataset import PageDataset
 import os
 import subprocess
@@ -28,6 +30,7 @@ parser.add_argument("pdfdir", type=str, help="Path to directory of PDFs")
 parser.add_argument('-d', "--weightsdir", default='weights', type=str, help="Path to weights dir")
 parser.add_argument('-w', "--weights", type=str, help='Path to weights file', required=True)
 parser.add_argument('-t', "--threads", default=160, type=int, help="Number of threads to use")
+parser.add_argument('-n', "--noingest", help="Ingest html documents and create postgres database")
 
 args = parser.parse_args()
 #if not os.path.exists('tmp'):
@@ -163,6 +166,23 @@ for xml_f in os.listdir('xml'):
     xpath = os.path.join('xml', xml_f)
     l = xml2list(xpath)
     list2html(l, f'{xml_f[:-4]}.png', 'tmp/images', 'html')
+
+
+if not args.noingest:
+    # Parse html files to postgres db
+    input_folder = ingestion_settings['input_folder']
+    
+    # intermediate folder location (will be auto-generated)
+    merge_folder = ingestion_settings['merge_folder']
+    output_html = ingestion_settings['output_html']
+    output_words = ingestion_settings['output_words']
+    
+    db_connect_str = ingestion_settings['db_connect_str']
+    
+    strip_tags = ingestion_settings['strip_tags']
+    ignored_file_when_link = ingestion_settings['ignored_file_when_link']
+    
+    parse_html_to_postgres(input_folder, output_html, merge_folder, output_html, db_connect_str, strip_tags, ignored_file_when_link)
     
 
 #shutil.rmtree('xml')
