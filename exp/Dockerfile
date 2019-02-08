@@ -89,11 +89,12 @@ RUN apt-get -y install postgresql
 
 COPY . .
 
-USER user
+RUN sed -i "s|tensorflow==1.12|tensorflow==1.8|g" /app/c_requirements.txt
+RUN sed -i "s|keras==2.2.4|keras==2.1.6|g" /app/c_requirements.txt
 
-RUN pip install -r requirements.txt --user
+RUN pip install -r requirements.txt
 
-RUN pip install -r c_requirements.txt --user
+RUN pip install -r c_requirements.txt
 
 RUN git clone https://github.com/josmcg/Mask_RCNN.git
 
@@ -101,16 +102,18 @@ USER root
 
 RUN cp pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
 
-USER user
 
 WORKDIR Mask_RCNN
 
-RUN python setup.py install --user
+RUN python setup.py install
 
 USER root
+RUN chmod -R 777 /app
+RUN mkdir /input && chmod 777 /input
+RUN mkdir /output && chmod 777 /output
 
-WORKDIR /vol
+ADD mask_rcnn_pages_uncollapsed_0022.h5 /app/weights/
 
+WORKDIR /app
 
-
-
+CMD ["python", "run.py", "/input", "-w", "weights/mask_rcnn_pages_uncollapsed_0022.h5", "-t", "4"]
