@@ -1,10 +1,17 @@
 version: "2.3"
 services:
-    test:
+    cosmos:
         build: .
-        runtime: nvidia
         ipc: host
         volumes:
-            - .:/vol/
+            - ${INPUT_DIR}:/input/
+            - ./output/:/output/
 
-
+    cosmos_postgres:
+        image: postgres:10.5-alpine
+        environment:
+            - POSTGRES_DB=cosmos
+        volumes:
+            - ./postgres-data:/var/lib/postgresql/data
+        ports:
+            - 54321:5432
