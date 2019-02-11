@@ -19,6 +19,7 @@ from list2html import list2html
 from tqdm import tqdm
 import shutil
 import preprocess as pp
+import postprocess
 from voc_utils import ICDAR_convert
 from connected_components.connected_components import write_proposals
 from proposal_matcher.process import process_doc
@@ -173,6 +174,17 @@ for xml_f in os.listdir(xml):
     l = xml2list(xpath)
     list2html(l, f'{xml_f[:-4]}.png', f'{tmp}/images', html)
 
+# postprocess
+tmp_html = html.replace('html', 'html_tmp')
+if not os.path.exists(tmp_html):
+    os.makedirs(tmp_html)
+
+print("Running postprocessing")
+postprocess.postprocess(html, tmp_html)
+
+# replace old html with corrected stuff.
+shutil.rmtree(html)
+shutil.move(tmp_html, html)
 
 # Parse html files to postgres db
 input_folder = ingestion_settings['input_folder']
