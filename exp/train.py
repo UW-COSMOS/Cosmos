@@ -36,3 +36,4 @@ model.train(data_train, data_val,
             learning_rate=config.LEARNING_RATE, 
             epochs=args.epochs, 
             layers='heads')
+
