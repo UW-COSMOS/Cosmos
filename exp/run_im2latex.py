@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     # Configuration steps
     # 1. Open vocab.json from the weight folder and change the value of path_vocab to [absolute-path-to-latex_ocr]/vocab.txt
-    # 2. pip install latex_ocr/requirements
+    # 2. pip install latex_ocr/requirements.txt
 
 
     # --img_path [abs-path-to-the-img-of-equation]
