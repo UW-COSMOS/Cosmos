@@ -1,4 +1,4 @@
-from variable_extractor import get_latex_variables_api
+from latex_parser.variable_extractor import get_latex_variables_api
 
 if __name__ == '__main__':
     # Setup
