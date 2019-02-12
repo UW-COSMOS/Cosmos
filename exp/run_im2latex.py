@@ -11,7 +11,7 @@ if __name__ == '__main__':
     # 2. pip install latex_ocr/requirements
 
 
-    # --img_path[abs-path-to-the-img-of-equation]
+    # --img_path [abs-path-to-the-img-of-equation]
     img_path = '/home/paulluh/test.png'
 
     downsample_image_ratio = 2
