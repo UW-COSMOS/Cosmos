@@ -1,0 +1,15 @@
+{
+  "name": "js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "parse.js",
+  "dependencies": {
+    "katex": "^0.10.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
