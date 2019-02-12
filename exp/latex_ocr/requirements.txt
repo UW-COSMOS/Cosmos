@@ -1,0 +1,14 @@
+tensorflow
+numpy
+scipy
+nltk
+pillow
+distance
+six
+click
+matplotlib
+scikit-image
+opencv-python
+imageio
+Shapely
+imgaug
