@@ -100,7 +100,7 @@ results = [pool.apply_async(resize_pngs, args=(x,)) for x in os.listdir(os.path.
 
 print('Begin writing proposals')
 #[write_proposals(os.path.join('tmp', 'images', x)) for x in os.listdir(os.path.join('tmp', 'images'))]
-results = [pool.apply_async(write_proposals, args=(os.path.join(f'{tmp}', 'images', x),)) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+results = [pool.apply_async(write_proposals, args=(os.path.join(f'{tmp}', 'images', x),), kwds={"output_dir" : tmp}) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
 [r.get() for r in results]
 
 #for img_f in os.listdir('tmp/images2'):
