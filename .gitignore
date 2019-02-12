@@ -1,5 +1,8 @@
 exp/data/*
 exp/weights/*
+xml/
+*.pyc
+tmp/
 .idea/
 !exp/data/README.md
 !exp/weights/README.md
@@ -7,5 +10,7 @@ exp/weights/*
 *.png
 .ipynb_checkpoints/
 pdfs/
-.DS_Store
+__pycache__/
 html/
+*.swp
+*.DS_Store

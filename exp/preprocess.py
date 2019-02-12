@@ -55,13 +55,23 @@ def pdf2png(input_dir, tmp_dir):
         call(["./ghost.sh", name, f"{join(input_dir,name)}.pdf", tmp_dir])
 
 
-def pad_image(path, size=1920):
-    im = Image.open(path)
-    im = resize_image(im, size)
+def resize_png(path, size=1920):
+    im = Image.open(path).convert('RGB')
+    w, h = im.size
+    if w >= size or h >= size:
+        maxsize = (1920, 1920)
+        im.thumbnail(maxsize, Image.ANTIALIAS)
+    else:
+        im = resize_image(im, size)
+    return path,im
+
+def pad_image(path, image=None, size=1920):
+    im = Image.open(path).convert('RGB') if image is None else image
     w, h = im.size
     d_w = size - w
     d_h = size - h
     if d_h < 0 or d_w < 0:
+        print(f'w: {w}, h: {h}')
         raise Exception("negative pad")
     padding = (0,0,d_w, d_h)
     im_2 = ImageOps.expand(im, padding, fill="#fff")
@@ -70,8 +80,13 @@ def pad_image(path, size=1920):
 
 def resize_image(im, new_h):
     w,h = im.size
-    ratio = float(new_h)/h
-    new_w = round(ratio*w)
+    if h > w:
+        ratio = float(new_h)/h
+        new_w = round(ratio*w)
+    else:
+        new_w = new_h
+        ratio = float(new_w)/w
+        new_h = round(ratio*h)
     im = im.resize((new_w, new_h), resample=Image.LANCZOS)
     return im
 

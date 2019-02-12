@@ -9,11 +9,13 @@ def mapper(obj):
     """
     map a single object to the list structure
     :param obj: an Etree node
-    :return: (type, (x1, y1, x2, y2))
+    :return: (type, (x1, y1, x2, y2), score)
     """
+    diff = obj.find("difficult")
+    score = float(diff.text) if diff is not None else 0
     bnd = obj.find("bndbox")
     coords = ["xmin", "ymin", "xmax", "ymax"]
-    return obj.find("name").text, [int(float(bnd.find(coord).text)) for coord in coords]
+    return obj.find("name").text, [int(float(bnd.find(coord).text)) for coord in coords], score
 
 
 def merge_below(objs, xtres=10):
@@ -127,10 +129,10 @@ def feather_list(objs, feather_x=30, feather_y=10, max_x=1920, max_y=1920):
     """
     new_objs = []
     for obj in objs:
-        t, coords = obj
+        t, coords, score = obj
         new_coords = (max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
                       min(coords[2]+feather_x, max_x), min(coords[3]+feather_y, max_y))
-        new_objs.append((t, new_coords))
+        new_objs.append((t, new_coords, score))
     return new_objs
 
 
@@ -199,17 +201,17 @@ def non_max_suppression_fast(boxes, overlapThresh):
     return final_boxes.tolist()
 
 
-def xml2list(fp):
+def xml2list(fp, tres=0):
     """
     convert VOC XML to a list
     :param fp: file path to VOC XML file
-    :return: [(type,(x1, y1, x2, y2))]
+    :return: [(type,(x1, y1, x2, y2),score)]
     """
     tree = ET.parse(fp)
     root = tree.getroot()
     objects = root.findall("object")
     lst = [mapper(obj) for obj in objects]
-    new_lst = merge_below(lst)
+    new_lst = [l for l in lst if l[2] >= tres]
     feathered_new_lst = feather_list(new_lst)
     feathered_new_lst.sort(key=lambda x: x[1])
     return feathered_new_lst
