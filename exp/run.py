@@ -36,21 +36,15 @@ parser.add_argument('-o', "--output", default='./', help="Output directory")
 parser.add_argument('-p', "--tmp_path", default='tmp', help="Path to directory for temporary files")
 
 args = parser.parse_args()
-#i not os.path.exists('tmp'):
-#    os.makedirs('tmp')
-#    os.makedirs('tmp/images')
-#    os.makedirs('tmp/images2')
-#    os.makedirs('tmp/images3')
 
 tmp = args.tmp_path
 xml = os.path.join(args.output, "xml")
 html = os.path.join(args.output, "html")
 
-if not os.path.exists(tmp):
-    os.makedirs(tmp)
-    os.makedirs('%s/images' % tmp)
-    os.makedirs('%s/images2' % tmp)
-    os.makedirs('%s/cc_proposals' % tmp)
+req_paths = [tmp, f'{tmp}/images', f'{tmp}/images2', f'{tmp}/cc_proposals']
+for path in req_paths:
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 img_d = os.path.join(tmp, 'images2')
 def preprocess_pdfs(pdf_path):
