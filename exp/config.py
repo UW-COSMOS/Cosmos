@@ -16,14 +16,15 @@ class PageConfig(Config):
 	USE_MINI_MASK = True
 
 
-base = '/vol'
+#base = '/app'
+output = '/output'
 ## POSTGRES INGESTION FILE SETTINGS
 ingestion_settings = {
-    'input_folder'           : os.path.join(base, 'html'),
-    'merge_folder'           : os.path.join(base, 'html', 'merged'),
-    'output_html'            : os.path.join(base, 'html_out', 'html/'),
-    'output_words'           : os.path.join(base, 'html_out', 'words/'),
-    'db_connect_str'         : 'postgres://postgres:password@localhost:5432/cosmos',
+    'input_folder'           : os.path.join(output, 'html'),
+    'merge_folder'           : os.path.join(output, 'html', 'merged'),
+    'output_html'            : os.path.join(output, 'html_out', 'html/'),
+    'output_words'           : os.path.join(output, 'html_out', 'words/'),
+    'db_connect_str'         : 'postgres://postgres:password@cosmos_postgres:5432/cosmos',
     'strip_tags'             : ['strong', 'em'],
     'ignored_file_when_link' : [],
 }

@@ -1,10 +1,11 @@
-import os
+import os, sys
 import shutil
+sys.path.append(os.path.dirname(__file__))
 
 from link import link
 from pagemerger import pagemerger
 from parse import parse
-from preprocess import preprocess
+from parse_preprocess import preprocess
 
 
 
