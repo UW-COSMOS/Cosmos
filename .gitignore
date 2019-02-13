@@ -1,11 +1,11 @@
-exp/data/*
-exp/weights/*
+cosmos/data/*
+cosmos/weights/*
 xml/
 *.pyc
 tmp/
 .idea/
-!exp/data/README.md
-!exp/weights/README.md
+!cosmos/data/README.md
+!cosmos/weights/README.md
 *.zip
 *.png
 .ipynb_checkpoints/
