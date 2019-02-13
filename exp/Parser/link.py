@@ -2,6 +2,8 @@ import argparse
 from fonduer import Meta
 from fonduer.parser.models import Document, Sentence
 import json
+import sys, os
+sys.path.append(os.path.dirname(__file__))
 from itertools import chain
 from collections import defaultdict
 import loguru
