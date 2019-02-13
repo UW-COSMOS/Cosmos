@@ -1,9 +1,0 @@
-opencv-python
-pascal-voc-writer
-imgaug
-dominate
-pytesseract
-pandas
-fonduer
-lxml
-loguru
