@@ -72,5 +72,4 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
         link(output_words, db_connect_str, ignored_file_when_link)
 
         insert_equation_tuple(db_connect_str, output_equations)
-
-
+        

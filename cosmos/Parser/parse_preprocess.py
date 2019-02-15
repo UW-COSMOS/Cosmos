@@ -29,7 +29,7 @@ def get_data_coordinate_pattern(data_coordinate_str):
 
 
 def load_file_to_tree(path):
-    with open(path, 'r') as in_f:
+    with open(path, 'r', , encoding='utf-8') as in_f:
         doc_str = in_f.read()
         try:
             loaded = etree.fromstring(doc_str)
@@ -172,10 +172,13 @@ def preprocess(input_file, output_word, output_html, output_equation, strip_tags
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', default='data/html/merged/10.4319_lo.1991.36.5.1066.pdf.html')
-    parser.add_argument('--output_words', default='out/words/10.4319_lo.1991.36.5.1066.pdf.html.json')
-    parser.add_argument('--output_html', default='out/html/10.4319_lo.1991.36.5.1066.pdf.html')
+
+    parser.add_argument('--input', help="source html", default='data/html/merged/10.4319_lo.1991.36.5.1066.pdf.html')
+    parser.add_argument('--output_words', help='location of JSON file that records word and its coordinate', default='out/words/10.4319_lo.1991.36.5.1066.pdf.html.json')
+    parser.add_argument('--output_html', help='location of HTML file that has been processed', default='out/html/10.4319_lo.1991.36.5.1066.pdf.html')
+    parser.add_argument('--strip_tags', help='Tags to be striped while parsing', nargs='+', default=['strong', 'em'])
+
     parser.add_argument('--output_equation', default='out/equations/10.4319_lo.1991.36.5.1066.pdf.html')
-    parser.add_argument('--strip_tags', nargs='+', default=['strong', 'em'])
+
     args = parser.parse_args()
     preprocess(args.input, args.output_words, args.output_html, args.output_equation, args.strip_tags)
