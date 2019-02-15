@@ -1,3 +1,4 @@
+import random
 import re
 from scipy.misc import imread
 import PIL
@@ -15,10 +16,12 @@ import click
 import tensorflow as tf
 
 
-def img2latex(model, img_path, downsample_image_ratio=1, cropping=False, padding=False, img_augment=None,
+def img2latex(model, img, downsample_image_ratio=1, cropping=False, padding=False, img_augment=None,
               gray_scale=True):
     dir_output = "tmp/"
     run(['mkdir -p tmp'], TIMEOUT)
+    img_path = os.path.join('tmp/', '%d.png'%random.randint(0, 10000))
+    img.save(img_path)
     name = img_path.split('/')[-1].split('.')[0]
     buckets = [
         [240, 100], [320, 80], [400, 80], [400, 100], [480, 80], [480, 100],
@@ -176,7 +179,7 @@ def postprocess(raw_latex):
     return merged
 
 
-def img2latex_api(weight_dir, img_path, downsample_image_ratio, cropping, padding, gray_scale):
+def img2latex_api(weight_dir, img, downsample_image_ratio, cropping, padding, gray_scale):
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
     tf.logging.set_verbosity(tf.logging.ERROR)
     config_vocab = Config(weight_dir + "vocab.json")
@@ -190,7 +193,7 @@ def img2latex_api(weight_dir, img_path, downsample_image_ratio, cropping, paddin
     seq = iaa.Sequential([
         iaa.GammaContrast(2)
     ])
-    latex, _, _ = img2latex(model, img_path,
+    latex, _, _ = img2latex(model, img,
                             downsample_image_ratio=downsample_image_ratio, cropping=cropping, padding=padding,
                             img_augment=seq, gray_scale=gray_scale)
     processed_latex = postprocess(latex)
@@ -208,7 +211,8 @@ def img2latex_api(weight_dir, img_path, downsample_image_ratio, cropping, paddin
 @click.option('--img_path', required=True, help='Path to source img')
 def img2latex_cli(weight_dir, img_path, downsample_image_ratio, cropping, padding, gray_scale):
     """Program that takes as input an image of equation and outputs a Latex code"""
-    processed_latex = img2latex_api(weight_dir, img_path, downsample_image_ratio, cropping, padding, gray_scale)
+    img = Image.open(img_path)
+    processed_latex = img2latex_api(weight_dir, img, downsample_image_ratio, cropping, padding, gray_scale)
     click.echo(processed_latex)
 
 
