@@ -1,4 +1,5 @@
 from latex_ocr.img2latex import img2latex_api
+from PIL import Image
 
 if __name__ == '__main__':
 
@@ -13,11 +14,14 @@ if __name__ == '__main__':
 
     # --img_path [abs-path-to-the-img-of-equation]
     img_path = '/home/paulluh/test.png'
+    img = Image.open(img_path)
 
     downsample_image_ratio = 2
     cropping = True
     padding = True
     gray_scale = True
 
-    tex = img2latex_api(weight_dir, img_path, downsample_image_ratio, cropping, padding, gray_scale)
+    tex = img2latex_api(weight_dir='/home/paulluh/im2latex_weights_prod/',
+                        img=img,
+                        downsample_image_ratio=2, cropping=True, padding=True, gray_scale=True)
     print(tex)
