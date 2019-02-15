@@ -45,8 +45,12 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
         shutil.rmtree(output_html)
     if os.path.exists(output_words):
         shutil.rmtree(output_words)
+    if os.path.exists(output_equations):
+        shutil.rmtree(output_equations)
+
     os.makedirs(output_html, exist_ok=True)
     os.makedirs(output_words, exist_ok=True)
+    os.makedirs(output_equations, exist_ok=True)
 
     all_inputs = [f for f in os.listdir(merge_folder)]
     for html_file in all_inputs:
