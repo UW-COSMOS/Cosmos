@@ -46,7 +46,7 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
                     div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
                 if tesseract_text:
                     if t == 'Equation':
-                        txt = img2latex_api(weight_dir='/home/paulluh/im2latex_weights_prod/', img=img, downsample_image_ratio=2, cropping=True, padding=True, gray_scale=True)
+                        txt = img2latex_api(weight_dir='/home/paulluh/im2latex_weights_prod/', img=cropped, downsample_image_ratio=2, cropping=True, padding=True, gray_scale=True)
                     else:
                         txt = pytesseract.image_to_string(cropped, lang='eng')
                     div(txt, cls='rawtext')
