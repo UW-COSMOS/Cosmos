@@ -1,3 +1,4 @@
+sys.path.append(os.path.dirname(__file__))
 import loguru
 from collections import defaultdict
 from itertools import chain
@@ -7,7 +8,6 @@ from fonduer.parser.models import Document, Sentence
 import json
 import sys
 import os
-sys.path.append(os.path.dirname(__file__))
 
 
 def link(words_location, db_connect_str, ignored_files=[]):
