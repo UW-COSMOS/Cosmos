@@ -4,7 +4,7 @@ from sqlalchemy.dialects import postgresql
 import json
 from fonduer.parser.models import Document, Sentence
 from collections import defaultdict
-from latex_parser.variable_extractor import get_variables
+from ..latex_parser.variable_extractor import get_variables
 from itertools import chain
 from os.path import join
 
