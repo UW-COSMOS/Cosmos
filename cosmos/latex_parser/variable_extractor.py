@@ -28,14 +28,12 @@ def get_variables(latex):
     processed = processed.replace(')', '}')
 
     response = muterun_js(os.path.join(CURRENT_DIR, 'katex/parse.js'), processed)
-    # print(response.stderr)
     if response.stdout == b'-1\n' or not response.stdout:
         yield -1
         return
 
     tree = etree.fromstring(response.stdout)
     ast = tree.xpath('.//semantics')[0]
-    # print(etree.tostring(ast, pretty_print=True))
     count = 0
 
     for c in ast.xpath('.//*'):
@@ -58,34 +56,27 @@ def get_variables(latex):
 
     for sup in tree.xpath('.//msup'):
         if 'None' not in unparse(sup):
-            yield sup
+            yield unparse(sup)
 
     for sub in tree.xpath('.//msub'):
         if 'None' not in unparse(sub):
-            yield sub
+            yield unparse(sub)
 
     for id in tree.xpath('.//mi'):
         if id.attrib['id'] not in ngram_kv:
             if 'None' not in unparse(id):
-                yield id.text
+                yield unparse(id.text)
     
     for _x in ngram:
         if len(_x) > 0:
-            yield ''.join(_x)
+            yield unparse(''.join(_x))
 
-
-def get_latex_variables_api(latex):
-    return list(set(map(lambda x: unparse(x), get_variables(latex))))
-
-
-@click.command()
+# @click.command()
 @click.option('--latex', required=True, help='Source latex code to be parsed')
 def get_variables_cli(latex):
     '''Variable extractor that finds variables in the Latex code'''
     for g in get_variables(latex):
         click.echo(unparse(g))
-
-
 
 
 if __name__ == '__main__':

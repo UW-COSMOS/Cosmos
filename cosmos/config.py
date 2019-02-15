@@ -24,6 +24,7 @@ ingestion_settings = {
     'merge_folder'           : os.path.join(output, 'html', 'merged'),
     'output_html'            : os.path.join(output, 'html_out', 'html/'),
     'output_words'           : os.path.join(output, 'html_out', 'words/'),
+	'output_equations'       : os.path.join(output, 'html_out', 'equations/'),
     'db_connect_str'         : 'postgres://postgres:password@cosmos_postgres:5432/cosmos',
     'strip_tags'             : ['strong', 'em'],
     'ignored_file_when_link' : [],
