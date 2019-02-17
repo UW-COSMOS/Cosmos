@@ -86,6 +86,8 @@ RUN apt-get -y install libxml2-dev libxslt-dev python3-dev
 # RUN apt-get -y build-dep python-matplotlib
 RUN apt-get -y install poppler-utils
 
+RUN apt install -y libsm6 libxext6
+
 COPY . .
 
 RUN sed -i "s|tensorflow==1.12|tensorflow==1.8|g" /app/c_requirements.txt

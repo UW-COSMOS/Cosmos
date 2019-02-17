@@ -1,3 +1,5 @@
+import sys, os
+sys.path.append(os.path.dirname(__file__))
 import random
 import re
 from scipy.misc import imread

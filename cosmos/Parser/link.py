@@ -1,3 +1,5 @@
+import os
+import sys
 sys.path.append(os.path.dirname(__file__))
 import loguru
 from collections import defaultdict
@@ -6,8 +8,6 @@ import argparse
 from fonduer import Meta
 from fonduer.parser.models import Document, Sentence
 import json
-import sys
-import os
 
 
 def link(words_location, db_connect_str, ignored_files=[]):
@@ -43,7 +43,7 @@ def link(words_location, db_connect_str, ignored_files=[]):
 
         for sent in sentences:
             if sent.name == 'Equation':
-                while word_bag[word_bag_count]['type'] == 'Equation':
+                while word_bag_count < len(word_bag) and word_bag[word_bag_count]['type'] == 'Equation':
                     word_bag_count += 1
                 continue
             coordinates_record = defaultdict(list)
