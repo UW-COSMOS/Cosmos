@@ -87,6 +87,7 @@ RUN apt-get -y install libxml2-dev libxslt-dev python3-dev
 RUN apt-get -y install poppler-utils
 
 RUN apt install -y libsm6 libxext6
+RUN apt-get install -y nodejs-legacy
 
 COPY . .
 
