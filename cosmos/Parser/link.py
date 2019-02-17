@@ -35,11 +35,11 @@ def link(words_location, db_connect_str, ignored_files=[]):
         all_words_from_db = list(
             chain(*[sent.text.split() for sent in sentences]))
 
-        loguru.logger.debug(len(all_words_from_db))
-        loguru.logger.debug(len(word_bag))
-        open('db_words.txt', 'w', encoding='utf-8').write('\n'.join(all_words_from_db))
-        open('json_words.txt', 'w',
-             encoding='utf-8').write('\n'.join(map(lambda x: x['text'], word_bag)))
+        #loguru.logger.debug(len(all_words_from_db))
+        #loguru.logger.debug(len(word_bag))
+        #open('db_words.txt', 'w', encoding='utf-8').write('\n'.join(all_words_from_db))
+        #open('json_words.txt', 'w',
+             #encoding='utf-8').write('\n'.join(map(lambda x: x['text'], word_bag)))
         assert len(all_words_from_db) >= len(word_bag)
 
         str_buffer = ''
