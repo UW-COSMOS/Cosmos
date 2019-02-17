@@ -1,10 +1,12 @@
+import sys, os
+sys.path.append(os.path.dirname(__file__))
 from fonduer.meta import Meta
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.dialects import postgresql
 import json
 from fonduer.parser.models import Document, Sentence
 from collections import defaultdict
-from ..latex_parser.variable_extractor import get_variables
+from latex_parser.variable_extractor import get_variables
 from itertools import chain
 from os.path import join
 
@@ -12,7 +14,7 @@ INT_ARRAY_TYPE = postgresql.ARRAY(Integer)
 STR_ARRAY_TYPE = postgresql.ARRAY(String)
 
 # Grab pointer to global metadata
-db_connect_str = "postgres://postgres:password@localhost:5432/cosmos8"
+db_connect_str = "postgres://postgres:password@cosmos_postgres:5432/cosmos"
 _meta = Meta.init()
 
 
@@ -76,7 +78,7 @@ def insert_equation_tuple(db, resource_loc):
             for paragraph_id, eqs in para_dic.items():
                 latex_code = ''.join(map(lambda x: x['text'], eqs))
                 variables = list(get_variables(latex_code))
-                if variables[0] == '-1':
+                if variables[0] == -1:
                     variables = None
 
                 e = Equation(
@@ -95,4 +97,7 @@ def insert_equation_tuple(db, resource_loc):
 
 
 if __name__ == '__main__':
-    insert_equation_tuple(db_connect_str, 'out/equations/')
+    #insert_equation_tuple(db_connect_str, 'out/equations/')
+    session = Meta.init(db_connect_str).Session()
+    session.add(Equation(name="Equation", latex="\\tfrac{a}{b}"))
+    session.commit()

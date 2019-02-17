@@ -13,7 +13,7 @@ INPUT_FILE = None
 
 def coordinate(title,org_x=0, org_y=0, page_num=0,):
     match = BBOX_COORDINATES_PATTERN.search(title)
-    loguru.logger.debug(title)
+    # loguru.logger.debug(title)
     return {
         'xmin': int(match.group(1)) + org_x,
         'ymin': int(match.group(2)) + org_y,
@@ -29,7 +29,7 @@ def get_data_coordinate_pattern(data_coordinate_str):
 
 
 def load_file_to_tree(path):
-    with open(path, 'r', , encoding='utf-8') as in_f:
+    with open(path, 'r', encoding='utf-8') as in_f:
         doc_str = in_f.read()
         try:
             loaded = etree.fromstring(doc_str)
@@ -132,7 +132,7 @@ def get_equation(root):
             base_x, base_y = get_data_coordinate_pattern(
                 page_coord
             )
-            loguru.logger.debug(page_coord)
+            # loguru.logger.debug(page_coord)
             ocr_coord = area.xpath(".//*[@class='ocr_page']")[0].attrib['title']
             yield coordinate(
                 title=ocr_coord,
