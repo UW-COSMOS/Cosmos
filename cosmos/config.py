@@ -18,6 +18,12 @@ class PageConfig(Config):
 
 #base = '/app'
 output = '/output'
+
+# weight for im2latex
+
+IM2LATEX_WEIGHT = '/app/im2latex_weights_prod/'
+
+
 ## POSTGRES INGESTION FILE SETTINGS
 ingestion_settings = {
     'input_folder'           : os.path.join(output, 'html'),
