@@ -15,13 +15,13 @@ def link(words_location, db_connect_str, ignored_files=[]):
 
     def get_word_bag(html_source):
         with open(words_location + html_source + '.html.json', encoding='utf-8') as words:
-            return json.load(words)
+            return list(filter(lambda x: x['type'] != 'Equation', json.load(words)))
 
     def get_all_documents():
         return session.query(Document).order_by(Document.id)
 
     def get_all_sentence_from_a_doc(doc_id):
-        return session.query(Sentence).filter(Sentence.document_id == doc_id).order_by(Sentence.id)
+        return session.query(Sentence).filter(Sentence.document_id == doc_id, Sentence.name != 'Equation').order_by(Sentence.id)
 
     def same(w1, w2):
         return w1.replace('-', '—') == w2.replace('-', '—')
@@ -35,17 +35,16 @@ def link(words_location, db_connect_str, ignored_files=[]):
         all_words_from_db = list(
             chain(*[sent.text.split() for sent in sentences]))
 
-        assert len(all_words_from_db) >= len(word_bag)
+        loguru.logger.debug(len(all_words_from_db))
+        loguru.logger.debug(len(word_bag))
         open('db_words.txt', 'w', encoding='utf-8').write('\n'.join(all_words_from_db))
         open('json_words.txt', 'w',
              encoding='utf-8').write('\n'.join(map(lambda x: x['text'], word_bag)))
+        assert len(all_words_from_db) >= len(word_bag)
+
         str_buffer = ''
 
         for sent in sentences:
-            if sent.name == 'Equation':
-                while word_bag_count < len(word_bag) and word_bag[word_bag_count]['type'] == 'Equation':
-                    word_bag_count += 1
-                continue
             coordinates_record = defaultdict(list)
             tokenized_words = sent.text.split()
 
