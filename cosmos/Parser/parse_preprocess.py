@@ -126,7 +126,7 @@ def split_paragraph(root):
 
 def get_equation(root):
     for area in get_ocr_segments(root):
-        loguru.logger.debug(area.attrib['id'])
+        # loguru.logger.debug(area.attrib['id'])
         if area.attrib['class'] == 'Equation':
             page_coord = area.xpath(".//*[@class='hocr']")[0].attrib['data-coordinates']
             base_x, base_y = get_data_coordinate_pattern(
