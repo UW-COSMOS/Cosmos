@@ -7,3 +7,27 @@ pandas
 fonduer
 lxml
 loguru
+
+# {{ for im2latex
+
+tensorflow
+numpy
+scipy
+nltk
+pillow
+distance
+six
+click
+matplotlib
+scikit-image
+imageio
+Shapely
+
+# }}
+
+# {{ for latex_parser
+
+naked
+
+# }}
+

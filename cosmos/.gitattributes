@@ -1,1 +1,2 @@
 *.h5 filter=lfs diff=lfs merge=lfs -text
+im2latex_weights_prod/** filter=lfs diff=lfs merge=lfs -text

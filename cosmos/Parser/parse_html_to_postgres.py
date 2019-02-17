@@ -6,10 +6,11 @@ from link import link
 from pagemerger import pagemerger
 from parse import parse
 from parse_preprocess import preprocess
+from insert_equation import insert_equation_tuple
 
 
 
-def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, db_connect_str,
+def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str,
                            strip_tags, ignored_file_when_link, store_into_postgres=True):
     assert os.path.isabs(input_folder)
     assert os.path.isabs(output_html)
@@ -44,13 +45,17 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
         shutil.rmtree(output_html)
     if os.path.exists(output_words):
         shutil.rmtree(output_words)
+    if os.path.exists(output_equations):
+        shutil.rmtree(output_equations)
+
     os.makedirs(output_html, exist_ok=True)
     os.makedirs(output_words, exist_ok=True)
+    os.makedirs(output_equations, exist_ok=True)
 
     all_inputs = [f for f in os.listdir(merge_folder)]
     for html_file in all_inputs:
         preprocess(os.path.join(merge_folder, html_file), "%s.json" % (os.path.join(output_words, html_file)),
-                   os.path.join(output_html, html_file), strip_tags)
+                   os.path.join(output_html, html_file), "%s.json" % (os.path.join(output_equations, html_file)), strip_tags)
 
     if store_into_postgres:
         """
@@ -69,3 +74,6 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
             @touch link.stamp
         """
         link(output_words, db_connect_str, ignored_file_when_link)
+
+        insert_equation_tuple(db_connect_str, output_equations)
+        
