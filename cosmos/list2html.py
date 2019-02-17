@@ -10,8 +10,10 @@ from PIL import Image
 import re
 import xml.etree.ElementTree as ET
 from dominate.util import raw
-from latex_ocr.img2latex import img2latex_api
+from latex_ocr.img2latex import img2latex_api, get_im2latex_model
 from config import IM2LATEX_WEIGHT
+
+im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
 
 def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True, tesseract_text=True, include_image=False):
     if not os.path.exists(output_dir):
@@ -46,7 +48,7 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
                     div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
                 if tesseract_text:
                     if t == 'Equation':
-                        txt = img2latex_api(weight_dir=IM2LATEX_WEIGHT, img=cropped, downsample_image_ratio=2, cropping=True, padding=True, gray_scale=True)
+                        txt = img2latex_api(im2latex_model, img=cropped, downsample_image_ratio=2, cropping=True, padding=True, gray_scale=True)
                     else:
                         txt = pytesseract.image_to_string(cropped, lang='eng')
                     div(txt, cls='rawtext')
