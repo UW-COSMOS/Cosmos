@@ -6,7 +6,7 @@ services:
         volumes:
             - ${INPUT_DIR}:/input/
             - ./output/:/output/
-        command: ["python", "run.py", "/input", "-w", "weights/mask_rcnn_pages_uncollapsed_0022.h5", "-t", "4", "-o", "/output/"]
+        command: tail -F anything
 
     cosmos_postgres:
         image: postgres:10.5-alpine
