@@ -17,7 +17,7 @@ from config import IM2LATEX_WEIGHT
 im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
 BBOX_COORDINATES_PATTERN = re.compile("bbox\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)")
 
-with open('/app/words_alpha.txt') as word_file:
+with open('words_alpha.txt') as word_file:
     valid_words = set(word_file.read().split())
 stop_words = ['all', 'am', 'an', 'and', 'any', 'are', 'as', 'at', 'be', 'but', 'by', 'can', 'did', 'do', 'few', \
 'for', 'get', 'had', 'has', 'he', 'her', 'him', 'his', 'how', 'if', 'in', 'is', 'it', 'its', 'me', \
