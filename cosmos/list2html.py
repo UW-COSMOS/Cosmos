@@ -58,12 +58,10 @@ def variable_ocr(root, sub_img, strip_tags):
 
 def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True, tesseract_text=True, include_image=False):
     latex_dir = os.path.join(output_dir, 'latex')
-    if not os.path.exists(latex_dir):
-        os.makedirs(latex_dir)
-
     doc = dominate.document(title=image_name[:-4])
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
     root = etree.Element("body")
+    print('HELLO WORLD')
     with doc:
         img = Image.open(os.path.join(image_dir, image_name))
         for ind, inp in enumerate(input_list):

@@ -31,7 +31,7 @@ parser.add_argument("pdfdir", type=str, help="Path to directory of PDFs")
 parser.add_argument('-d', "--weightsdir", default='weights', type=str, help="Path to weights dir")
 parser.add_argument('-w', "--weights", type=str, help='Path to weights file', required=True)
 parser.add_argument('-t', "--threads", default=160, type=int, help="Number of threads to use")
-parser.add_argument('-n', "--noingest", help="Ingest html documents and create postgres database")
+parser.add_argument('-n', "--noingest", help="Ingest html documents and create postgres database", action='store_true')
 parser.add_argument('-o', "--output", default='./', help="Output directory")
 parser.add_argument('-p', "--tmp_path", default='tmp', help="Path to directory for temporary files")
 
@@ -165,8 +165,11 @@ results = [pool.apply_async(match_proposal, args=(x,)) for x in os.listdir(os.pa
 if not os.path.exists(html):
     os.makedirs(html)
     os.makedirs(os.path.join(html, 'img'))
+    os.makedirs(os.path.join(html, 'latex'))
+print('Begin converting to html')
 results = [pool.apply_async(convert_to_html, args=(x,)) for x in os.listdir(xml)]
 [r.get() for r in results]
+print('End converting to html')
 #for xml_f in os.listdir(xml):
 #    xpath = os.path.join(xml, xml_f)
 #    l = xml2list(xpath)
