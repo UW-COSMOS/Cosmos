@@ -201,9 +201,7 @@ db_connect_str = ingestion_settings['db_connect_str']
 strip_tags = ingestion_settings['strip_tags']
 ignored_file_when_link = ingestion_settings['ignored_file_when_link']
 
-if args.noingest:
-    parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, store_into_postgres=False)
-else:
+if not args.noingest:
     parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, store_into_postgres=True)
 
 
