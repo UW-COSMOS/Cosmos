@@ -6,6 +6,7 @@ services:
         volumes:
             - ${INPUT_DIR}:/input/
             - ./output/:/output/
+            - .:/develop/
         command: tail -F anything
 
     cosmos_postgres:
