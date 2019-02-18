@@ -14,7 +14,6 @@ from dominate.util import raw
 from latex_ocr.img2latex import img2latex_api, get_im2latex_model
 from config import IM2LATEX_WEIGHT
 
-im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
 BBOX_COORDINATES_PATTERN = re.compile("bbox\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)")
 
 with open('words_alpha.txt') as word_file:
@@ -33,7 +32,7 @@ def get_coordinate(title):
         'ymax': int(match.group(4)),
     }
 
-def variable_ocr(root, sub_img, strip_tags):
+def variable_ocr(im2latex_model, root, sub_img, strip_tags):
     hocr = root.xpath(".//*[@class='hocr']")[0]
     hocr.set('class', 'latex')
     etree.strip_tags(hocr, *strip_tags)
@@ -42,18 +41,13 @@ def variable_ocr(root, sub_img, strip_tags):
         text = re.sub('['+string.punctuation+']', '', text)
         text = text.lower()
         if not text or text in stop_words:
-            word.text = 'not_var'
             continue
 
         if not text in valid_words or len(text) <= 3:
             coord = get_coordinate(word.get('title'))
             sub_sub_img = sub_img.crop((coord['xmin'],coord['ymin'],coord['xmax'],coord['ymax']))
             output = img2latex_api(im2latex_model, img=sub_sub_img, downsample_image_ratio=2, cropping=True, padding=True, gray_scale=True)
-            print(text)
             word.text = output
-            print(output)
-        else:
-            word.text = 'not_var'
     return root
 
 def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True, tesseract_text=True, include_image=False):
@@ -61,7 +55,7 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
     doc = dominate.document(title=image_name[:-4])
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
     root = etree.Element("body")
-    print('HELLO WORLD')
+    im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
     with doc:
         img = Image.open(os.path.join(image_dir, image_name))
         for ind, inp in enumerate(input_list):
@@ -98,7 +92,7 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
             #
             loaded = html.fromstring(d.render())
             tree = etree.fromstring(etree.tostring(loaded))
-            tree = variable_ocr(tree, cropped, ['strong', 'em'])
+            tree = variable_ocr(im2latex_model, tree, cropped, ['strong', 'em'])
             root.append(tree)
 
     with open(os.path.join(output_dir, f'{image_name[:-4]}.html'), 'w', encoding='utf-8') as wf:
