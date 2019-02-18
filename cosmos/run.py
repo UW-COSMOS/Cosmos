@@ -106,7 +106,6 @@ results = [pool.apply_async(write_proposals, args=(os.path.join(f'{tmp}', 'image
 print('Begin preprocessing pngs')
 results = [pool.apply_async(preprocess_pngs, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
 [r.get() for r in results]
-shutil.rmtree(f'{tmp}/images2')
 
 with open('test.txt', 'w') as wf:
     for f in os.listdir(f'{tmp}/images'):
@@ -163,10 +162,15 @@ for idx, image_id in enumerate(tqdm(image_ids)):
 results = [pool.apply_async(match_proposal, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'cc_proposals'))]
 [r.get() for r in results]
 
-for xml_f in os.listdir(xml):
-    xpath = os.path.join(xml, xml_f)
-    l = xml2list(xpath)
-    list2html(l, f'{xml_f[:-4]}.png', f'{tmp}/images', html)
+if not os.path.exists(html):
+    os.makedirs(html)
+    os.makedirs(os.path.join(html, 'img'))
+results = [pool.apply_async(convert_to_html, args=(x,)) for x in os.listdir(xml)]
+[r.get() for r in results]
+#for xml_f in os.listdir(xml):
+#    xpath = os.path.join(xml, xml_f)
+#    l = xml2list(xpath)
+#    list2html(l, f'{xml_f[:-4]}.png', f'{tmp}/images', html)
 
 # postprocess
 tmp_html = html.replace('html', 'html_tmp')
