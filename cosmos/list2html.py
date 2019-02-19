@@ -51,7 +51,7 @@ def variable_ocr(im2latex_model, root, sub_img, strip_tags):
     return root
 
 def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True, tesseract_text=True, include_image=False):
-    latex_dir = os.path.join(output_dir, 'latex')
+    latex_dir = os.path.join(output_dir[:-4], 'latex')
     doc = dominate.document(title=image_name[:-4])
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
     root = etree.Element("body")
@@ -97,7 +97,7 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
 
     with open(os.path.join(output_dir, f'{image_name[:-4]}.html'), 'w', encoding='utf-8') as wf:
         wf.write(doc.render())
-    with open(os.path.join(latex_dir, f'{image_name[:-4]}.html'), 'wb') as wf:
+    with open(os.path.join(latex_dir, f'{image_name[:-4]}.html'), 'wb+') as wf:
         wf.write(etree.tostring(root, pretty_print=True))
 
     
