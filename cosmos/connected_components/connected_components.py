@@ -174,7 +174,8 @@ def balance_margins(bmap, img):
         else:
             right_w += 1
             left_w += 1
-    return bmap, img, left_w
+    l_diff = left_w - right_w if left_w > right_w else 0
+    return bmap, img, l_diff
 
 
 def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=10):
@@ -182,6 +183,7 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
     fn = lambda x : 0 if x > white_thresh else 255
     img_np = np.array(img.convert('RGB'))
     bmap_np = np.array(img.convert('L').point(fn, mode='1')).astype(np.uint8)
+    img_np_orig = img_np
     bmap_np, img_np, left_shave = balance_margins(bmap_np, img_np)
     img_height = bmap_np.shape[0]
     num_sections = int(img_height / blank_row_height)
@@ -272,7 +274,7 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
     with open(write_p, 'w', encoding='utf-8') as wp:
         for coord in block_coords:
             wp.write(f'{coord[0]},{coord[1]},{coord[2]},{coord[3]}\n')
-    #draw_cc(img_np, block_coords, write_img_p=write_img_p)
+    draw_cc(img_np_orig, block_coords, write_img_p=write_img_p)
     return
 
 
