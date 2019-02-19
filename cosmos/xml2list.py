@@ -211,10 +211,10 @@ def xml2list(fp, tres=0):
     root = tree.getroot()
     objects = root.findall("object")
     lst = [mapper(obj) for obj in objects]
-    new_lst = [l for l in lst if l[2] >= tres]
-    feathered_new_lst = feather_list(new_lst)
-    feathered_new_lst.sort(key=lambda x: x[1])
-    return feathered_new_lst
+    #new_lst = [l for l in lst if l[2] >= tres]
+    #feathered_new_lst = feather_list(new_lst)
+    #feathered_new_lst.sort(key=lambda x: x[1])
+    return lst
 
 
 def run_non_map_suppression(lst):

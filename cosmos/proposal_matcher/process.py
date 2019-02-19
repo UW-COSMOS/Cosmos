@@ -58,6 +58,10 @@ def get_ious(pred_df, box):
 
 
 def get_votes(pred_df, proposal_df):
+    print('Prediction DF')
+    print(pred_df)
+    print('Proposal DF')
+    print(proposal_df)
     N, _ = pred_df.shape
     M, _ = proposal_df.shape
     for i,row in proposal_df.iterrows():
@@ -93,6 +97,8 @@ def process_doc(prediction_path, proposal_path, out_path):
     data_xml = load_xml(prediction_path)
     data_proposal = load_proposal(proposal_path)
     vote_df = get_votes(data_xml, data_proposal)
+    print('Vote_df')
+    print(vote_df)
     write_matches(vote_df,out_path)
 
 if __name__ == "__main__":
