@@ -34,6 +34,7 @@ parser.add_argument('-t', "--threads", default=160, type=int, help="Number of th
 parser.add_argument('-n', "--noingest", help="Ingest html documents and create postgres database", action='store_true')
 parser.add_argument('-o', "--output", default='./', help="Output directory")
 parser.add_argument('-p', "--tmp_path", default='tmp', help="Path to directory for temporary files")
+parser.add_argument('--debug', help="Ingest html documents and create postgres database", action='store_true')
 
 args = parser.parse_args()
 
@@ -187,8 +188,9 @@ print("Running postprocessing")
 postprocess.postprocess(html, tmp_html)
 
 # replace old html with corrected stuff.
-shutil.rmtree(html)
-shutil.move(tmp_html, html)
+if not args.debug:
+    shutil.rmtree(html)
+    shutil.move(tmp_html, html)
 
 # Parse html files to postgres db
 input_folder = ingestion_settings['input_folder']
@@ -207,5 +209,5 @@ ignored_file_when_link = ingestion_settings['ignored_file_when_link']
 if not args.noingest:
     parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, store_into_postgres=True)
 
-
-shutil.rmtree(f'{tmp}')
+if not args.debug:
+    shutil.rmtree(f'{tmp}')
