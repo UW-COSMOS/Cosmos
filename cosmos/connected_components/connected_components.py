@@ -266,7 +266,11 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
         coords_list = block_coords2[key]
         for ind2, bc in enumerate(coords_list):
             tl_y1, tl_x1, br_y1, br_x1 = bc
-            block_coords.add((left_shave + tl_x1, tl_y1, left_shave + br_x1, br_y1))
+            adjusted = (left_shave + tl_x1, tl_y1, left_shave + br_x1, br_y1)
+            print(adjusted)
+            block_coords.add(adjusted)
+    print('----')
+
     block_coords = list(block_coords)
     img_p = os.path.basename(img_p)
     write_p = os.path.join(output_dir, img_p[:-4] + '.csv')
@@ -274,6 +278,9 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
     with open(write_p, 'w', encoding='utf-8') as wp:
         for coord in block_coords:
             wp.write(f'{coord[0]},{coord[1]},{coord[2]},{coord[3]}\n')
+    print('CC Proposals img shape')
+    print(img_np_orig.shape)
+    print('-----')
     draw_cc(img_np_orig, block_coords, write_img_p=write_img_p)
     return
 

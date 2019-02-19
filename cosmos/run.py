@@ -68,11 +68,14 @@ def preprocess_pngs(img_f):
 
 def convert_to_html(xml_f):
     xpath = os.path.join(xml, xml_f)
+    print('Begin convert')
+    print(xpath)
     l = xml2list(xpath)
+    print(l)
     list2html(l, f'{xml_f[:-4]}.png', img_d, html)
 
 def match_proposal(proposal_f):
-    proposal_f_full = os.path.join(f'{tmp}', 'cc_proposals', proposal_f)
+    proposal_f_full = os.path.join(f'{tmp}', proposal_f)
     xml_f = f'{xml}/{proposal_f[:-4]}' + '.xml'
     process_doc(xml_f, proposal_f_full, xml_f)
 #for pdf_f in os.listdir(args.pdfdir):
@@ -159,7 +162,7 @@ for idx, image_id in enumerate(tqdm(image_ids)):
     zipped = zip(r["class_ids"], r["rois"])
     model2xml(info["str_id"], xml, [1920, 1920], zipped, data_test.class_names, r['scores'])
 
-results = [pool.apply_async(match_proposal, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'cc_proposals'))]
+results = [pool.apply_async(match_proposal, args=(x,)) for x in os.listdir(f'{tmp}') if x[-4:] == '.csv']
 [r.get() for r in results]
 
 if not os.path.exists(html):
@@ -205,5 +208,4 @@ if not args.noingest:
     parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, store_into_postgres=True)
 
 
-#shutil.rmtree('xml')
 shutil.rmtree(f'{tmp}')
