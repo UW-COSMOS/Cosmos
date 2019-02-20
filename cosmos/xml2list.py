@@ -117,7 +117,7 @@ def test_merge_below():
         print('Test 3 fails')
 
 
-def feather_list(objs, feather_x=30, feather_y=10, max_x=1920, max_y=1920):
+def feather_list(objs, feather_x=5, feather_y=5, max_x=1920, max_y=1920):
     """
     Feather the input coordinates by some amount
     :param objs: [(t, coords)]

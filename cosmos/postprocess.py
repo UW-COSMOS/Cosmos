@@ -35,12 +35,10 @@ def check_caption_body(soup):
                 clean_line = line.getText().strip().replace('\n', ' ').replace('  ', ' ').lower()
                 matches = re.findall('^(figure|fig)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', clean_line, flags=re.IGNORECASE|re.MULTILINE)
                 if len(matches) >0:
-                    if seg_class == "Body Text":
-                        seg_type["class"] = "Figure Caption"
+                    seg_type["class"] = "Figure Caption"
                 matches = re.findall('^(table|tbl|tab)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', clean_line, flags=re.IGNORECASE|re.MULTILINE)
                 if len(matches) >0:
-                    if seg_class == "Body Text":
-                        seg_type["class"] = "Table Caption"
+                    seg_type["class"] = "Table Caption"
     return soup
 
 def postprocess(html_path, output_path):
