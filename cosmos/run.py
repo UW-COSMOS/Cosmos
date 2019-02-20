@@ -18,8 +18,8 @@ from xml2list import xml2list
 from list2html import list2html
 from tqdm import tqdm
 import shutil
-import preprocess as pp
-import postprocess
+import preprocess.preprocess as pp
+import postprocess.postprocess as post
 from voc_utils import ICDAR_convert
 from connected_components.connected_components import write_proposals
 from proposal_matcher.process import process_doc
@@ -185,7 +185,7 @@ if not os.path.exists(tmp_html):
     os.makedirs(tmp_html)
 
 print("Running postprocessing")
-postprocess.postprocess(html, tmp_html)
+post.postprocess(html, tmp_html)
 
 # replace old html with corrected stuff.
 if not args.debug:
