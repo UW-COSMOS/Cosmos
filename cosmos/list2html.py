@@ -50,7 +50,7 @@ def variable_ocr(im2latex_model, root, sub_img, strip_tags):
             word.text = output
     return root
 
-def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True, tesseract_text=True, include_image=False):
+def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True, tesseract_text=True, include_image=True):
     latex_dir = os.path.join(output_dir, 'latex')
     doc = dominate.document(title=image_name[:-4])
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
@@ -60,6 +60,7 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
         img = Image.open(os.path.join(image_dir, image_name))
         for ind, inp in enumerate(input_list):
             t, coords, score = inp
+            print(coords)
             cropped = img.crop(coords)
             input_id = str(t) + str(ind)
             hocr = pytesseract.image_to_pdf_or_hocr(cropped, extension='hocr').decode('utf-8')
@@ -89,7 +90,7 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
                         txt = pytesseract.image_to_string(cropped, lang='eng')
                     div(txt, cls='rawtext')
 
-            #
+            
             loaded = html.fromstring(d.render())
             tree = etree.fromstring(etree.tostring(loaded))
             tree = variable_ocr(im2latex_model, tree, cropped, ['strong', 'em'])
