@@ -117,7 +117,7 @@ def test_merge_below():
         print('Test 3 fails')
 
 
-def feather_list(objs, feather_x=30, feather_y=10, max_x=1920, max_y=1920):
+def feather_list(objs, feather_x=5, feather_y=5, max_x=1920, max_y=1920):
     """
     Feather the input coordinates by some amount
     :param objs: [(t, coords)]
@@ -211,10 +211,10 @@ def xml2list(fp, tres=0):
     root = tree.getroot()
     objects = root.findall("object")
     lst = [mapper(obj) for obj in objects]
-    #new_lst = [l for l in lst if l[2] >= tres]
-    #feathered_new_lst = feather_list(new_lst)
-    #feathered_new_lst.sort(key=lambda x: x[1])
-    return lst
+    new_lst = [l for l in lst if l[2] >= tres]
+    feathered_new_lst = feather_list(new_lst)
+    feathered_new_lst.sort(key=lambda x: x[1])
+    return feathered_new_lst
 
 
 def run_non_map_suppression(lst):
