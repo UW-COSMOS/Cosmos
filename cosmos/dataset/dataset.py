@@ -1,6 +1,6 @@
 from mrcnn import utils
 import os
-from voc_utils import load_from_file
+from utils.voc_utils import load_from_file
 import numpy as np
 from PIL import Image
 
