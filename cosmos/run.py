@@ -169,8 +169,7 @@ results = [pool.apply_async(match_proposal, args=(x,)) for x in os.listdir(f'{tm
 if not os.path.exists(html):
     os.makedirs(html)
     os.makedirs(os.path.join(html, 'img'))
-if not os.path.exists(os.path.join(html[:-4], 'latex')):
-    os.makedirs(os.path.join(html[:-4], 'latex'))
+    os.makedirs(os.path.join(html, 'latex'))
 print('Begin converting to html')
 results = [pool.apply_async(convert_to_html, args=(x,)) for x in os.listdir(xml)]
 [r.get() for r in results]
