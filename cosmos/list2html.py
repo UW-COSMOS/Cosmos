@@ -98,7 +98,7 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
 
     with open(os.path.join(output_dir, f'{image_name[:-4]}.html'), 'w', encoding='utf-8') as wf:
         wf.write(doc.render())
-    with open(os.path.join(latex_dir, f'{image_name[:-4]}.html'), 'wb') as wf:
+    with open(os.path.join(latex_dir, f'{image_name[:-4]}.html'), 'wb+') as wf:
         wf.write(etree.tostring(root, pretty_print=True))
 
     
