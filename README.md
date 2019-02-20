@@ -1,5 +1,5 @@
-# Mask-RCNN-exp
-Interface for applying Mask-RCNN to document segmentation
+# Cosmos
+Interface for applying Cosmos to document segmentation
 
 # Running the model
 
