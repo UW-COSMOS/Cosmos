@@ -142,6 +142,7 @@ if not os.path.exists(html):
     os.makedirs(html)
     os.makedirs(os.path.join(html, 'img'))
     os.makedirs(os.path.join(html, 'latex'))
+
 print('Begin converting to html')
 results = [pool.apply_async(convert_to_html, args=(x,)) for x in os.listdir(xml)]
 [r.get() for r in results]
