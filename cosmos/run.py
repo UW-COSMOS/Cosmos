@@ -34,6 +34,7 @@ parser.add_argument('-t', "--threads", default=160, type=int, help="Number of th
 parser.add_argument('-n', "--noingest", help="Ingest html documents and create postgres database", action='store_true')
 parser.add_argument('-o', "--output", default='./', help="Output directory")
 parser.add_argument('-p', "--tmp_path", default='tmp', help="Path to directory for temporary files")
+parser.add_argument('--debug', help="Ingest html documents and create postgres database", action='store_true')
 
 args = parser.parse_args()
 
@@ -68,11 +69,14 @@ def preprocess_pngs(img_f):
 
 def convert_to_html(xml_f):
     xpath = os.path.join(xml, xml_f)
+    print('Begin convert')
+    print(xpath)
     l = xml2list(xpath)
+    print(l)
     list2html(l, f'{xml_f[:-4]}.png', img_d, html)
 
 def match_proposal(proposal_f):
-    proposal_f_full = os.path.join(f'{tmp}', 'cc_proposals', proposal_f)
+    proposal_f_full = os.path.join(f'{tmp}', proposal_f)
     xml_f = f'{xml}/{proposal_f[:-4]}' + '.xml'
     process_doc(xml_f, proposal_f_full, xml_f)
 #for pdf_f in os.listdir(args.pdfdir):
@@ -159,7 +163,7 @@ for idx, image_id in enumerate(tqdm(image_ids)):
     zipped = zip(r["class_ids"], r["rois"])
     model2xml(info["str_id"], xml, [1920, 1920], zipped, data_test.class_names, r['scores'])
 
-results = [pool.apply_async(match_proposal, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'cc_proposals'))]
+results = [pool.apply_async(match_proposal, args=(x,)) for x in os.listdir(f'{tmp}') if x[-4:] == '.csv']
 [r.get() for r in results]
 
 if not os.path.exists(html):
@@ -183,8 +187,9 @@ print("Running postprocessing")
 postprocess.postprocess(html, tmp_html)
 
 # replace old html with corrected stuff.
-shutil.rmtree(html)
-shutil.move(tmp_html, html)
+if not args.debug:
+    shutil.rmtree(html)
+    shutil.move(tmp_html, html)
 
 # Parse html files to postgres db
 input_folder = ingestion_settings['input_folder']
@@ -200,11 +205,8 @@ db_connect_str = ingestion_settings['db_connect_str']
 strip_tags = ingestion_settings['strip_tags']
 ignored_file_when_link = ingestion_settings['ignored_file_when_link']
 
-if args.noingest:
-    parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, store_into_postgres=False)
-else:
+if not args.noingest:
     parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, store_into_postgres=True)
 
-
-#shutil.rmtree('xml')
-shutil.rmtree(f'{tmp}')
+if not args.debug:
+    shutil.rmtree(f'{tmp}')
