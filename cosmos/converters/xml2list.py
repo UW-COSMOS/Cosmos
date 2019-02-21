@@ -1,4 +1,5 @@
 """
+from ...converters.xml2list import xml2list
 convert VOC XML to a list
 """
 import numpy as np
@@ -125,13 +126,13 @@ def feather_list(objs, feather_x=5, feather_y=5, max_x=1920, max_y=1920):
     :param feather_y: Feather y by this much
     :param max_x: Document X
     :param max_y: Document Y
-    :return: [(t, feathered_coords)]
+    :return: [(t, feathered_coords, score)]
     """
     new_objs = []
     for obj in objs:
         t, coords, score = obj
-        new_coords = (max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
-                      min(coords[2]+feather_x, max_x), min(coords[3]+feather_y, max_y))
+        new_coords = [max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
+                      min(coords[2]+feather_x, max_x), min(coords[3]+feather_y, max_y)]
         new_objs.append((t, new_coords, score))
     return new_objs
 
@@ -201,7 +202,7 @@ def non_max_suppression_fast(boxes, overlapThresh):
     return final_boxes.tolist()
 
 
-def xml2list(fp, tres=0):
+def xml2list(fp, tres=0, feather=True):
     """
     convert VOC XML to a list
     :param fp: file path to VOC XML file
@@ -212,7 +213,11 @@ def xml2list(fp, tres=0):
     objects = root.findall("object")
     lst = [mapper(obj) for obj in objects]
     new_lst = [l for l in lst if l[2] >= tres]
-    feathered_new_lst = feather_list(new_lst)
+    feathered_new_lst = None
+    if feather:
+        feathered_new_lst = feather_list(new_lst)
+    else:
+        feathered_new_lst = new_lst
     feathered_new_lst.sort(key=lambda x: x[1])
     return feathered_new_lst
 
