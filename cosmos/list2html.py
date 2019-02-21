@@ -33,10 +33,10 @@ def get_coordinate(title):
     }
 
 def variable_ocr(im2latex_model, root, sub_img, strip_tags):
-    hocr = root.xpath(".//*[@class='hocr']")[0]
-    hocr.set('class', 'latex')
-    etree.strip_tags(hocr, *strip_tags)
-    for word in hocr.xpath(".//*[@class='ocrx_word']"):
+    #etree.strip_tags(root, *strip_tags)
+    for word in root.xpath(".//*[@class='ocrx_word']"):
+        if not word.text:
+            continue
         text = word.text.strip()
         text = re.sub('['+string.punctuation+']', '', text)
         text = text.lower()
@@ -51,10 +51,8 @@ def variable_ocr(im2latex_model, root, sub_img, strip_tags):
     return root
 
 def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True, tesseract_text=True, include_image=False):
-    latex_dir = os.path.join(output_dir[:-4], 'latex')
     doc = dominate.document(title=image_name[:-4])
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
-    root = etree.Element("body")
     im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
     with doc:
         img = Image.open(os.path.join(image_dir, image_name))
@@ -81,6 +79,10 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
                 if b_text and tesseract_hocr:
                     # We do a quick loading and deloading to properly convert encodings
                     div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                    loaded = html.fromstring(b_text)                    
+                    tree = etree.fromstring(etree.tostring(loaded))
+                    tree = variable_ocr(im2latex_model, tree, cropped, [])
+                    div(raw(etree.tostring(tree).decode("utf-8")), cls='hocr_img2latex', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
 
                 if tesseract_text:
                     if t == 'Equation':
@@ -89,16 +91,8 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
                         txt = pytesseract.image_to_string(cropped, lang='eng')
                     div(txt, cls='rawtext')
 
-            #
-            loaded = html.fromstring(d.render())
-            tree = etree.fromstring(etree.tostring(loaded))
-            tree = variable_ocr(im2latex_model, tree, cropped, ['strong', 'em'])
-            root.append(tree)
-
     with open(os.path.join(output_dir, f'{image_name[:-4]}.html'), 'w', encoding='utf-8') as wf:
         wf.write(doc.render())
-    with open(os.path.join(latex_dir, f'{image_name[:-4]}.html'), 'wb+') as wf:
-        wf.write(etree.tostring(root, pretty_print=True))
 
     
     
