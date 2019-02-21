@@ -1,0 +1,11 @@
+language: python
+
+env:
+    - docker
+
+script:
+    - cd cosmos
+    - ls
+    - docker-compose -f "docker-compose-test.yml" build
+    - docker-compose -f "docker-compose-test.yml" run test
+

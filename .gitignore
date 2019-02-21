@@ -15,3 +15,4 @@ __pycache__/
 html/
 *.swp
 *.DS_Store
+postgres-data/
