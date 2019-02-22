@@ -206,6 +206,8 @@ def xml2list(fp, tres=0, feather=True):
     """
     convert VOC XML to a list
     :param fp: file path to VOC XML file
+    :param tres: score treshold to filter on
+    :param feather: add a bit of feathering (improves OCR quality downstream)
     :return: [(type,(x1, y1, x2, y2),score)]
     """
     tree = ET.parse(fp)
