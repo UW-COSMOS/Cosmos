@@ -8,6 +8,7 @@ fonduer
 lxml
 loguru
 pytest
+click
 
 # {{ for im2latex
 

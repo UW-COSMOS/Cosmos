@@ -2,6 +2,7 @@
 Connected components algorithm for region proposal
 """
 
+import click
 import multiprocessing as mp
 import torch
 from PIL import Image, ImageFilter
@@ -267,9 +268,7 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
         for ind2, bc in enumerate(coords_list):
             tl_y1, tl_x1, br_y1, br_x1 = bc
             adjusted = (left_shave + tl_x1, tl_y1, left_shave + br_x1, br_y1)
-            print(adjusted)
             block_coords.add(adjusted)
-    print('----')
 
     block_coords = list(block_coords)
     img_p = os.path.basename(img_p)
@@ -278,16 +277,12 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
     with open(write_p, 'w', encoding='utf-8') as wp:
         for coord in block_coords:
             wp.write(f'{coord[0]},{coord[1]},{coord[2]},{coord[3]}\n')
-    print('CC Proposals img shape')
-    print(img_np_orig.shape)
-    print('-----')
     draw_cc(img_np_orig, block_coords, write_img_p=write_img_p)
     return
 
 
 def draw_grid(img_np, block_coords):
     for coords in block_coords:
-        print(coords)
         img_np[coords[0]:coords[2], coords[1]-1:coords[1]+1, :] = 50
         img_np[coords[0]:coords[2], coords[3]-1:coords[3]+1, :] = 50
         img_np[coords[0]-1:coords[0]+1, coords[1]:coords[3], :] = 50
@@ -296,6 +291,12 @@ def draw_grid(img_np, block_coords):
 
 
 def draw_cc(img_np, cc_list, write_img_p=None):
+    '''
+    convenience function to visualize output proposals
+    :param img_np: Input np ndarray to write onto. Shape should by N x M x K, where N and M are less than max coords passed in and K is arbitrary
+    :param cc_list: list of coordinates to draw boxes
+    :param write_img_p: file path to save to
+    '''
     for coords in cc_list:
         img_np[coords[1]:coords[3], coords[0]-2:coords[0]+2, :] = 50
         img_np[coords[1]:coords[3], coords[2]-2:coords[2]+2, :] = 50
@@ -344,10 +345,17 @@ def divide_row_into_columns(row, n_columns):
     return splits, coords, col_idx
 
 
-if __name__ == '__main__':
+@click.command()
+@click.argument('img_dir')
+@click.argument('output_dir')
+def run_write_proposals(img_dir, output_dir):
     pool = mp.Pool(processes=240)
-    results = [pool.apply_async(write_proposals, args=(os.path.join('img',x),)) for x in os.listdir('img')]
+    results = [pool.apply_async(write_proposals, (os.path.join(img_dir,x),), dict(output_dir=output_dir)) for x in os.listdir(img_dir)]
     [r.get() for r in results]
+
+
+if __name__ == '__main__':
+    run_write_proposals()
 
 
 
