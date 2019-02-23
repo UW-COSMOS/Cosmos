@@ -16,7 +16,6 @@ import numpy as np
 @click.argument('output_dir')
 def visualize_xml(xml_dir, img_dir, output_dir):
     for xml in glob.glob(os.path.join(xml_dir, '*.xml')):
-        print(xml)
         bname = os.path.basename(xml)[:-4]
         png_name = os.path.join(img_dir, bname + '.png')
         img = Image.open(png_name)
