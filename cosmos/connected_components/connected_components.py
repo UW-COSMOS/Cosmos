@@ -179,7 +179,33 @@ def balance_margins(bmap, img):
     return bmap, img, l_diff
 
 
-def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=10):
+def get_blank_rows(inp_np, blank_row_h):
+    blank_row = np.zeros((blank_row_h, inp_np.shape[1]))
+    curr_top = 0
+    curr_bot = blank_row_h
+    white_rows = []
+    while curr_bot < inp_np.shape[0]-1:
+        sub_img = inp_np[curr_top:curr_bot, :]
+        if (sub_img == blank_row).all():
+            if len(white_rows) == 0:
+                white_rows.append(curr_bot)
+                curr_top += 1
+                curr_bot = curr_top + blank_row_h
+                continue
+            last_white_bot = white_rows[len(white_rows)-1]
+            if last_white_bot >= curr_top:
+                white_rows[len(white_rows)-1] = curr_bot
+            else:
+                white_rows.append(curr_bot)
+        elif curr_top == 0:
+            white_rows.append(0)
+        elif curr_bot == inp_np.shape[0]-2:
+            white_rows.append(inp_np.shape[0]-1)
+        curr_top += 1
+        curr_bot = curr_top + blank_row_h
+    return white_rows
+
+def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=10, filter_thres=5):
     img = Image.open(img_p)
     fn = lambda x : 0 if x > white_thresh else 255
     img_np = np.array(img.convert('RGB'))
@@ -190,21 +216,7 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
     num_sections = int(img_height / blank_row_height)
     blank_row = np.zeros((blank_row_height, bmap_np.shape[1]))
     curr_top = 0
-    white_rows = []
-    for section in range(num_sections):
-        curr_bot = curr_top + blank_row_height
-        sub_img = bmap_np[curr_top:curr_bot, :]
-        if (sub_img == blank_row).all():
-            if len(white_rows) == 0:
-                white_rows.append(curr_bot)
-                curr_top += blank_row_height
-                continue
-            last_white_bot = white_rows[len(white_rows)-1]
-            if last_white_bot == curr_top:
-                white_rows[len(white_rows)-1] = curr_bot
-            else:
-                white_rows.append(curr_bot)
-        curr_top += blank_row_height
+    white_rows = get_blank_rows(bmap_np, blank_row_height)
     rows = []
     for i in range(len(white_rows)-1):
         curr = white_rows[i]
@@ -219,28 +231,8 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
         for ind, b in enumerate(blocks):
             c = coords[ind]
             column_index = col_idx[ind]
-            num_sections = int(b.shape[0] / blank_row_height)
-            blank_row = np.zeros((blank_row_height, b.shape[1]))
-            curr_top = 0
-            curr_bot = blank_row_height
-            white_rows = []
-            while curr_bot < b.shape[0]-1:
-                sub_img = b[curr_top:curr_bot, :]
-                if (sub_img == blank_row).all():
-                    if len(white_rows) == 0:
-                        white_rows.append(curr_bot)
-                        curr_top += 1
-                        curr_bot = curr_top + blank_row_height
-                        continue
-                    last_white_bot = white_rows[len(white_rows)-1]
-                    if last_white_bot == curr_bot-1:
-                        white_rows[len(white_rows)-1] = curr_bot
-                    else:
-                        white_rows.append(curr_bot)
-                elif curr_top == 0:
-                    white_rows.append(0)
-                curr_top += 1
-                curr_bot = curr_top + blank_row_height
+
+            white_rows = get_blank_rows(b, blank_row_height)
             rows2 = []
             for i in range(len(white_rows)-1):
                 curr = white_rows[i]
@@ -248,6 +240,8 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
                 rows2.append((b[curr:nxt, :], curr, nxt))
             for r, c2, n in rows2:
                 components = get_components(r, numpy=True)
+                if len(components) == 0:
+                    continue
                 x1 = min(components, key=lambda x: x[1])
                 x1 = x1[1]
                 y1 = min(components, key=lambda x: x[0])
@@ -267,6 +261,11 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
         coords_list = block_coords2[key]
         for ind2, bc in enumerate(coords_list):
             tl_y1, tl_x1, br_y1, br_x1 = bc
+            # Filter objs that are too small
+            height = br_y1 - tl_y1
+            width = br_x1 - tl_x1
+            if height <= filter_thres or width <= filter_thres:
+                continue
             adjusted = (left_shave + tl_x1, tl_y1, left_shave + br_x1, br_y1)
             block_coords.add(adjusted)
 
