@@ -19,8 +19,7 @@ from collections import namedtuple
 from uuid import uuid4
 from tqdm import tqdm
 from utils.bbox import BBoxes
-normalizer = NormalizeWrapper(mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225])
+normalizer = NormalizeWrapper()
 
 tens = ToTensor()
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
