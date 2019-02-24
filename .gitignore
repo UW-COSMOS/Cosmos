@@ -7,7 +7,6 @@ tmp/
 .idea/
 !exp/data/README.md
 !exp/weights/README.md
-*.zip
 *.png
 .ipynb_checkpoints/
 pdfs/
