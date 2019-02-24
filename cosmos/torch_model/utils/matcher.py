@@ -3,7 +3,7 @@ import torch
 NEGATIVE = -1
 NEITHER = -2
 
-def match(regions, gt_boxes, device=torch.device("cpu"), silence=False):
+def match(regions, gt_boxes, device=torch.device("cpu")):
     """
     Get positive region indexes for each box
     :param regions: predicted regions [KA x 4]
@@ -26,8 +26,7 @@ def match(regions, gt_boxes, device=torch.device("cpu"), silence=False):
     # index back to targets
     best_score_pred, match_idxs_pred = torch.max(overlaps, dim=1)
     mask = best_score_pred == 0
-    if mask.sum() > 0 and not silence:
-        raise ValueError()
+    match_idxs_pred[mask] = -1
     assert match_idxs_pred.shape[0] == regions.shape[0]
 
     return match_idxs_pred
