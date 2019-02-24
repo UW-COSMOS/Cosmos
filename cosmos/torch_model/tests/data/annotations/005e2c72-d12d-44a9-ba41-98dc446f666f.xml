@@ -1,0 +1,62 @@
+<annotation>
+  <folder>COSMOS_annotated</folder>
+  <filename>005e2c72-d12d-44a9-ba41-98dc446f666f.png</filename>
+  <size>
+    <width>1172</width>
+    <height>1920</height>
+  </size>
+  <object>
+    <name>Page Header</name>
+    <bndbox>
+      <xmin>62</xmin>
+      <ymin>148</ymin>
+      <xmax>1039</xmax>
+      <ymax>190</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>66</xmin>
+      <ymin>214</ymin>
+      <xmax>1039</xmax>
+      <ymax>693</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Section Header</name>
+    <bndbox>
+      <xmin>66</xmin>
+      <ymin>751</ymin>
+      <xmax>537</xmax>
+      <ymax>810</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Section Header</name>
+    <bndbox>
+      <xmin>76</xmin>
+      <ymin>1029</ymin>
+      <xmax>439</xmax>
+      <ymax>1082</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>71</xmin>
+      <ymin>820</ymin>
+      <xmax>1045</xmax>
+      <ymax>975</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>84</xmin>
+      <ymin>1085</ymin>
+      <xmax>1046</xmax>
+      <ymax>1676</ymax>
+    </bndbox>
+  </object>
+</annotation>
