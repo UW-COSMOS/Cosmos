@@ -1,0 +1,107 @@
+<annotation>
+  <folder>COSMOS_annotated</folder>
+  <filename>0071baad-a9d9-460e-a49c-8cb503c5ec50.png</filename>
+  <size>
+    <width>1440</width>
+    <height>1920</height>
+  </size>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>740</xmin>
+      <ymin>153</ymin>
+      <xmax>1376</xmax>
+      <ymax>239</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>754</xmin>
+      <ymin>284</ymin>
+      <xmax>1365</xmax>
+      <ymax>935</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>751</xmin>
+      <ymin>1043</ymin>
+      <xmax>1364</xmax>
+      <ymax>1801</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>101</xmin>
+      <ymin>1521</ymin>
+      <xmax>718</xmax>
+      <ymax>1803</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>96</xmin>
+      <ymin>155</ymin>
+      <xmax>728</xmax>
+      <ymax>1423</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Page Header</name>
+    <bndbox>
+      <xmin>501</xmin>
+      <ymin>108</ymin>
+      <xmax>1373</xmax>
+      <ymax>133</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Section Header</name>
+    <bndbox>
+      <xmin>751</xmin>
+      <ymin>256</ymin>
+      <xmax>934</xmax>
+      <ymax>279</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Section Header</name>
+    <bndbox>
+      <xmin>751</xmin>
+      <ymin>964</ymin>
+      <xmax>1153</xmax>
+      <ymax>990</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Section Header</name>
+    <bndbox>
+      <xmin>750</xmin>
+      <ymin>1018</ymin>
+      <xmax>908</xmax>
+      <ymax>1039</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Section Header</name>
+    <bndbox>
+      <xmin>99</xmin>
+      <ymin>1441</ymin>
+      <xmax>549</xmax>
+      <ymax>1471</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Section Header</name>
+    <bndbox>
+      <xmin>103</xmin>
+      <ymin>1493</ymin>
+      <xmax>260</xmax>
+      <ymax>1521</ymax>
+    </bndbox>
+  </object>
+</annotation>

@@ -1,48 +1,54 @@
 from torch.utils.data import DataLoader
 import torch
-from functools import partial
+from pascal_voc_writer import Writer
+from os.path import join, isdir
+from os import mkdir
 
-def unpack_cls(cls_dict, gt_list):
-    arr = map(lambda x: cls_dict[x], gt_list)
-    return torch.tensor(list(arr))
-
-
-def collate(item, cls_dict):
-    """
-    collation function for GTDataset class
-    :param batch:
-    :return:
-    """
-    return item[0][0]
 
 class InferenceHelper:
     def __init__(self, model, dataset, device):
         """
         initialize an inference object
-        :param model: a MMFasterRCNN model
-        :param dataset: a dataset with or without ground truth
+        :param model: a MMFasterRCNN model, expected to have weights loaded
+        :param dataset: an inference_loader dataset
         """
         self.model = model
         self.dataset = dataset
         self.device = device
-        self.cls = dict([(val, idx) for (idx, val) in enumerate(model.cls_names)])
+        self.cls = [val for val in model.cls_names]
 
-    def get_predictions(self):
+    def run(self,out):
         """
-        get predictions for each img in the dataset
+        run inference
+        :param out: the directory to output xmls
+        :return:
+
+        """
+        if isdir(out):
+            raise ValueError(f"Is a directory {out}")
+        mkdir(out)
+        loader = DataLoader(self.dataset, batch_size=1, collate_fn=self.dataset.collate, )
+        for doc in loader:
+            windows, proposals, identifier = doc
+            preds = self._get_predictions(windows)
+            writer = Writer("", 1000,1000)
+            for i in range(len(preds)):
+                pred = preds[i]
+                x0, y0, x1, y1 = proposals[i, :].tolist()
+                writer.addObject(pred, x0, y0, x1, y1)
+            writer.save(join(out, f"{identifier}.xml"))
+    def _get_predictions(self, windows):
+        """
+        get predictions for each img in a document
         :return: [[cls, (x1, y1, x2,y2)]]
         """
         preds = []
-        loader = DataLoader(self.dataset, batch_size=1, collate_fn=partial(collate, cls_dict=self.cls))
-        for item in loader:
-            ex = item.unsqueeze(0).float()
-            rpn_cls_scores, rpn_bbox_deltas, rois, cls_preds, cls_scores, bbox_deltas = self.model(ex, self.device)
-            #filter background predictions
-            probs, idxs = torch.max(cls_preds, dim=2)
-            mask = probs > 0.5
-            npred = mask.nonzero().sum()
-            print(f"made {npred} non background predictions")
-            print(f"rois: {rois.shape}")
+        rois, cls_scores = self.model(windows, self.device)
+        # filter background predictions
+        probs, pred_idxs = torch.max(cls_scores, dim=1)
+        for i in pred_idxs:
+            preds.append(self.cls[i])
+        return preds.tolist()
 
-            #mask = torch.argmax(cls_preds)
+
 
