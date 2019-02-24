@@ -48,7 +48,7 @@ class InferenceHelper:
         probs, pred_idxs = torch.max(cls_scores, dim=1)
         for i in pred_idxs:
             preds.append(self.cls[i])
-        return preds.tolist()
+        return preds
 
 
 
