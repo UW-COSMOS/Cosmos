@@ -107,13 +107,14 @@ class XMLLoader(Dataset):
     """
 
 
-    def __init__(self, img_dir,xml_dir=None, proposal_dir=None,warped_size=300, img_type="jpg", host="redis"):
+    def __init__(self, img_dir,xml_dir=None, proposal_dir=None,warped_size=300, img_type="jpg", host="redis",debug=False):
         """
         Initialize a XML loader object
         :param xml_dir: directory to get XML from
         :param img_dir: directory to load PNGs from
         :param img_type: the image format to load in
         """
+        self.debug = debug
         self.xml_dir = xml_dir
         self.img_dir = img_dir
         self.proposal_dir = proposal_dir
