@@ -347,8 +347,9 @@ def divide_row_into_columns(row, n_columns):
 @click.command()
 @click.argument('img_dir')
 @click.argument('output_dir')
-def run_write_proposals(img_dir, output_dir):
-    pool = mp.Pool(processes=240)
+@click.option("--n", help="number of pooled processes", default=240)
+def run_write_proposals(img_dir, output_dir, procs):
+    pool = mp.Pool(processes=procs)
     results = [pool.apply_async(write_proposals, (os.path.join(img_dir,x),), dict(output_dir=output_dir)) for x in os.listdir(img_dir)]
     [r.get() for r in results]
 
