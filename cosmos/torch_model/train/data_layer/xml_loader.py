@@ -179,8 +179,10 @@ class XMLLoader(Dataset):
 
         matches = match(proposals,gt_boxes)
         #filter 0 overlap examples
-        mask = matches == -1
-        proposals = proposals[mask, :]
+        mask = matches != -1
+        idxs = mask.nonzero()
+        idxs = idxs.squeeze()
+        proposals = proposals[idxs, :].reshape(-1,4)
         matches = list(filter(lambda x: x!= -1, matches))
         labels = [gt_cls[match] for match in matches]
         windows = []
