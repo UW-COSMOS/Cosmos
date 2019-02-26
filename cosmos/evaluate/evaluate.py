@@ -1,5 +1,5 @@
 import os
-from model.utils.xml2list import xml2list
+from converters.xml2list import xml2list
 from PIL import Image, ImageDraw
 import numpy as np
 from tqdm import tqdm
@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from utils.voc_utils import similar_class_sets, ICDAR_convert
 plt.style.use('ggplot')
 import pandas as pd
+import click
+import ipdb
 
 
 def rect(d, im, color, points):
@@ -72,7 +74,7 @@ def calculate_iou(box1, box2, contains=False):
 def match_lists(predict_list, target_list):
     list_map = {}
     for prediction in predict_list:
-        p_cls, p_bb = prediction
+        p_cls, p_bb, p_score= prediction
         p_score = 0.1
         # make a tuple because i need to hash predicitons
         p_bb = tuple(p_bb)
@@ -99,7 +101,7 @@ color_classes =  {"Section Header":"#800000", "Body Text":"#e6194B",
                   "Table Note":"#f032e6", "Abstract":"#a9a9a9", "Other":"#469990", 
                   "Equation label":"#aaffc3", "Reference text":"#9A6324", "Figure Note":"#ffd8b1"}
 
-def run_evaluate(predict_dir, target_dir, img_dir=None, simi=False, thres=0):
+def run_evaluate(predict_dir, target_dir, output_dir, img_dir=None, simi=False, thres=0):
     fp_list = []
     classification_p_list = []
     total_intersection = 0
@@ -114,16 +116,16 @@ def run_evaluate(predict_dir, target_dir, img_dir=None, simi=False, thres=0):
             img_p = os.path.join(img_dir, predict_f[:-4] + '.png')
             img = Image.open(img_p)
             for predict in predict_list:
-                p_cls, p_bb = predict
+                p_cls, p_bb, p_score = predict
                 p_bb = [x - 5 for x in p_bb]
                 d = ImageDraw.Draw(img)
                 d.rectangle(p_bb, outline=color_classes[p_cls])
-                img.save(f'outputs/{predict_f[:-4] + ".png"}')
+                img.save(os.path.join(output_dir, f'{predict_f[:-4] + ".png"}'))
 
         list_map = match_lists(predict_list, target_list)
         tbb_map = {}
         for predict in predict_list:
-            p_cls, p_bb = predict
+            p_cls, p_bb, p_score = predict
             p_score = 0.1
             p_bb = tuple(p_bb)
             matched_target = list_map[(p_cls, p_bb, p_score)]
@@ -131,8 +133,9 @@ def run_evaluate(predict_dir, target_dir, img_dir=None, simi=False, thres=0):
                 fp_list.append((predict, 'background'))
                 continue
             t, iou = matched_target
-            t_cls, t_bb = t
-            t_cls = ICDAR_convert[t_cls]
+            t_cls, t_bb, t_score = t
+            t_bb = tuple(t_bb)
+            #t_cls = ICDAR_convert[t_cls]
             if t_bb in tbb_map:
                 tbb_map[t_bb].append(p_bb)
             else:
@@ -220,7 +223,9 @@ def run_evaluate(predict_dir, target_dir, img_dir=None, simi=False, thres=0):
     all_tp = 0
     all_denom = 0
     class_recalls = {}
+    print('DEBUG')
     for p_cls in class_counts:
+        print(class_counts)
         tp = class_counts[p_cls][p_cls] if p_cls in class_counts[p_cls] else 0
         fn = 0
         for p2_cls in class_counts:
@@ -254,6 +259,10 @@ def run_evaluate(predict_dir, target_dir, img_dir=None, simi=False, thres=0):
     for cl in class_recalls:
         rec = class_recalls[cl]
         prec = class_precisions[cl]
+        if type(rec) == str:
+            print(f'Class: {cl}')
+            print(rec)
+            continue
         if rec + prec == 0:
             class_f1[cl] = 0
             continue
@@ -317,10 +326,11 @@ def run_evaluate(predict_dir, target_dir, img_dir=None, simi=False, thres=0):
             
 
     uz = list(zip(*p_r_curve))
-    make_p_r_curve(uz[0], uz[1])
+    make_p_r_curve(uz[0], uz[1], output_dir)
     normalized_tp = [x / tp_num for x in roc_tp]
-    normalized_fp = [x / fp_num for x in roc_fp]
-    make_roc_chart(normalized_tp, normalized_fp)
+    if fp_num > 0:
+        normalized_fp = [x / fp_num for x in roc_fp]
+        make_roc_chart(normalized_tp, normalized_fp, output_dir)
 
     filtered_fp_list = [fp for fp in fp_list if fp[1] != 'correct']
     print(f'True Positives: {tp_num}')
@@ -337,7 +347,7 @@ def calculate_statistics_map(fp_list):
     stats_map = {'all': statistics.copy()}
     for fp in fp_list:
         p, fp_type = fp
-        p_cls, p_bb = p
+        p_cls, p_bb, p_score = p
         if p_cls not in stats_map:
             stats_map[p_cls] = statistics.copy()
         stats_map['all'][fp_type] += 1
@@ -345,26 +355,26 @@ def calculate_statistics_map(fp_list):
     return stats_map
 
 
-def make_p_r_curve(precisions_list, recalls_list):
+def make_p_r_curve(precisions_list, recalls_list, output_dir):
     fig1, ax1 = plt.subplots()
     ax1.plot(recalls_list, precisions_list)
     ax1.axis([0, 1, 0, 1])
     ax1.set_title('Precision-Recall Curve')
     ax1.set_xlabel('Recall', fontsize='medium')
     ax1.set_ylabel('Precision', fontsize='medium')
-    plt.savefig('charts/prcurve.png')
+    plt.savefig(os.path.join(output_dir, 'prcurve.png'))
 
 
-def make_roc_chart(tp_rate, fp_rate):
+def make_roc_chart(tp_rate, fp_rate, output_dir):
     fig1, ax1 = plt.subplots()
     ax1.plot(fp_rate, tp_rate)
     ax1.axis([0, 1, 0, 1])
     ax1.set_title('ROC Curve')
-    plt.savefig('charts/roc_curve.png')
+    plt.savefig(os.path.join(output_dir, 'roc_curve.png'))
 
 
 
-def make_pie_charts(stats_map):
+def make_pie_charts(stats_map, output_dir):
     chart_num = 0
     for stat_key in stats_map:
         stats = stats_map[stat_key]
@@ -373,14 +383,22 @@ def make_pie_charts(stats_map):
         ax1.set_title(f'False positive distribution: {stat_key}')
         ax1.pie(stats.values(), labels=fp_types, autopct='%1.1f%%')
         ax1.axis('equal')
-        plt.savefig(f'charts/pie{chart_num}.png')
+        plt.savefig(os.path.join(output_dir, f'pie{chart_num}.png'))
         chart_num += 1
+
+@click.command()
+@click.argument('xml_dir')
+@click.argument('annotations_dir')
+@click.argument('img_dir')
+@click.argument('output_dir')
+def convert(xml_dir, annotations_dir, img_dir, output_dir):
+    fp_list = run_evaluate(xml_dir, annotations_dir, output_dir, img_dir=img_dir)
+    smap = calculate_statistics_map(fp_list)
+    make_pie_charts(smap, output_dir)
 
 
 if __name__ == '__main__':
-    fp_list = run_evaluate('xml', 'annotations', img_dir='images')
-    smap = calculate_statistics_map(fp_list)
-    make_pie_charts(smap)
+    convert()
     
 
 
