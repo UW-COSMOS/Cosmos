@@ -4,7 +4,6 @@ from cosmos.torch_model.model.utils.config_manager import ConfigManager
 from cosmos.torch_model.inference.inference import InferenceHelper
 from cosmos.torch_model.inference.data_layer.inference_loader import InferenceLoader
 import torch
-
 class TestInference(unittest.TestCase):
     def setUp(self):
         self.img_dir = "../data/images"

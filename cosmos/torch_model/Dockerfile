@@ -80,7 +80,7 @@ USER root
 
 RUN apt-get update && apt-get -y install gcc g++ vim imagemagick tesseract-ocr libtesseract-dev
 
-COPY . .
+COPY ./requirements.txt .
 
 USER user
 
@@ -88,5 +88,4 @@ RUN pip install -r requirements.txt --user
 
 USER root
 
-RUN python3 setup.py build develop
 
