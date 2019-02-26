@@ -10,7 +10,7 @@ class TestXMLLoader(unittest.TestCase):
         self.xml_dir = join(data_dir, "annotations")
         self.img_dir = join(data_dir, "images")
         self.proposal_dir = join(data_dir, "proposals")
-        self.img_type = "jpg"
+        self.img_type = "png"
         self.host="localhost"
         self.warped_size = 300
 
