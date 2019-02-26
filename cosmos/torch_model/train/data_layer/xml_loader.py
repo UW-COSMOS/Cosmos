@@ -107,7 +107,7 @@ class XMLLoader(Dataset):
     """
 
 
-    def __init__(self, img_dir,xml_dir=None, proposal_dir=None,warped_size=300, img_type="jpg", host="redis",debug=False):
+    def __init__(self, img_dir,xml_dir=None, proposal_dir=None,warped_size=300, img_type="jpg", host="redis",debug=True):
         """
         Initialize a XML loader object
         :param xml_dir: directory to get XML from
@@ -174,23 +174,33 @@ class XMLLoader(Dataset):
                 conn.set(uuid, obj)
 
     def _unpack_page(self, page):
+
         img, gt, proposals, identifier = page
         gt_boxes, gt_cls = gt
-
         matches = match(proposals,gt_boxes)
         #filter 0 overlap examples
         mask = matches != -1
+<<<<<<< HEAD
         idxs = mask.nonzero()
         idxs = idxs.squeeze()
         proposals = proposals[idxs, :].reshape(-1,4)
         matches = list(filter(lambda x: x!= -1, matches))
+=======
+        proposals.change_format("xyxy")
+        proposals = proposals[mask, :]
+        matches = list(filter(lambda x: x != -1, matches))
+>>>>>>> eea1af159ffe4e485e71a184af2fab0c29513601
         labels = [gt_cls[match] for match in matches]
         windows = []
         proposals_lst = proposals.tolist()
+
         self.nproposals += len(proposals_lst)
         gt_box_lst = gt_boxes.tolist()
         self.ngt_boxes += len(gt_box_lst)
-        for proposal in proposals_lst:
+        print(img.size)
+        print(identifier)
+        for idx, proposal in enumerate(proposals_lst):
+            proposal = [int(c) for c in proposal]
             img_sub = img.crop(proposal)
             img_sub = img_sub.resize((self.warped_size, self.warped_size))
             img_data = tens(img_sub)
