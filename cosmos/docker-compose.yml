@@ -19,3 +19,11 @@ services:
             - ./postgres-data:/var/lib/postgresql/data
         ports:
             - 54321:5432
+    redis:
+      image: "redis:alpine"
+      volumes:
+        - ./redis_data:/data
+      restart: always
+      ports:
+        - "6379:6379"
+

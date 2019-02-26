@@ -1,4 +1,4 @@
-from train.data_layer.xml_loader import XMLLoader
+from cosmos.torch_model.train.data_layer.xml_loader import XMLLoader
 import unittest
 from os.path import join
 import torch
