@@ -50,7 +50,7 @@ def variable_ocr(im2latex_model, root, sub_img, strip_tags):
             word.text = output
     return root
 
-def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True, tesseract_text=True, include_image=True):
+def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, tesseract_hocr=True, tesseract_text=True, include_image=True):
     doc = dominate.document(title=image_name[:-4])
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
     im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
@@ -58,7 +58,6 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
         img = Image.open(os.path.join(image_dir, image_name))
         for ind, inp in enumerate(input_list):
             t, coords, score = inp
-            print(coords)
             cropped = img.crop(coords)
             input_id = str(t) + str(ind)
             hocr = pytesseract.image_to_pdf_or_hocr(cropped, extension='hocr').decode('utf-8')
@@ -67,6 +66,9 @@ def list2html(input_list, image_name, image_dir, output_dir, tesseract_hocr=True
             b_text = body.group(1)
             d = div(id=input_id, cls=str(t))
             with d:
+                orig_image = Image.open(os.path.join(original_img_dir, image_name))
+                width, height = orig_image.size
+                div('', cls='coordinates', data_height=f'{height}', data_width=f'{width}')
                 if include_image:
                     if not os.path.exists(inter_path):
                         os.makedirs(inter_path)

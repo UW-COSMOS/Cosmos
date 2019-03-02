@@ -1,8 +1,5 @@
 version: "2.3"
 services:
-    test:
-        build: .
-        command: ["pytest"]
     cosmos:
         build: .
         ipc: host
