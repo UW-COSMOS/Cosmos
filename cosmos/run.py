@@ -71,7 +71,7 @@ def preprocess_pngs(img_f):
 def convert_to_html(xml_f):
     xpath = os.path.join(xml, xml_f)
     l = xml2list(xpath)
-    list2html(l, f'{xml_f[:-4]}.png', img_d, html)
+    list2html(l, f'{xml_f[:-4]}.png', img_d, html, os.path.join(f'{tmp}', 'images'))
 
 def match_proposal(proposal_f):
     proposal_f_full = os.path.join(f'{tmp}', proposal_f)
