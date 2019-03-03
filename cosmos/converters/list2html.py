@@ -13,8 +13,10 @@ from lxml import html, etree
 from dominate.util import raw
 from latex_ocr.img2latex import img2latex_api, get_im2latex_model
 from config import IM2LATEX_WEIGHT
+from .pdf_extractor import parse_pdf
 
 BBOX_COORDINATES_PATTERN = re.compile("bbox\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)")
+FILE_NAME_PATTERN = re.compile("(.*\.pdf)_([0-9]+)\.png")
 
 with open('words_alpha.txt') as word_file:
     valid_words = set(word_file.read().split())
@@ -50,8 +52,56 @@ def variable_ocr(im2latex_model, root, sub_img, strip_tags):
             word.text = output
     return root
 
+def coordinate_convert(x1,y1,x2,y2,max_of_x,max_of_y):
+    x_range = 1920*max_of_x/max_of_y
+    xmin = x1/x_range*max_of_x
+    xmax = x2/x_range*max_of_x
+    ymin = (1920-y2)*max_of_y/1920
+    ymax = (1920-y1)*max_of_y/1920
+    return (xmin,ymin,xmax,ymax)
+
+def unicode_representation(pdf, page, root, base, t):
+    df, limit = parse_pdf(pdf)
+    MAX_OF_X = limit[2]
+    MAX_OF_Y = limit[3]
+    df_page = df[df['page'] == page-1] 
+    for word in root.xpath(".//*[@class='ocrx_word']"):
+        coord = get_coordinate(word.get('title'))
+        coordinate = coordinate_convert(coord['xmin']+base[0],coord['ymin']+base[1],coord['xmax']+base[0],coord['ymax']+base[1],MAX_OF_X,MAX_OF_Y)
+        print(coordinate)
+        paddy = (coordinate[3]-coordinate[1])*0.3
+        index = ~( (df_page['x1'] >= coordinate[2]) | (df_page['x2'] <= coordinate[0]) | \
+                (df_page['y1'] >= coordinate[3]-paddy) | (df_page['y2'] <= coordinate[1]+paddy) )
+        df_within = df_page[index]
+        print(df_within.shape)
+        text = ''
+        for idx, row in df_within.iterrows():
+            text += row['text']
+            text += ' '
+        word.text = text
+    if t == 'Equation':
+        coordinate = coordinate_convert(base[0],base[1],base[2],base[3],MAX_OF_X,MAX_OF_Y)
+        paddy = (coordinate[3]-coordinate[1])*0.0
+        index = ~( (df_page['x1'] >= coordinate[2]) | (df_page['x2'] <= coordinate[0]) | \
+                (df_page['y1'] >= coordinate[3]-paddy) | (df_page['y2'] <= coordinate[1]+paddy) )
+        df_within = df_page[index]
+        text = ''
+        for idx, row in df_within.iterrows():
+            text += row['text']
+            text += ' '
+    else:
+        text = ' '
+    return root,text
+        
+
 def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, tesseract_hocr=True, tesseract_text=True, include_image=True):
     doc = dominate.document(title=image_name[:-4])
+    print('image_name')
+    print(image_name)
+    match = FILE_NAME_PATTERN.search(image_name)
+    pdf_name = '/input/'+match.group(1)
+    page_num = int(match.group(2))
+    
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
     im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
     with doc:
@@ -84,8 +134,12 @@ def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, t
                     div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
                     loaded = html.fromstring(b_text)                    
                     tree = etree.fromstring(etree.tostring(loaded))
-                    tree = variable_ocr(im2latex_model, tree, cropped, [])
-                    div(raw(etree.tostring(tree).decode("utf-8")), cls='hocr_img2latex', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                    latex_tree = variable_ocr(im2latex_model, tree, cropped, [])
+                    div(raw(etree.tostring(latex_tree).decode("utf-8")), cls='hocr_img2latex', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                    tree = etree.fromstring(etree.tostring(loaded))
+                    unicode_tree,text = unicode_representation(pdf_name, page_num, tree, coords, t)
+                    div(raw(etree.tostring(unicode_tree).decode("utf-8")), cls='unicode', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                    div(text, cls='equation_unicode')  
 
                 if tesseract_text:
                     if t == 'Equation':
@@ -93,6 +147,7 @@ def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, t
                     else:
                         txt = pytesseract.image_to_string(cropped, lang='eng')
                     div(txt, cls='rawtext')
+
 
     with open(os.path.join(output_dir, f'{image_name[:-4]}.html'), 'w', encoding='utf-8') as wf:
         wf.write(doc.render())
