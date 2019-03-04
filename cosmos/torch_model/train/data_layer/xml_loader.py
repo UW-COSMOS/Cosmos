@@ -180,25 +180,17 @@ class XMLLoader(Dataset):
         matches = match(proposals,gt_boxes)
         #filter 0 overlap examples
         mask = matches != -1
-<<<<<<< HEAD
         idxs = mask.nonzero()
         idxs = idxs.squeeze()
-        proposals = proposals[idxs, :].reshape(-1,4)
-        matches = list(filter(lambda x: x!= -1, matches))
-=======
         proposals.change_format("xyxy")
-        proposals = proposals[mask, :]
+        proposals = proposals[idxs, :].reshape(-1,4)
         matches = list(filter(lambda x: x != -1, matches))
->>>>>>> eea1af159ffe4e485e71a184af2fab0c29513601
         labels = [gt_cls[match] for match in matches]
         windows = []
         proposals_lst = proposals.tolist()
-
         self.nproposals += len(proposals_lst)
         gt_box_lst = gt_boxes.tolist()
         self.ngt_boxes += len(gt_box_lst)
-        print(img.size)
-        print(identifier)
         for idx, proposal in enumerate(proposals_lst):
             proposal = [int(c) for c in proposal]
             img_sub = img.crop(proposal)

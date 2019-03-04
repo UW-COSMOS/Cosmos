@@ -21,6 +21,10 @@ class ConfigManager:
                     value2 = (Struct(**value) if isinstance(value, dict) else value)
                     self.__dict__[key] = value2
 
+        def merge(self, data):
+            for key in data.keys():
+                self__dict__[key] = data[key] 
+
     instance = None
 
     def __init__(self, fp=None):
@@ -32,3 +36,4 @@ class ConfigManager:
 
     def __setattr__(self, key, value):
         setattr(ConfigManager.instance, key, value)
+				

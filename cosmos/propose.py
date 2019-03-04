@@ -7,7 +7,7 @@ import click
 @click.argument("out_dir")
 @click.argument("procs")
 def cli(img_dir, out_dir, procs):
-    run_write_proposals(img_dir=img_dir, output_dir=out_dir, procs=procs)
+    run_write_proposals(img_dir=img_dir, output_dir=out_dir, procs=int(procs))
 
 
 if __name__ == "__main__":
