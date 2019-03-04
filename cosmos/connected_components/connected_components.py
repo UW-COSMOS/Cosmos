@@ -7,7 +7,7 @@ import multiprocessing as mp
 import torch
 from PIL import Image, ImageFilter
 import numpy as np
-np.set_printoptions(threshold=np.nan)
+#np.set_printoptions(threshold=np.nan)
 from skimage import io
 from torchvision.transforms import ToTensor, ToPILImage
 from timeit import default_timer as timer

@@ -17,11 +17,11 @@ class MMFasterRCNN(nn.Module):
         super(MMFasterRCNN, self).__init__()
         cfg = ConfigManager(cfg)
         self.featurizer = Featurizer(cfg)
-        N, H, W, D = get_shape_info(self.featurizer.backbone, (1, 3, cfg.CC_LAYER.WARPED_SIZE, cfg.CC_LAYER.WARPED_SIZE))
+        N, H, W, D = get_shape_info(self.featurizer.backbone, (1, 3, cfg.WARPED_SIZE, cfg.WARPED_SIZE))
         self.head = MultiModalClassifier(H,
                                          W,
                                          D,
-                                         cfg.HEAD.DIM,
+                                         cfg.HEAD_DIM,
                                          len(cfg.CLASSES))
         self.cls_names = cfg.CLASSES
 

@@ -8,7 +8,7 @@ class CCLayer(nn.Module):
     
     def __init__(self, cfg):
         super(CCLayer, self).__init__()
-        self.warped_size = cfg.CC_LAYER.WARPED_SIZE
+        self.warped_size = cfg.WARPED_SIZE
         self.pool = Pool(processes=10)
 
     def forward(self, img, device, proposals=None):

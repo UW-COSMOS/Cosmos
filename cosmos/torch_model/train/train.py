@@ -14,7 +14,6 @@ from tqdm import tqdm
 from train.anchor_targets.head_target_layer import HeadTargetLayer
 from functools import partial
 from tensorboardX import SummaryWriter
-from torch.utils.data import random_split
 
 
 def unpack_cls(cls_dict, gt_label):
@@ -42,7 +41,7 @@ def prep_gt_boxes(boxes, device):
 
 
 class TrainerHelper:
-    def __init__(self, model, dataset, params,device):
+    def __init__(self, model, train_set, val_set, params,device):
         """
         Initialize a trainer helper class
         :param model: a MMFasterRCNN model
@@ -50,10 +49,7 @@ class TrainerHelper:
         :param params: a dictionary of training specific parameters
         """
         self.model = model.to(device)
-        self.detect_weights(params["SAVE_DIR"])
-        val_size = params["VAL_SIZE"]
-        train_size = len(dataset) - val_size
-        self.train_set, self.val_set = random_split(dataset, (train_size, val_size))
+        self.train_set, self.val_set = train_set, val_set
         self.params = params
         self.cls = dict([(val, idx) for (idx, val) in enumerate(model.cls_names)])
         self.device = device
@@ -69,22 +65,20 @@ class TrainerHelper:
         if len(ls) == 0:
             return
         path = join(weights_dir, ls[len(ls) - 1])
-        print(f"loading weights from {path}")
-        self.model.load_state_dict(torch.load(path))
 
     def train(self):
         optimizer = optim.Adam(self.model.parameters(), 
                               lr=self.params["LEARNING_RATE"],
                               weight_decay=self.params["WEIGHT_DECAY"])
         train_loader = DataLoader(self.train_set,
-                            batch_size=self.params["BATCH_SIZE"],
+                            batch_size=int(self.params["BATCH_SIZE"]),
                             collate_fn=partial(collate,cls_dict=self.cls),
-                            num_workers=self.params["BATCH_SIZE"],
+                            num_workers=int(self.params["BATCH_SIZE"]),
                             shuffle=True)
                             
         self.model.train(mode=True)
         iteration = 0
-        for epoch in tqdm(range(self.params["EPOCHS"]),desc="epochs"):
+        for epoch in tqdm(range(int(self.params["EPOCHS"])),desc="epochs"):
             tot_cls_loss = 0.0
             for idx, batch in enumerate(tqdm(train_loader, desc="batches", leave=False)):
                 optimizer.zero_grad()
@@ -99,33 +93,22 @@ class TrainerHelper:
                 loss.backward()
                 nn.utils.clip_grad_value_(self.model.parameters(), 5)
                 optimizer.step()
-                if idx % self.params["PRINT_PERIOD"] == 0 and idx != 0:
-                    del loss 
-                    del cls_loss
-                    del cls_scores
-                    del ex
-                    del gt_box
-                    del rois
-                    del proposals
-                    self.validate(iteration)
-                    if not (idx == 0 and epoch ==0):
-                        self.writer.add_scalar("train_cls_loss", tot_cls_loss / len(self.train_set), iteration)
-                        tot_cls_loss = 0.0
-                    iteration += 1
             if epoch % self.params["CHECKPOINT_PERIOD"] == 0:
                 name = f"model_{epoch}.pth"
                 path = join(self.params["SAVE_DIR"], name)
                 if not isdir(self.params["SAVE_DIR"]):
                     mkdir(self.params["SAVE_DIR"])
                 torch.save(self.model.state_dict(), path)
+            self.validate(iteration)
+            self.writer.add_scalar("train_cls_loss", tot_cls_loss / len(self.train_set), iteration)
+            iteration += 1
 
-    def validate(self, iteration):
+    def validate(self, iteration=0, to_tensorboard=True):
         loader = DataLoader(self.val_set,
-                            batch_size=self.params["BATCH_SIZE"],
+                            batch_size=1,
                             collate_fn=partial(collate,cls_dict=self.cls),
                             num_workers=3)
         tot_cls_loss = 0.0
-        torch.cuda.empty_cache()
         self.model.train(mode=False)
         for batch in tqdm(loader, desc="validation"):
             ex, gt_box, gt_cls, proposals = batch
@@ -140,10 +123,12 @@ class TrainerHelper:
                     cls_scores, gt_cls, self.device)
             # update batch losses, cast as float so we don't keep gradient history
             tot_cls_loss += float(cls_loss)
-        self.output_batch_losses(
+        if to_tensorboard:
+                self.output_batch_losses(
                                  tot_cls_loss/len(self.val_set),
                                  iteration)
         self.model.train(mode=True)
+        return tot_cls_loss/len(self.val_set)
 
 
 

@@ -16,3 +16,6 @@ html/
 *.DS_Store
 postgres-data/
 redis_data/
+weights/
+runs
+final_data
