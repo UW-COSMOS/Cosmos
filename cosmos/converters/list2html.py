@@ -60,23 +60,47 @@ def coordinate_convert(x1,y1,x2,y2,max_of_x,max_of_y):
     ymax = (1920-y1)*max_of_y/1920
     return (xmin,ymin,xmax,ymax)
 
+def valid_xml_char_ordinal(c):
+    codepoint = ord(c)
+    # conditions ordered by presumed frequency
+    return (
+        0x20 <= codepoint <= 0xD7FF or
+        codepoint in (0x9, 0xA, 0xD) or
+        0xE000 <= codepoint <= 0xFFFD or
+        0x10000 <= codepoint <= 0x10FFFF
+        )
+def invalid_filter(s):
+    out = ''
+    for c in s:
+        if valid_xml_char_ordinal(c):
+            out += c
+    return out
+
 def unicode_representation(pdf, page, root, base, t):
     df, limit = parse_pdf(pdf)
+    #The file doesn't have unicode
+    if df is None:
+        return root, 'Have no Unicide', -1
     MAX_OF_X = limit[2]
     MAX_OF_Y = limit[3]
-    df_page = df[df['page'] == page-1] 
+    df_page = df[df['page'] == page-1]
+    first_id = -1
+    first = True 
     for word in root.xpath(".//*[@class='ocrx_word']"):
         coord = get_coordinate(word.get('title'))
         coordinate = coordinate_convert(coord['xmin']+base[0],coord['ymin']+base[1],coord['xmax']+base[0],coord['ymax']+base[1],MAX_OF_X,MAX_OF_Y)
-        print(coordinate)
+        #print(coordinate)
         paddy = (coordinate[3]-coordinate[1])*0.3
         index = ~( (df_page['x1'] >= coordinate[2]) | (df_page['x2'] <= coordinate[0]) | \
                 (df_page['y1'] >= coordinate[3]-paddy) | (df_page['y2'] <= coordinate[1]+paddy) )
         df_within = df_page[index]
-        print(df_within.shape)
+        #print(df_within.shape)
         text = ''
         for idx, row in df_within.iterrows():
-            text += row['text']
+            if first:
+                first_id = idx
+                fisrt = False
+            text += invalid_filter(row['text'])
             text += ' '
         word.text = text
     if t == 'Equation':
@@ -91,7 +115,7 @@ def unicode_representation(pdf, page, root, base, t):
             text += ' '
     else:
         text = ' '
-    return root,text
+    return root,text,first_id
         
 
 def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, tesseract_hocr=True, tesseract_text=True, include_image=True):
@@ -137,8 +161,11 @@ def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, t
                     latex_tree = variable_ocr(im2latex_model, tree, cropped, [])
                     div(raw(etree.tostring(latex_tree).decode("utf-8")), cls='hocr_img2latex', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
                     tree = etree.fromstring(etree.tostring(loaded))
-                    unicode_tree,text = unicode_representation(pdf_name, page_num, tree, coords, t)
-                    div(raw(etree.tostring(unicode_tree).decode("utf-8")), cls='unicode', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                    unicode_tree,text,first_id = unicode_representation(pdf_name, page_num, tree, coords, t)
+                    #print(f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                    #occasionally the class here would be replaced by 'Page Header', cannot figure our why
+                    div(raw(etree.tostring(unicode_tree).decode("utf-8")), cls='text_unicode', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}', id=str(first_id))
+                    print('after')
                     div(text, cls='equation_unicode')  
 
                 if tesseract_text:

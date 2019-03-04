@@ -47,7 +47,8 @@ def parse_pdf(fp):
                                 pages.append(page)
                                 text = ''
                                 pos = (10000,10000,-1,-1)
-                          
+    if len(positions) == 0:
+        return None, None                      
     x1, y1, x2, y2 = list(zip(*positions))
     df = pd.DataFrame({
         "text": texts,
