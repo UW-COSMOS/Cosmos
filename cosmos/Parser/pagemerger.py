@@ -9,7 +9,7 @@ from itertools import groupby
 from parse_preprocess import load_file_to_tree
 
 
-def pagemerger(rawfolder, outputfolder):
+def pagemerger(rawfolder):
     PAGENAME_NUMBER_PATTERN = re.compile("(.*)_([0-9]+).html")
     def get_filename(filename):
         page_match = PAGENAME_NUMBER_PATTERN.search(filename)
@@ -19,6 +19,8 @@ def pagemerger(rawfolder, outputfolder):
         page_match = PAGENAME_NUMBER_PATTERN.search(filename)
         return page_match.group(2) if page_match is not None else None
 
+
+    merged_files = {}
 
     for key, group in groupby(sorted(listdir(rawfolder)), key=get_filename):
         if group is None or key is None:
@@ -34,8 +36,12 @@ def pagemerger(rawfolder, outputfolder):
             for element in tree[1]:
                 page.append(element)
 
-        with open(path.join(outputfolder, key.replace(' ', '_')) + '.html', 'wb') as f:
-            f.write(etree.tostring(root, pretty_print=True))
+        merged_files[key.replace(' ', '_') + '.html'] = root
+        #
+        # with open(path.join(outputfolder, key.replace(' ', '_')) + '.html', 'wb') as f:
+        #     f.write(etree.tostring(root, pretty_print=True))
+
+    return merged_files
 
 
 if __name__ == '__main__':

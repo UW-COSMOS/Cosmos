@@ -59,10 +59,10 @@ class Equation(_meta.Base):
     page = Column(Integer)
 
 
-def insert_equation_tuple(db, resource_loc):
+def insert_equation_tuple(db, all_equations):
     session = Meta.init(db).Session()
     for doc in session.query(Document):
-        locs = json.load(open(join(resource_loc, '%s.html.json' % doc.name)))
+        locs = all_equations['%s.html' % doc.name]
         locs_counter = 0
         eqs_groupby_section_para = defaultdict(lambda: defaultdict(list))
         for sent in session.query(Sentence).filter(Sentence.document_id == doc.id):
