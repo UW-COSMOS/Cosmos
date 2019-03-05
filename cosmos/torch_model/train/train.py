@@ -9,7 +9,7 @@ from os.path import join, isdir
 from os import mkdir
 import os
 from torch import optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
 from train.anchor_targets.head_target_layer import HeadTargetLayer
 from functools import partial
@@ -52,6 +52,7 @@ class TrainerHelper:
         self.train_set, self.val_set = train_set, val_set
         self.params = params
         self.cls = dict([(val, idx) for (idx, val) in enumerate(model.cls_names)])
+        self.weight_vec = train_set.get_weight_vec(model.cls_names)
         self.device = device
         if params["USE_TENSORBOARD"]:
             self.writer = SummaryWriter()
@@ -74,7 +75,7 @@ class TrainerHelper:
                             batch_size=int(self.params["BATCH_SIZE"]),
                             collate_fn=partial(collate,cls_dict=self.cls),
                             num_workers=int(self.params["BATCH_SIZE"]),
-                            shuffle=True)
+														sampler=WeightedRandomSampler(self.weight_vec, int(len(self.train_set) *.7)))
                             
         self.model.train(mode=True)
         iteration = 0
@@ -85,7 +86,6 @@ class TrainerHelper:
                 ex, gt_box, gt_cls, proposals = batch
                 ex = ex.to(self.device)
                 gt_cls = gt_cls.to(self.device)
-                gt_box = prep_gt_boxes(gt_box, self.device)
                 rois, cls_scores= self.model(ex, self.device, proposals=proposals)
                 cls_loss = self.head_target_layer(cls_scores, gt_cls, self.device)
                 loss = cls_loss

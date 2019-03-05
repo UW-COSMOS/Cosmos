@@ -2,13 +2,13 @@
 Utilities for loading inference data into the model
 """
 # TODO refactor so xml_loader and inference_loader import from a utilities directory
-from train.data_layer.xml_loader import load_image, load_proposal
+from torch_model.train.data_layer.xml_loader import load_image, load_proposal
 from torch.utils.data import Dataset
 import torch
 import os
 from os.path import splitext
 from torchvision.transforms import ToTensor
-from train.data_layer.transforms import NormalizeWrapper
+from torch_model.train.data_layer.transforms import NormalizeWrapper
 from collections import namedtuple
 
 normalizer = NormalizeWrapper(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])

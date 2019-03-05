@@ -4,8 +4,8 @@ Author: Josh McGrath
 """
 from torch import nn
 
-from model.connected_components.cc_layer import CCLayer
-from model.backbone.backbone import get_backbone
+from ..connected_components.cc_layer import CCLayer
+from ..backbone.backbone import get_backbone
 class Featurizer(nn.Module):
 
     def __init__(self, cfg):

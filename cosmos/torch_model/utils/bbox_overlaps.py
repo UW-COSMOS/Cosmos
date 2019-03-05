@@ -3,7 +3,7 @@ compute the overlap matrix
 Author: Josh McGrath
 """
 import torch
-from utils.bbox import BBoxes
+from .bbox import BBoxes
 X = 0
 Y = 1
 H = 2

@@ -4,10 +4,10 @@ Author: Josh McGrath
 """
 import torch
 from torch import nn
-from model.layers.featurization import Featurizer
-from model.head.object_classifier import MultiModalClassifier
-from model.utils.config_manager import ConfigManager
-from model.utils.shape_utils import get_shape_info
+from .layers.featurization import Featurizer
+from .head.object_classifier import MultiModalClassifier
+from .utils.config_manager import ConfigManager
+from .utils.shape_utils import get_shape_info
 class MMFasterRCNN(nn.Module):
     def __init__(self, cfg):
         """

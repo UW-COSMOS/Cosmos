@@ -1,5 +1,5 @@
-BACKBONE: "resnet50"
-HEAD_DIM: 2048
+BACKBONE: "resnet101"
+HEAD_DIM: 1024
 PROPOSAL_METHOD: "CONNECTED_COMPONENTS"
 WARPED_SIZE: 250
 CLASSES: ["Section Header", "Body Text", "Figure", "Figure Caption", "Table", "Equation",
