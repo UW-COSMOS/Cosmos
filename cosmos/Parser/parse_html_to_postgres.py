@@ -10,10 +10,10 @@ from insert_equation import insert_equation_tuple
 
 
 
-def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str,
+def parse_html_to_postgres(input_folder, output_html, db_connect_str,
                            strip_tags, ignored_file_when_link, store_into_postgres=True):
-    assert os.path.isabs(input_folder)
-    assert os.path.isabs(output_html)
+    # assert os.path.isabs(input_folder)
+    # assert os.path.isabs(output_html)
     # assert os.path.isabs(merge_folder)
     # assert os.path.isabs(output_words)
 
@@ -68,7 +68,7 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
         python parse.py --html_location $(output_html) --database $(db_connect_str)
         @touch parse.stamp
         """
-        parse(output_html, db_connect_str)
+        parse(output_html, db_connect_str, parallelism=1)
 
         """
         # 4. run the link file to insert coordinate information into fonduer based on the information from the json output folder (aka. hocr)
@@ -80,3 +80,6 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
 
         insert_equation_tuple(db_connect_str, all_equations)
         
+
+if __name__ == '__main__':
+    parse_html_to_postgres('files/', 'out_html', 'postgres://postgres:password@localhost:5432/cosmos10', ['strong', 'em'], [])
