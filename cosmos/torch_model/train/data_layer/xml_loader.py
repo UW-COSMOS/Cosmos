@@ -14,11 +14,11 @@ import torch
 from xml.etree import ElementTree as ET
 from .transforms import NormalizeWrapper
 import pickle
-from utils.matcher import match
+from torch_model.utils.matcher import match
 from collections import namedtuple
 from uuid import uuid4
 from tqdm import tqdm
-from utils.bbox import BBoxes
+from torch_model.utils.bbox import BBoxes
 normalizer = NormalizeWrapper()
 
 tens = ToTensor()
@@ -149,6 +149,20 @@ class XMLLoader(Dataset):
         bytes_rep = conn.get(self.uuids[item])
         lst = pickle.loads(bytes_rep)
         return lst
+
+
+    def get_weight_vec(self, classes):
+        weight_per_class = {}                                    
+        N = len(self.uuids)
+        for name in classes:                                                   
+            weight_per_class[name] = N/float(self.class_stats[name])                                 
+        weight = [0] * N                                              
+        for idx, uuid in tqdm(enumerate(self.uuids)):                                          
+            conn = redis.Redis(connection_pool=self.pool)
+            bytes_rep = conn.get(uuid)
+            lst = pickle.loads(bytes_rep)
+            weight[idx] = weight_per_class[lst.gt_cls]
+        return weight
 
     def _ingest(self):
         conn = redis.Redis(connection_pool=self.pool)

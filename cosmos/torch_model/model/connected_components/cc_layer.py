@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from model.connected_components.connected_components import get_components
+from .connected_components import get_components
 from multiprocessing import Pool, set_start_method
 
 

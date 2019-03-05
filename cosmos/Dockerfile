@@ -12,7 +12,10 @@ RUN apt-get update && apt-get install -y \
 
 # Create a working directory
 RUN mkdir /app
+
 WORKDIR /app
+
+COPY . .
 
 # Create a non-root user and switch to it
 RUN adduser --disabled-password --gecos '' --shell /bin/bash user \
@@ -79,6 +82,8 @@ CMD ["python3"]
 USER root
 
 RUN apt-get update && apt-get -y install gcc g++ vim imagemagick tesseract-ocr libtesseract-dev
+RUN apt install -y libsm6 libxext6
+RUN apt-get install -y nodejs-legacy
 
 COPY ./requirements.txt ./requirements.txt
 
@@ -88,4 +93,4 @@ RUN pip install -r requirements.txt --user
 
 USER root
 
-
+CMD ["python", "run.py", "/input", "-w", "torch_model/weights/model_95.pth", "-t", "4"]

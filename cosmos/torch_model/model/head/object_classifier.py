@@ -26,7 +26,7 @@ class MultiModalClassifier(nn.Module):
         self.height = pool_height
         self.width = pool_width
         self.depth = pool_depth
-        self.dropout = nn.Dropout(p=0.3)
+        self.dropout = nn.Dropout(p=0.4)
         intermediate = int(intermediate)
         self.FC = nn.Linear(self.height*self.width*self.depth,intermediate)
         self.FC_2 = nn.Linear(intermediate, intermediate)

@@ -5,12 +5,12 @@ Script to run an end to end pipeline
 
 from Parser.parse_html_to_postgres import parse_html_to_postgres
 import multiprocessing as mp
-from mrcnn.config import Config
 from argparse import ArgumentParser
-import mrcnn.model as modellib
-from config import PageConfig
-from config import ingestion_settings
-from dataset.dataset import PageDataset
+import torch
+from torch_model.model.model import MMFasterRCNN
+from torch_model.model.utils.config_manager import ConfigManager
+from torch_model.inference.inference import InferenceHelper 
+from torch_model.inference.data_layer.inference_loader import InferenceLoader
 import os
 import subprocess
 from converters.model2xml import model2xml
@@ -39,6 +39,8 @@ parser.add_argument('--debug', help="Ingest html documents and create postgres d
 args = parser.parse_args()
 
 # Path variables
+model_config = "torch_model/model_config.yaml"
+weights = args.weights
 tmp = args.tmp_path
 xml = os.path.join(args.output, "xml")
 html = os.path.join(args.output, "html")
@@ -87,7 +89,7 @@ results = [pool.apply_async(resize_pngs, args=(x,)) for x in os.listdir(os.path.
 
 print('Begin writing proposals')
 
-results = [pool.apply_async(write_proposals, args=(os.path.join(f'{tmp}', 'images', x),), kwds={"output_dir" : tmp}) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+results = [pool.apply_async(write_proposals, args=(os.path.join(f'{tmp}', 'images', x),), kwds={"output_dir" : os.path.join(tmp,"cc_proposals")}) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
 [r.get() for r in results]
 
 
@@ -101,42 +103,25 @@ with open('test.txt', 'w') as wf:
 
 shutil.move('test.txt', f'{tmp}/test.txt')
 
-class InferenceConfig(Config):
-    NAME = "pages_uncollapsed"
-    BACKBONE = "resnet50"
-    GPU_COUNT = 1
-    IMAGE_MAX_DIM = 1920
-    RPN_ANCHOR_SCALES = (32,64, 256, 512,1024)
-    NUM_CLASSES = 16
-    IMAGES_PER_GPU = 1
+model_config = ConfigManager(model_config)
+model = MMFasterRCNN(model_config)
+model.load_state_dict(torch.load(weights, map_location={"cuda:0": "cpu"}))
+loader = InferenceLoader(f"{tmp}/images", f"{tmp}/cc_proposals", "png", model_config.WARPED_SIZE)
+runner = InferenceHelper(model, loader, torch.device("cpu"))
 
-inference_config = InferenceConfig()
-config = PageConfig()
-model = modellib.MaskRCNN(mode="inference",
-                          config=inference_config,
-                          model_dir=args.weightsdir)
+runner.run(xml)
+# for idx, image_id in enumerate(tqdm(image_ids)):
+    # # Load image and ground truth data
+    # image, image_meta, gt_class_id, gt_bbox, gt_mask = \
+        # modellib.load_image_gt(data_test, inference_config,image_id, use_mini_mask=False)
+    # results = model.detect([image], verbose=0)
+    # r = results[0]
+    # info = data_test.image_info[image_id]
+    # zipped = zip(r["class_ids"], r["rois"])
+    # model2xml(info["str_id"], xml, [1920, 1920], zipped, data_test.class_names, r['scores'])
 
-model.load_weights(args.weights, by_name=True)
-data_test = PageDataset('test', f'{tmp}', 0, nomask=True)
-data_test.load_page(classes=list(ICDAR_convert.keys()))
-data_test.prepare()
-image_ids = data_test.image_ids
-
-if not os.path.exists(xml):
-    os.makedirs(xml)
-
-for idx, image_id in enumerate(tqdm(image_ids)):
-    # Load image and ground truth data
-    image, image_meta, gt_class_id, gt_bbox, gt_mask = \
-        modellib.load_image_gt(data_test, inference_config,image_id, use_mini_mask=False)
-    results = model.detect([image], verbose=0)
-    r = results[0]
-    info = data_test.image_info[image_id]
-    zipped = zip(r["class_ids"], r["rois"])
-    model2xml(info["str_id"], xml, [1920, 1920], zipped, data_test.class_names, r['scores'])
-
-results = [pool.apply_async(match_proposal, args=(x,)) for x in os.listdir(f'{tmp}') if x[-4:] == '.csv']
-[r.get() for r in results]
+# results = [pool.apply_async(match_proposal, args=(x,)) for x in os.listdir(f'{tmp}') if x[-4:] == '.csv']
+# [r.get() for r in results]
 
 if not os.path.exists(html):
     os.makedirs(html)

@@ -9,29 +9,40 @@ from train.train import TrainerHelper
 from model.utils.config_manager import ConfigManager
 from train.data_layer.xml_loader import XMLLoader
 import yaml
-from argparse import ArgumentParser
+import click
+from os.path import join
 
-parser = ArgumentParser("train the model")
-parser.add_argument("img_dir", type=str, default="images")
-parser.add_argument("xml_dir", type=str, default="annotations")
-parser.add_argument("proposals_dir", type=str, default="proposals")
-parser.add_argument("model_config",type=str, default="model_config.yaml")
-parser.add_argument("train_config", type=str, default="train_config.yaml")
 
-args = parser.parse_args()
+@click.command()
+@click.argument("model_config")
+@click.argument("train_config")
+@click.argument("train_dir")
+@click.argument("val_dir")
+def train(model_config, train_config, train_dir, val_dir):
+	cfg = ConfigManager(model_config)
+	model = MMFasterRCNN(cfg)
+	train_loader = XMLLoader(join(train_dir, "images"),
+			join(train_dir, "annotations"),
+			join(train_dir, "proposals"),
+			cfg.WARPED_SIZE,
+			"png")
+	val_loader = XMLLoader(join(val_dir, "images"),
+			join(val_dir, "annotations"),
+			join(val_dir, "proposals"),
+			cfg.WARPED_SIZE,
+			"png")
 
-cfg = ConfigManager(args.model_config)
-model = MMFasterRCNN(cfg)
-loader = XMLLoader(args.img_dir, args.xml_dir,
-        args.proposals_dir,
-        cfg.CC_LAYER.WARPED_SIZE,
-        "png")
-train_params = None
-with open(args.train_config) as fh:
-    train_params = yaml.load(fh)
-device = torch.device("cuda")
-trainer = TrainerHelper(model,
-                        loader,
-                        train_params,
-                        device)
-trainer.train()
+	train_params = None
+	with open(train_config) as fh:
+			train_params = yaml.load(fh)
+	device = torch.device("cuda")
+	trainer = TrainerHelper(model,
+													train_loader,
+													val_loader,
+													train_params,
+													device)
+	trainer.train()
+
+
+if __name__ == "__main__":
+	train()

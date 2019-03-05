@@ -30,7 +30,6 @@ class InferenceHelper:
         loader = DataLoader(self.dataset, batch_size=1, collate_fn=self.dataset.collate, )
         for doc in tqdm(loader):
             windows, proposals, identifier = doc
-            print(proposals)
             proposals.change_format("xyxy")
             windows = windows.to(self.device)
             preds = self._get_predictions(windows)
@@ -40,7 +39,6 @@ class InferenceHelper:
                 x0, y0, x1, y1 = proposals[i, :].long().tolist()
                 writer.addObject(pred, x0, y0, x1, y1)
             writer.save(join(out, f"{identifier}.xml"))
-            exit()
     def _get_predictions(self, windows):
         """
         get predictions for each img in a document
