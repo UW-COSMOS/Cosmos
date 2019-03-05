@@ -6,6 +6,8 @@ services:
         ipc: host
         volumes:
             - .:/vol/
+            - ${INPUT_DIR}:/input/
+            - ./output/:/output/ 
     redis:
       image: "redis:alpine"
       volumes:
