@@ -14,8 +14,8 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
                            strip_tags, ignored_file_when_link, store_into_postgres=True):
     assert os.path.isabs(input_folder)
     assert os.path.isabs(output_html)
-    assert os.path.isabs(merge_folder)
-    assert os.path.isabs(output_words)
+    # assert os.path.isabs(merge_folder)
+    # assert os.path.isabs(output_words)
 
     """
     # 1. group files by file name
@@ -25,10 +25,10 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
         python pagemerger.py --rawfolder $(input_folder) --outputfolder $(merge_folder)
         @touch merge.stamp
     """
-    if os.path.exists(merge_folder):
-        shutil.rmtree(merge_folder)
-    os.makedirs(merge_folder, exist_ok=True)
-    pagemerger(input_folder, merge_folder)
+    # if os.path.exists(merge_folder):
+    #     shutil.rmtree(merge_folder)
+    # os.makedirs(merge_folder, exist_ok=True)
+    merged_file = pagemerger(input_folder)
 
     """
     # 2. preprocess the input html and store intermediate json and html in the output folder declared above.
@@ -43,19 +43,22 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
     """
     if os.path.exists(output_html):
         shutil.rmtree(output_html)
-    if os.path.exists(output_words):
-        shutil.rmtree(output_words)
-    if os.path.exists(output_equations):
-        shutil.rmtree(output_equations)
+    # if os.path.exists(output_words):
+    #     shutil.rmtree(output_words)
+    # if os.path.exists(output_equations):
+    #     shutil.rmtree(output_equations)
 
     os.makedirs(output_html, exist_ok=True)
-    os.makedirs(output_words, exist_ok=True)
-    os.makedirs(output_equations, exist_ok=True)
+    # os.makedirs(output_words, exist_ok=True)
+    # os.makedirs(output_equations, exist_ok=True)
 
-    all_inputs = [f for f in os.listdir(merge_folder)]
-    for html_file in all_inputs:
-        preprocess(os.path.join(merge_folder, html_file), "%s.json" % (os.path.join(output_words, html_file)),
-                   os.path.join(output_html, html_file), "%s.json" % (os.path.join(output_equations, html_file)), strip_tags)
+    # all_inputs = [f for f in os.listdir(merge_folder)]
+    all_words = {}
+    all_equations = {}
+    for filename, tree in merged_file.items():
+        words, equations = preprocess(tree, os.path.join(output_html, filename), strip_tags)
+        all_words[filename] = words
+        all_equations[filename] = equations
 
     if store_into_postgres:
         """
@@ -73,7 +76,7 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
             python link.py --words_location $(output_words) --database $(db_connect_str)
             @touch link.stamp
         """
-        link(output_words, db_connect_str, ignored_file_when_link)
+        link(all_words, db_connect_str, ignored_file_when_link)
 
-        insert_equation_tuple(db_connect_str, output_equations)
+        insert_equation_tuple(db_connect_str, all_equations)
         
