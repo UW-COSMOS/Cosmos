@@ -80,6 +80,12 @@ def add_name(root):
 def generate_rawtext_from_ocrx(root):
     for ocr_segment in get_ocr_segments(root):
         if ocr_segment.attrib['class'] == 'Equation':
+            try:
+                rawtext_node = ocr_segment.xpath(".//*[@class='rawtext']")[0]
+                rawtext_node.text = rawtext_node.text.replace('\n', ' ')
+                rawtext_node.text = rawtext_node.text.replace('.', ' ')
+            except:
+                pass
             continue
         rawtext = []
         for paragraph in ocr_segment.xpath(".//*[@class='ocr_par']"):

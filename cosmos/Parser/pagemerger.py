@@ -10,7 +10,7 @@ from parse_preprocess import load_file_to_tree
 
 
 def pagemerger(rawfolder):
-    PAGENAME_NUMBER_PATTERN = re.compile("(.*)_([0-9]+).html")
+    PAGENAME_NUMBER_PATTERN = re.compile("(.*)-([0-9]+).html")
     def get_filename(filename):
         page_match = PAGENAME_NUMBER_PATTERN.search(filename)
         return page_match.group(1) if page_match is not None else None
