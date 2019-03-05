@@ -77,8 +77,8 @@ def insert_equation_tuple(db, all_equations):
         for sec_id, para_dic in eqs_groupby_section_para.items():
             for paragraph_id, eqs in para_dic.items():
                 latex_code = ''.join(map(lambda x: x['text'], eqs))
-                # variables = list(get_variables(latex_code))
-                variables = []
+                variables = list(get_variables(latex_code))
+                # variables = []
                 if len(variables) == 0 or variables[0] == -1:
                     variables = None
 
