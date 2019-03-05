@@ -32,4 +32,5 @@ Shapely
 naked
 
 # }}
-
+tensorboardX
+redis

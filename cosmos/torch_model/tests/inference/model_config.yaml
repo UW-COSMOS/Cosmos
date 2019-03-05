@@ -1,0 +1,26 @@
+BACKBONE: "resnet50"
+STRIDE: 2
+RATIOS: [1, 0.5, 2]
+SCALES: [32,64,128]
+IMG_SIZE: 500
+HEAD:
+  INTERMEDIATE: 256
+RPN:
+  DEPTH: 512
+  WINDOW_SIZE: 3
+PROPOSAL:
+  METHOD: "RPN"
+  NMS_PRE: 1000
+  NMS_POST: 300
+  NMS_THRESHOLD: 0.7
+  MIN_SIZE: 64
+ROI_POOL:
+  OUTPUT_SIZE: 20
+  SPATIAL_SCALE: 7
+  SAMPLING_RATIO: 2
+CLASSES:
+  NAMES: ["aeroplane", "bicycle", "bird", "bottle",
+      "boat", "bus", "car", "cat", "chair", "cow",
+        "diningtable", "dog", "horse", "motorbike",
+ "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]       
+

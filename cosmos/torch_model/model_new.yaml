@@ -1,0 +1,9 @@
+BACKBONE: "resnet101"
+HEAD:
+  DIM: 2048
+PROPOSAL_METHOD: "CONNECTED_COMPONENTS"
+CC_LAYER:
+  WARPED_SIZE: 250
+CLASSES: ["Section Header", "Body Text", "Figure", "Figure Caption", "Table", "Equation",
+      "Page Footer", "Page Header", "Table Caption", "Table Note", "Abstract", "Other", "Equation label", "Reference text", "Figure Note"]
+TRAINING: False
