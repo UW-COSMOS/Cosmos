@@ -1,3 +1,4 @@
+
 import os
 from converters.xml2list import xml2list
 from PIL import Image, ImageDraw
@@ -400,5 +401,4 @@ def convert(xml_dir, annotations_dir, img_dir, output_dir):
 if __name__ == '__main__':
     convert()
     
-
 

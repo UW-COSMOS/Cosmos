@@ -2,11 +2,17 @@ version: "2.3"
 services:
     cosmos:
         build: .
+        runtime: nvidia
         ipc: host
         volumes:
-            - ${INPUT_DIR}:/input/
-            - ./output/:/output/
-        command: ["python", "run.py", "/input", "-w", "weights/mask_rcnn_pages_uncollapsed_0022.h5", "-t", "4", "-o", "/output/", "-n"]
+            - .:/vol/
+    redis:
+      image: "redis:alpine"
+      volumes:
+        - ./redis_data:/data
+      restart: always
+      ports:
+        - "6379:6379"
 
     cosmos_postgres:
         image: postgres:10.5-alpine
@@ -16,3 +22,4 @@ services:
             - ./postgres-data:/var/lib/postgresql/data
         ports:
             - 54321:5432
+    

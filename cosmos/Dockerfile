@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM nvidia/cuda:10.0-devel-ubuntu16.04
 
 # Install some basic utilities
 RUN apt-get update && apt-get install -y \
@@ -12,7 +12,10 @@ RUN apt-get update && apt-get install -y \
 
 # Create a working directory
 RUN mkdir /app
+
 WORKDIR /app
+
+COPY . .
 
 # Create a non-root user and switch to it
 RUN adduser --disabled-password --gecos '' --shell /bin/bash user \
@@ -41,14 +44,12 @@ ENV CONDA_PREFIX=/home/user/miniconda/envs/$CONDA_DEFAULT_ENV
 ENV PATH=$CONDA_PREFIX/bin:$PATH
 
 # CUDA 10.0-specific steps
-#RUN conda install -y -c pytorch \
-#    cuda100=1.0 \
-#    magma-cuda100=2.4.0 \
-#    "pytorch=1.0.0=py3.6_cuda10.0.130_cudnn7.4.1_1" \
-#    torchvision=0.2.1 \
-# && conda clean -ya
-#
-RUN conda install pytorch-cpu torchvision-cpu -c pytorch
+RUN conda install -y -c pytorch \
+    cuda100=1.0 \
+    magma-cuda100=2.4.0 \
+    "pytorch=1.0.0=py3.6_cuda10.0.130_cudnn7.4.1_1" \
+    torchvision=0.2.1 \
+ && conda clean -ya
 
 # Install HDF5 Python bindings
 RUN conda install -y h5py=2.8.0 \
@@ -81,38 +82,15 @@ CMD ["python3"]
 USER root
 
 RUN apt-get update && apt-get -y install gcc g++ vim imagemagick tesseract-ocr libtesseract-dev
-
-RUN apt-get -y install libxml2-dev libxslt-dev python3-dev
-# RUN apt-get -y build-dep python-matplotlib
-RUN apt-get -y install poppler-utils
-
 RUN apt install -y libsm6 libxext6
 RUN apt-get install -y nodejs-legacy
 
-COPY . .
+COPY ./requirements.txt ./requirements.txt
 
-RUN sed -i "s|tensorflow==1.12|tensorflow==1.8|g" /app/c_requirements.txt
-RUN sed -i "s|keras==2.2.4|keras==2.1.6|g" /app/c_requirements.txt
+USER user
 
-RUN pip install -r requirements.txt
-
-RUN pip install -r c_requirements.txt
-
-RUN git clone https://github.com/josmcg/Mask_RCNN.git
+RUN pip install -r requirements.txt --user
 
 USER root
 
-WORKDIR Mask_RCNN
-
-RUN python setup.py install
-
-USER root
-RUN chmod -R 777 /app
-RUN mkdir /input && chmod 777 /input
-RUN mkdir /output && chmod 777 /output
-
-ADD mask_rcnn_pages_uncollapsed_0022.h5 /app/weights/
-
-WORKDIR /app
-
-CMD ["python", "run.py", "/input", "-w", "weights/mask_rcnn_pages_uncollapsed_0022.h5", "-t", "4"]
+CMD ["python", "run.py", "/input", "-w", "torch_model/weights/model_95.pth", "-t", "4"]
