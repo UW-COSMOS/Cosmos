@@ -7,6 +7,9 @@ from pagemerger import pagemerger
 from parse import parse
 from parse_preprocess import preprocess
 from insert_equation import insert_equation_tuple
+from table_X import build_table_X
+from csv_generator import generate_csv
+from table_one import var_in_text
 
 
 
@@ -76,4 +79,10 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
         link(output_words, db_connect_str, ignored_file_when_link)
 
         insert_equation_tuple(db_connect_str, output_equations)
+
+        var_in_text(db_connect_str)
+
+        build_table_X(db_connect_str,'/home/vangle/corenlp/stanford-corenlp-full-2018-10-05')
+
+        generate_csv(db_connect_str)
         

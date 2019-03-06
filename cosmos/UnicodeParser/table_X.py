@@ -1,7 +1,4 @@
 import os
-
-os.environ["CORENLP_HOME"] = "/home/paulluh/Downloads/stanford-corenlp-full-2018-10-05"
-
 import re
 import string
 from stanfordnlp.server import CoreNLPClient
@@ -14,7 +11,9 @@ from stanfordnlp.server import CoreNLPClient
 db_connect_str = "postgres://postgres:password@localhost:5432/cosmos_unicode_1"
 
 
-def build_table_X(db):
+def build_table_X(db, corenlp):
+    os.environ["CORENLP_HOME"] = corenlp
+
     with open('words_alpha.txt') as word_file:
         valid_words = set(word_file.read().split())
     session = Meta.init(db).Session()
