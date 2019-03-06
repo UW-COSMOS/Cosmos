@@ -1,4 +1,5 @@
 import os
+
 os.environ["CORENLP_HOME"] = "/home/paulluh/Downloads/stanford-corenlp-full-2018-10-05"
 
 import re
@@ -10,7 +11,8 @@ from fonduer.meta import Meta
 
 from stanfordnlp.server import CoreNLPClient
 
-db_connect_str = "postgres://postgres:password@localhost:5432/cosmos8"
+db_connect_str = "postgres://postgres:password@localhost:5432/cosmos_unicode_1"
+
 
 def build_table_X(db):
     with open('words_alpha.txt') as word_file:
@@ -23,7 +25,7 @@ def build_table_X(db):
             print(eqt.id)
             vars_in_eqt = variables.filter(Variable.equation_id == eqt.id)
             if vars_in_eqt.count() == 0:
-                print('No Variable found for equation '+str(eqt.id))
+                print('No Variable found for equation ' + str(eqt.id))
             else:
                 vars_used = []
                 sent_used = []
@@ -43,7 +45,7 @@ def build_table_X(db):
                             for triple in sent.openieTriple:
                                 sub = triple.subject
                                 obj = triple.object
-                                tokens = re.sub('['+string.punctuation+']', ' ', sub)
+                                tokens = re.sub('[' + string.punctuation + ']', ' ', sub)
                                 tokens = tokens.split()
                                 good_entity = True
                                 for token in tokens:
@@ -52,8 +54,8 @@ def build_table_X(db):
 
                                 if good_entity and sub not in vars_used and sub not in entities:
                                     entities.append(sub)
-                                
-                                tokens = re.sub('['+string.punctuation+']', ' ', obj)
+
+                                tokens = re.sub('[' + string.punctuation + ']', ' ', obj)
                                 tokens = tokens.split()
                                 good_entity = True
                                 for token in tokens:
@@ -64,21 +66,15 @@ def build_table_X(db):
                                     entities.append(obj)
 
                 x = TableX(
-                    equation_id = eqt.id,
-                    symbols = vars_used,
-                    phrases = entities
+                    equation_id=eqt.id,
+                    symbols=vars_used,
+                    phrases=entities
                 )
-                
+
                 session.add(x)
 
         session.commit()
 
 
-
-
-
-
 if __name__ == '__main__':
     build_table_X(db_connect_str)
-
-
