@@ -1,5 +1,5 @@
 import os
-os.environ["CORENLP_HOME"] = "/home/vangle/corenlp/stanford-corenlp-full-2018-10-05"
+os.environ["CORENLP_HOME"] = "/home/paulluh/Downloads/stanford-corenlp-full-2018-10-05"
 
 import re
 import string
@@ -10,7 +10,7 @@ from fonduer.meta import Meta
 
 from stanfordnlp.server import CoreNLPClient
 
-db_connect_str = "postgres://postgres:vangle@localhost:5432/cosmos5"
+db_connect_str = "postgres://postgres:password@localhost:5432/cosmos8"
 
 def build_table_X(db):
     with open('words_alpha.txt') as word_file:
