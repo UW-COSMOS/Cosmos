@@ -1,5 +1,5 @@
 from parse_html_to_postgres import parse_html_to_postgres
-from table_one import var_in_text
+
 
 ingestion_settings = {
     'input_folder'           : '/home/vangle/UnicodeParser/html/files/',
@@ -27,4 +27,4 @@ strip_tags = ingestion_settings['strip_tags']
 ignored_file_when_link = ingestion_settings['ignored_file_when_link']
 
 parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, store_into_postgres=True)
-var_in_text(db_connect_str)
+

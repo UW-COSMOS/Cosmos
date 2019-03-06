@@ -93,7 +93,7 @@ def generate_rawtext_from_ocrx(root):
                 assert len(ocr_segment.xpath(".//*[@class='equation_unicode']")) == 1
                 unicode_node = ocr_segment.xpath(".//*[@class='equation_unicode']")[0]
                 loguru.logger.debug(rawtext_node.text)
-                if rawtext_node.text:
+                if unicode_node.text:
                     unicode_node.text = unicode_node.text.replace('\n', ' ')
                     unicode_node.text = unicode_node.text.replace('.', ' ')
                 else:
@@ -101,7 +101,7 @@ def generate_rawtext_from_ocrx(root):
                 rawtext_node.text = unicode_node.text
                 unicode_node.getparent().remove(unicode_node)
             except AssertionError:
-                loguru.logger.debug('Rawtext not found ' + INPUT_FILE)
+                loguru.logger.debug('Rawtext not found ' )
             continue
         rawtext = []
 
@@ -121,7 +121,7 @@ def generate_rawtext_from_ocrx(root):
             rawtext_node = ocr_segment.xpath(".//*[@class='rawtext']")[0]
             rawtext_node.text = '\n\n'.join(rawtext)
         except AssertionError:
-            loguru.logger.debug('Rawtext not found ' + INPUT_FILE)
+            loguru.logger.debug('Rawtext not found ' )
 
 
 def remove_ocr_img_for_non_img(root):
@@ -164,14 +164,19 @@ def get_equation(root):
             )
             # loguru.logger.debug(page_coord)
             ocr_coord = area.xpath(".//*[@class='ocr_page']")[0].attrib['title']
-            rawtext = area.xpath(".//*[@class='rawtext']")[0][0]
             coordinate_info = coordinate(
                 title=ocr_coord,
                 org_x=base_x,
                 org_y=base_y,
                 page_num=root.attrib['page'],
             )
-            coordinate_info['text'] = rawtext.text
+
+            rawtext = area.xpath(".//*[@class='rawtext']")
+            if len(rawtext) > 0 and len(rawtext[0]) > 0:
+                rawtext = rawtext[0][0]
+                coordinate_info['text'] = rawtext.text
+            else:
+                coordinate_info['text'] = 'null'
             yield coordinate_info
 
 
