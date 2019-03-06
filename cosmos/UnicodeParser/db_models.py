@@ -37,4 +37,9 @@ class Variable(_meta.Base):
     sentence_text = Column(Text, nullable=False)
     score = Column(Float)
 
+class TableX(_meta.Base):
+    __tablename__ = "tableX"
+    equation_id = Column(Integer, primary_key=True)
+    symbols = Column(STR_ARRAY_TYPE)
+    phrases = Column(STR_ARRAY_TYPE)
 
