@@ -19,7 +19,9 @@ def similarity(token1, token2):
 
 def match(word, equation):
     word = re.sub('['+string.punctuation+']', '', word)
+    word = re.sub('cid[0-9]*', '', word)
     equation = re.sub('['+string.punctuation+']', '', equation)
+    equation = re.sub('cid[0-9]*', '', equation)
     if len(word) > len(equation) or len(word) == 0 or word.isdigit():
         return -1, -1
     if word == '∗':
