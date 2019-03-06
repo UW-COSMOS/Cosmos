@@ -12,6 +12,7 @@ import string
 from lxml import html, etree
 from dominate.util import raw
 from latex_ocr.img2latex import img2latex_api, get_im2latex_model
+from postprocess.postprocess import group_cls
 from config import IM2LATEX_WEIGHT
 
 BBOX_COORDINATES_PATTERN = re.compile("bbox\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)")
@@ -51,6 +52,8 @@ def variable_ocr(im2latex_model, root, sub_img, strip_tags):
     return root
 
 def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, tesseract_hocr=True, tesseract_text=True, include_image=True):
+    #input_list = group_cls(input_list, 'Table')
+    #input_list = group_cls(input_list, 'Figure')
     doc = dominate.document(title=image_name[:-4])
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
     im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
