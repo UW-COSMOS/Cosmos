@@ -10,12 +10,12 @@ from fonduer.parser.models import Document, Sentence
 import json
 
 
-def link(words_location, db_connect_str, ignored_files=[]):
+def link(all_words, db_connect_str, ignored_files=[]):
     session = Meta.init(db_connect_str).Session()
 
     def get_word_bag(html_source):
-        with open(words_location + html_source + '.html.json', encoding='utf-8') as words:
-            return list(filter(lambda x: x['type'] != 'Equation', json.load(words)))
+        return list(filter(lambda x: x['type'] != 'Equation', all_words['%s.html'%html_source]))
+
 
     def get_all_documents():
         return session.query(Document).order_by(Document.id)
