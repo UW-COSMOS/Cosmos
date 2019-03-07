@@ -24,6 +24,7 @@ import postprocess.postprocess as post
 from utils.voc_utils import ICDAR_convert
 from connected_components.connected_components import write_proposals
 from proposal_matcher.process import process_doc
+from config import ingestion_settings
 
 # PDF directory path
 
@@ -147,10 +148,11 @@ post.postprocess(html, tmp_html)
 
 # replace old html with corrected stuff.
 if not args.debug:
+    shutil.move(os.path.join(html, 'img'), tmp_html)
     shutil.rmtree(html)
     shutil.move(tmp_html, html)
 
-results = [pool.apply_async(update_xmls, args=(x,)) for x in os.listdir(html)]
+results = [pool.apply_async(update_xmls, args=(x,)) for x in os.listdir(html) if x != 'img']
 [r.get() for r in results]
 
 # Parse html files to postgres db
