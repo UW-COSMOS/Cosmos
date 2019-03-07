@@ -70,8 +70,8 @@ def check_caption_body(soup):
     
     return soup
 
-def check_overlap(hocr_list, box):
-    for cls, bb in hocr_list:
+def check_overlap(obj_list, box):
+    for cls, bb, _ in obj_list:
         iou = calculate_iou(bb, box)
         if (iou > 0 and cls == 'Table') or iou == 0:
             continue
@@ -89,23 +89,27 @@ def group_cls(obj_list, g_cls):
         cls, coords, _ = obj
         if cls == g_cls:
             if len(nbhds) == 0:
-                table_neighborhoods.append(coords)
+                nbhds.append(coords)
                 continue
             new_nbhd_list = []
-            for nbhd in nbhds:
+            added = False
+            for nbhd_bb in nbhds:
                 # construct a bounding box over this table and the neighborhood
-                nbhd_bb = table_neighborhoods[neighborhood]
                 new_box = [min(nbhd_bb[0], coords[0]), min(nbhd_bb[1], coords[1]), max(nbhd_bb[2], coords[2]), max(nbhd_bb[3], coords[3])]
-                if check_overlap(hocr_list, new_box):
+                if check_overlap(obj_list, new_box):
                     new_nbhd_list.append(new_box)
+                    added = True
                 else:
                     new_nbhd_list.append(nbhd_bb)
-                    new_nbhd_list.append(coords)
+            # If we didn't merge with an existing neighborhood, create a new neighborhood
+            if not added:
+                new_nbhd_list.append(coords)
             nbhds = new_nbhd_list
     new_obj_list = []
     for obj in obj_list:
+        cls, coords, _ = obj
         if cls != g_cls:
-            new_obj_list = obj
+            new_obj_list.append(obj)
     for nbhd in nbhds:
         new_obj_list.append((g_cls, nbhd, 1))
     return new_obj_list
