@@ -13,7 +13,7 @@ from argparse import ArgumentParser
 
 def iterate_and_update_writer(soup, writer):
     for seg_type in soup.find_all('div', not_ocr):
-        seg_class = ' '.join(seg_type['class'])
+        seg_class = " ".join(seg_type["class"])
         hocr = seg_type.find_next('div', 'hocr')
         coordinates = hocr['data-coordinates']
         coordinates = coordinates.split(' ')
@@ -26,9 +26,9 @@ def iterate_and_update_writer(soup, writer):
 def htmlfile2xml(html_f_path, output_path):
     with codecs.open(html_f_path, "r", "utf-8") as fin:
         soup = BeautifulSoup(fin, 'html.parser')
-        writer = Writer(f'{os.path.basename(f)[:-5]}.png', 1920, 1920)
+        writer = Writer(f'{os.path.basename(html_f_path)[:-5]}.png', 1920, 1920)
         writer = iterate_and_update_writer(soup, writer)
-        writer.save(f'{os.path.join(output_path, os.path.basename(f)[:-5])}.xml')
+        writer.save(f'{os.path.join(output_path, os.path.basename(html_f_path)[:-5])}.xml')
 
 
 def html2xml(html_path, output_path):
