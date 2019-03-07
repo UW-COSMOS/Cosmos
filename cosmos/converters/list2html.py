@@ -12,6 +12,7 @@ import string
 from lxml import html, etree
 from dominate.util import raw
 from latex_ocr.img2latex import img2latex_api, get_im2latex_model
+from postprocess.postprocess import group_cls
 from config import IM2LATEX_WEIGHT
 from .pdf_extractor import parse_pdf
 
@@ -118,6 +119,8 @@ def unicode_representation(unicode_df, page, root, base, t):
         
 
 def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, unicode_df,tesseract_hocr=True, tesseract_text=True, include_image=True):
+    input_list = group_cls(input_list, 'Table')
+    input_list = group_cls(input_list, 'Figure')
     doc = dominate.document(title=image_name[:-4])
     match = FILE_NAME_PATTERN.search(image_name)
     pdf_name = '/input/'+match.group(1)
@@ -140,7 +143,6 @@ def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, u
             with d:
                 orig_image = Image.open(os.path.join(original_img_dir, image_name))
                 width, height = orig_image.size
-                div('', cls='coordinates', data_height=f'{height}', data_width=f'{width}')
                 if include_image:
                     if not os.path.exists(inter_path):
                         os.makedirs(inter_path)
