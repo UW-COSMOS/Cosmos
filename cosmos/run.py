@@ -13,10 +13,12 @@ from torch_model.inference.inference import InferenceHelper
 from torch_model.inference.data_layer.inference_loader import InferenceLoader
 import os
 import subprocess
+import re
 from converters.model2xml import model2xml
 from converters.xml2list import xml2list
 from converters.list2html import list2html
 from converters.html2xml import htmlfile2xml
+from converters.pdf_extractor import parse_pdf
 from tqdm import tqdm
 import shutil
 import preprocess.preprocess as pp
@@ -54,6 +56,13 @@ for path in req_paths:
     if not os.path.exists(path):
         os.makedirs(path)
 
+# do pdfminer for all pdfs and preserve in mem
+unicodes = {}
+for pdf_name in os.listdir(args.pdfdir):
+    print(os.path.join(args.pdfdir,pdf_name))
+    df, limit = parse_pdf(os.path.join(args.pdfdir,pdf_name))
+    unicodes[pdf_name] = (df, limit) 
+
 # Convert a pdf into a set of images
 def preprocess_pdfs(pdf_path):
     subprocess.run(['gs', '-dBATCH', '-dNOPAUSE', '-sDEVICE=png16m', '-dGraphicsAlphaBits=4',
@@ -72,10 +81,13 @@ def preprocess_pngs(img_f):
     if pth is not None:
         padded_img.save(os.path.join(img_d, img_f))
 
+FILE_NAME = re.compile("(.*\.pdf)_([0-9]+)\.png")
+
 def convert_to_html(xml_f):
     xpath = os.path.join(xml, xml_f)
     l = xml2list(xpath)
-    list2html(l, f'{xml_f[:-4]}.png', img_d, html, os.path.join(f'{tmp}', 'images'))
+    pdf_name = FILE_NAME.search(f'{xml_f[:-4]}.png').group(1)
+    list2html(l, f'{xml_f[:-4]}.png', img_d, html, os.path.join(f'{tmp}', 'images'), unicodes[pdf_name])
 
 def match_proposal(proposal_f):
     proposal_f_full = os.path.join(f'{tmp}', proposal_f)
