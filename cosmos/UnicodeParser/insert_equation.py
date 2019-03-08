@@ -22,10 +22,11 @@ def insert_equation_tuple(db, resource_loc):
         locs = json.load(open(join(resource_loc, '%s.html.json' % doc.name)))
         print(join(resource_loc, '%s.html.json' % doc.name))
         locs_counter = 0
-        for sent in session.query(Sentence).filter(Sentence.document_id == doc.id):
+        for sent in session.query(Sentence).filter(Sentence.document_id == doc.id).order_by(Sentence.paragraph_id):
             if sent.name == 'Equation':
+                length_tmp = len(locs[locs_counter]['text'])
                 if not sent.text.replace('-', '—').replace('−','—')\
-                       .startswith(locs[locs_counter]['text'][:5].replace('-', '—').replace('−','—')):
+                       .startswith(locs[locs_counter]['text'][:min(5,length_tmp-1)].replace('-', '—').replace('−','—')):
                     print('Not Aligned!!!')
                     print(sent.id)
                     print('*****************************************')
