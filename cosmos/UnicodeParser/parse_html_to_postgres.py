@@ -14,7 +14,7 @@ from table_one import var_in_text
 
 
 def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str,
-                           strip_tags, ignored_file_when_link, store_into_postgres=True):
+                           strip_tags, ignored_file_when_link, csv_file, store_into_postgres=True):
     assert os.path.isabs(input_folder)
     assert os.path.isabs(output_html)
     assert os.path.isabs(merge_folder)
@@ -82,7 +82,7 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
 
         var_in_text(db_connect_str)
 
-        build_table_X(db_connect_str,'/home/vangle/corenlp/stanford-corenlp-full-2018-10-05')
+        build_table_X(db_connect_str,'/app/stanford-corenlp-full-2018-10-05')
 
-        generate_csv(db_connect_str)
+        generate_csv(db_connect_str, csv_file)
         
