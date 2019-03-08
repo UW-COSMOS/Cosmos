@@ -7,7 +7,7 @@ import psycopg2
 #note the lack of trailing semi-colon in the query string, as per the Postgres documentation
 
 
-def generate_csv(db):
+def generate_csv(db,outputfile):
     variable_lj_document = """
         SELECT document.name AS document_name,
         variable.*
@@ -70,11 +70,12 @@ def generate_csv(db):
 
     #make connection between python and postgresql
     conn = psycopg2.connect(db)
+    conn.set_client_encoding('UTF8')
     cur = conn.cursor()
 
     outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(query)
 
-    with open('resultsfile.csv', 'w') as f:
+    with open(outputfile, 'wb') as f:
         cur.copy_expert(outputquery, f)
 
     conn.close()
