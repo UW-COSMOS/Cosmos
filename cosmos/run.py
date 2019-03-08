@@ -3,7 +3,7 @@
 Script to run an end to end pipeline
 """
 
-from Parser.parse_html_to_postgres import parse_html_to_postgres
+from UnicodeParser.parse_html_to_postgres import parse_html_to_postgres
 import multiprocessing as mp
 from argparse import ArgumentParser
 import torch
@@ -25,6 +25,7 @@ import postprocess.postprocess as post
 from utils.voc_utils import ICDAR_convert
 from connected_components.connected_components import write_proposals
 from proposal_matcher.process import process_doc
+from config import ingestion_settings
 
 # PDF directory path
 
@@ -157,8 +158,10 @@ if not args.debug:
     shutil.rmtree(html)
     shutil.move(tmp_html, html)
 
+print('Here')
 # Parse html files to postgres db
 input_folder = ingestion_settings['input_folder']
+print(input_folder)
 
 # intermediate folder location (will be auto-generated)
 merge_folder = ingestion_settings['merge_folder']
@@ -170,9 +173,10 @@ db_connect_str = ingestion_settings['db_connect_str']
 
 strip_tags = ingestion_settings['strip_tags']
 ignored_file_when_link = ingestion_settings['ignored_file_when_link']
+output_csv = os.path.join(args.output, "output.csv")
 
 if not args.noingest:
-    parse_html_to_postgres(input_folder, output_html, db_connect_str, strip_tags, ignored_file_when_link, store_into_postgres=True)
+    parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, output_csv, store_into_postgres=True)
 
 if not args.debug:
     shutil.rmtree(f'{tmp}')
