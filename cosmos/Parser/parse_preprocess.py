@@ -80,6 +80,12 @@ def add_name(root):
 def generate_rawtext_from_ocrx(root):
     for ocr_segment in get_ocr_segments(root):
         if ocr_segment.attrib['class'] == 'Equation':
+            try:
+                rawtext_node = ocr_segment.xpath(".//*[@class='rawtext']")[0]
+                rawtext_node.text = rawtext_node.text.replace('\n', ' ')
+                rawtext_node.text = rawtext_node.text.replace('.', ' ')
+            except:
+                pass
             continue
         rawtext = []
         for paragraph in ocr_segment.xpath(".//*[@class='ocr_par']"):
@@ -144,10 +150,10 @@ def get_equation(root):
 
 
 
-def preprocess(input_file, output_word, output_html, output_equation, strip_tags):
-    tree = load_file_to_tree(input_file)
+def preprocess(tree, filename, strip_tags):
+    # tree = load_file_to_tree(input_file)
     etree.strip_tags(tree, *strip_tags)
-    all_words = []
+    words = []
     equations = []
     # print(tree.attrib)
     for page_tree in tree:
@@ -155,19 +161,15 @@ def preprocess(input_file, output_word, output_html, output_equation, strip_tags
         remove_ocr_img_for_non_img(page_tree)
         img_segment_clean_up(page_tree)
         split_paragraph(page_tree)
-        all_words += [*get_all_words_with_coordinates(page_tree)]
+        words += [*get_all_words_with_coordinates(page_tree)]
         equations += list(get_equation(page_tree))
         remove_ocr_elements(page_tree)
         add_name(page_tree)
 
-    with open(output_word, 'w') as out_word:
-        json.dump(all_words, out_word, indent=4)
-
-    with open(output_html, 'wb') as out_html:
+    with open(filename, 'wb') as out_html:
         out_html.write(etree.tostring(tree, pretty_print=True))
 
-    with open(output_equation, 'w') as out_equ:
-        json.dump(equations, out_equ, indent=4)
+    return words, equations
 
 
 if __name__ == '__main__':

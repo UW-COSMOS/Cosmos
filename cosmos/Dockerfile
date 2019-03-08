@@ -93,4 +93,4 @@ RUN pip install -r requirements.txt --user
 
 USER root
 
-CMD ["python", "run.py", "/input", "-w", "torch_model/model_95.pth", "-t", "4"]
+CMD ["python", "run.py", "/input", "-w", "torch_model/model_95.pth", "-t", "4", "-o", "/output"]
