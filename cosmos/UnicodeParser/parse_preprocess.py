@@ -96,6 +96,11 @@ def generate_rawtext_from_ocrx(root):
                 if unicode_node.text:
                     unicode_node.text = unicode_node.text.replace('\n', ' ')
                     unicode_node.text = unicode_node.text.replace('.', ' ')
+                    unicode_node.text = unicode_node.text.replace('!', ' ')
+                    unicode_node.text = unicode_node.text.replace('?', ' ')
+                    unicode_node.text = unicode_node.text.replace(';', ' ')
+                    unicode_node.text = re.sub('\(cid:[0-9]*\)', ' ', unicode_node.text)
+                    unicode_node.text = re.sub('¼', ' ', unicode_node.text)
                 else:
                     unicode_node.text = 'null'
                 rawtext_node.text = unicode_node.text
@@ -113,6 +118,10 @@ def generate_rawtext_from_ocrx(root):
             for paragraph in hocr.xpath(".//*[@class='ocr_par']"):
                 words = []
                 for word in paragraph.xpath(".//*[@class='ocrx_word']"):
+                    if word.text is not None:
+                        word.text = re.sub('\(cid:[0-9]*\)', ' ', word.text)
+                    if word.text is not None:
+                        word.text = re.sub('¼', ' ', word.text)
                     if word.text is not None:
                         words.append(word.text)
                 rawtext.append(' '.join(words))
