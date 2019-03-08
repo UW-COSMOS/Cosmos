@@ -1,14 +1,21 @@
 import click
-from evaluate.evaluate import run_evaluate,calculate_statistics_map, make_pie_charts
-
+from evaluate.evaluate_iccv import evaluate_dir
+from evaluate.evaluate_libs import run_voc, run_coco
+import os
+import yaml
+with open("classes.yaml") as stream:
+  classes = yaml.load(stream)["classes"]
 
 @click.command()
 @click.argument("preds_dir")
 @click.argument("annotations_dir")
-def run_eval(preds_dir, annotations_dir):
-    fp_list = run_evaluate(preds_dir, annotations_dir)
-    smap = calculate_statistics_map(fp_list)
-    make_pie_charts(smap)
+@click.argument("out_d")
+def run_eval(preds_dir, annotations_dir, out_d):
+    iccv = evaluate_dir(preds_dir, annotations_dir, classes)
+    voc = run_voc(preds_dir, annotations_dir,classes)
+    os.mkdir(out_d)
+    iccv.to_csv(os.path.join(out_d, "iccv.csv"))
+    voc.to_csv(os.path.join(out_d,"voc.csv"))
 
 
 if __name__ == "__main__":

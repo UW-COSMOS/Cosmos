@@ -11,10 +11,6 @@ from tqdm import tqdm
 import yaml
 import pandas as pd
 
-with open("../../classes.yaml") as fh:
-    classes = yaml.load(fh)["classes"]
-    print(classes)
-
 def get_identifiers(dir):
     files = os.listdir(dir)
     return [os.path.splitext(f)[0] for f in files]
@@ -27,7 +23,7 @@ def ingest(pred_dir, gt_dir, identifier):
     return pred_df, gt_df
 
 def map_to_integers(labels, classes):
-    labels = labels.squeeze()
+    labels = labels
     result = labels.apply(lambda row: classes.index(row))
     return result
 
@@ -72,8 +68,8 @@ def run_eval(pred_dir, gt_dir, eval_func, classes):
 
 
 
-def run_voc(pred_dir, gt_dir, classes=classes):
+def run_voc(pred_dir, gt_dir, classes):
     return run_eval(pred_dir, gt_dir,eval_detection_voc, classes) 
 
-def run_coco(pred_dir, gt_dir, classes=classes):
+def run_coco(pred_dir, gt_dir, classes):
     return run_eval(pred_dir, gt_dir, eval_detection_coco, classes)
