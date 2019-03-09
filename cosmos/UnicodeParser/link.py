@@ -10,7 +10,7 @@ from fonduer.parser.models import Document, Sentence
 import json
 
 from fonduer.meta import Meta as Mt
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, ForeignKey
 from sqlalchemy.dialects import postgresql
 from os.path import join
 
