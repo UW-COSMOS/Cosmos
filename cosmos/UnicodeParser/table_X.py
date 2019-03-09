@@ -47,22 +47,32 @@ def build_table_X(db, corenlp):
                                 tokens = re.sub('[' + string.punctuation + ']', ' ', sub)
                                 tokens = tokens.split()
                                 good_entity = True
+                                valid_phrase = ''
                                 for token in tokens:
-                                    if token not in valid_words:
-                                        good_entity = False
+                                    for char in token:
+                                        if not char.isalpha():
+                                            #print('Bad entity: '+sub)
+                                            good_entity = False
+                                    if token not in vars_used:
+                                        valid_phrase += token+' '
 
-                                if good_entity and sub not in vars_used and sub not in entities:
-                                    entities.append(sub)
+                                if good_entity and len(valid_phrase) > 0 and valid_phrase not in vars_used and valid_phrase not in entities:
+                                    entities.append(valid_phrase)
 
                                 tokens = re.sub('[' + string.punctuation + ']', ' ', obj)
                                 tokens = tokens.split()
                                 good_entity = True
+                                valid_phrase = ''
                                 for token in tokens:
-                                    if token not in valid_words:
-                                        good_entity = False
+                                    for char in token:
+                                        if not char.isalpha():
+                                            #print('Bad entity: '+obj)
+                                            good_entity = False
+                                    if token not in vars_used:
+                                        valid_phrase += token+' '
 
-                                if good_entity and obj not in vars_used and obj not in entities:
-                                    entities.append(obj)
+                                if good_entity and len(valid_phrase) > 0 and valid_phrase not in vars_used and valid_phrase not in entities:
+                                    entities.append(valid_phrase)
 
                 x = TableX(
                     equation_id=eqt.id,

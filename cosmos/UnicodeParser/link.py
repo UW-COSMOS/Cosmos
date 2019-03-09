@@ -10,9 +10,12 @@ from fonduer.parser.models import Document, Sentence
 import json
 
 from fonduer.meta import Meta as Mt
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, ForeignKey
 from sqlalchemy.dialects import postgresql
 from os.path import join
+
+import re
+
 
 STR_ARRAY_TYPE = postgresql.ARRAY(String)
 _meta = Mt.init()
@@ -40,20 +43,32 @@ class Latex(_meta.Base):
     #: A list of the words in a ``Sentence``.
     tokens = Column(STR_ARRAY_TYPE)
 
+class Image(_meta.Base):
+    __tablename__ = "image"
+    id = Column(Integer, primary_key=True)
+    img_path = Column(Text, nullable=False)
+
 
 def link(words_location, db_connect_str, ignored_files=[]):
+    XPATH_PATTERN = re.compile("/html/body/div\[([0-9]+)\]/div\[([0-9]+)\]/div\[.*\]/p.*")
     session = Meta.init(db_connect_str).Session()
     print("Type of session: "+str(type(session)))
 
     def get_word_bag(html_source):
         with open(words_location + html_source + '.html.json', encoding='utf-8') as words:
             return list(filter(lambda x: x['type'] != 'Equation', json.load(words)))
+    def get_img_path(html_source):
+        with open(words_location + 'path_info_' +html_source + '.html.json', encoding='utf-8') as paths:
+            return json.load(paths)
 
     def get_all_documents():
         return session.query(Document).order_by(Document.id)
 
     def get_all_sentence_from_a_doc(doc_id):
         return session.query(Sentence).filter(Sentence.document_id == doc_id, Sentence.name != 'Equation').order_by(Sentence.id)
+
+    def get_all_sentence_with_equation(doc_id):
+        return session.query(Sentence).filter(Sentence.document_id == doc_id).order_by(Sentence.paragraph_id)
 
     def same(w1, w2):
         return w1.replace('-', '—').replace('−','—').replace('–','—').strip() \
@@ -63,8 +78,13 @@ def link(words_location, db_connect_str, ignored_files=[]):
         if doc.name + '.html' in ignored_files:
             continue
         word_bag = get_word_bag(doc.name)
+        paths = get_img_path(doc.name)
+        for path in paths:
+            print(path)
         sentences = get_all_sentence_from_a_doc(doc.id)
+        sentences_with_eq = get_all_sentence_with_equation(doc.id)
         word_bag_count = 0
+        path_count = -1
         all_words_from_db = list(
             chain(*[sent.text.split() for sent in sentences]))
 
@@ -76,10 +96,45 @@ def link(words_location, db_connect_str, ignored_files=[]):
         assert len(all_words_from_db) >= len(word_bag)
 
         str_buffer = ''
+        index1_prev = 'nonesense'
+        index2_prev = 'nonesense'
+
+        for sent in sentences_with_eq:
+            xpath = sent.xpath
+            match = XPATH_PATTERN.search(xpath)
+            index1 = match.group(1)
+            index2 = match.group(2)
+
+            if index1 == index1_prev and index2 == index2_prev:
+                print('the same')
+                print(path_count)
+                print(paths[path_count])
+                img_p = Image(
+                    id = sent.id,
+                    img_path = paths[path_count]
+                )
+                session.add(img_p)
+            else:
+                path_count += 1
+                if path_count >= len(paths):
+                    print("There is no path available")
+                else:
+                    print('different')
+                    print(path_count)
+                    print(paths[path_count])
+                    img_p = Image(
+                        id = sent.id,
+                        img_path = paths[path_count]
+                    )
+                    session.add(img_p)
+                    index1_prev = index1
+                    index2_prev = index2
+
 
         for sent in sentences:
             coordinates_record = defaultdict(list)
             tokenized_words = sent.text.split()
+
             latex_tokens = []
 
             def add_to_coordinate_record_list(current_idx_json):
@@ -138,7 +193,7 @@ def link(words_location, db_connect_str, ignored_files=[]):
 
             if sent.name != 'Equation':
                 sanity_check()
-
+    print('Before commit')
     session.commit()
 
 

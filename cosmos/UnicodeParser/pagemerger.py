@@ -18,6 +18,9 @@ def pagemerger(rawfolder, outputfolder):
     def get_page_number(filename):
         page_match = PAGENAME_NUMBER_PATTERN.search(filename)
         return page_match.group(2) if page_match is not None else None
+    def get_page_int(filename):
+        page_match = PAGENAME_NUMBER_PATTERN.search(filename)
+        return int(page_match.group(2)) if page_match is not None else -1
 
     for name in sorted(listdir(rawfolder)):
         print(get_filename(name))
@@ -28,7 +31,7 @@ def pagemerger(rawfolder, outputfolder):
         html = etree.Element('html')
         root = etree.SubElement(html, 'body')
 
-        for file in group:
+        for file in sorted(group, key=get_page_int):
             page = etree.SubElement(root, 'div', page=get_page_number(file))
             tree = load_file_to_tree(path.join(rawfolder, file))
             elem_dict = {}

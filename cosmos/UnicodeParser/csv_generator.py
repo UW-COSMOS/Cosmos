@@ -7,7 +7,7 @@ import psycopg2
 #note the lack of trailing semi-colon in the query string, as per the Postgres documentation
 
 
-def generate_csv(db):
+def generate_csv(db,outputfile):
     variable_lj_document = """
         SELECT document.name AS document_name,
         variable.*
@@ -58,23 +58,34 @@ def generate_csv(db):
     """%(variable_lj_document_lj_sentence)
 
     variable_lj_document_lj_sentence_lj_equation_lj_corenlp = """
-    SELECT t.*, table_x.*
+    SELECT t.*, table_x.symbols, table_x.phrases
     FROM (%s) as t
     LEFT JOIN table_x ON table_x.equation_id=t.equation_id
     """%(variable_lj_document_lj_sentence_lj_equation)
 
+    
+    variable_lj_document_lj_sentence_lj_equation_lj_corenlp_lj_image = """
+    SELECT t.*, image.img_path as sentence_img
+    FROM (%s) as t
+    LEFT JOIN image ON image.id=t.sentence_id
+    """%(variable_lj_document_lj_sentence_lj_equation_lj_corenlp)
 
+    variable_lj_document_lj_sentence_lj_equation_lj_corenlp_lj_image_lj_image = """
+    SELECT t.*, image.img_path as equation_img
+    FROM (%s) as t
+    LEFT JOIN image ON image.id=t.equation_id
+    """%(variable_lj_document_lj_sentence_lj_equation_lj_corenlp_lj_image)
 
-
-    query = variable_lj_document_lj_sentence_lj_equation_lj_corenlp
+    query = variable_lj_document_lj_sentence_lj_equation_lj_corenlp_lj_image_lj_image
 
     #make connection between python and postgresql
     conn = psycopg2.connect(db)
+    conn.set_client_encoding('UTF8')
     cur = conn.cursor()
 
     outputquery = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(query)
 
-    with open('resultsfile.csv', 'w') as f:
+    with open(outputfile, 'wb') as f:
         cur.copy_expert(outputquery, f)
 
     conn.close()

@@ -24,9 +24,8 @@ class InferenceHelper:
         :return:
 
         """
-        if isdir(out):
-            raise ValueError(f"Is a directory {out}")
-        mkdir(out)
+        if not isdir(out):
+            mkdir(out)
         loader = DataLoader(self.dataset, batch_size=1, collate_fn=self.dataset.collate, )
         for doc in tqdm(loader):
             windows, proposals, identifier = doc
