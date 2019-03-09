@@ -155,6 +155,7 @@ post.postprocess(html, tmp_html)
 
 # replace old html with corrected stuff.
 if not args.debug:
+    shutil.move(os.path.join(html,'img'),tmp_html)
     shutil.rmtree(html)
     shutil.move(tmp_html, html)
 
