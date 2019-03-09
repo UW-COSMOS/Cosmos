@@ -15,6 +15,9 @@ def iterate_and_update_writer(soup, writer):
     for seg_type in soup.find_all('div', not_ocr):
         seg_class = " ".join(seg_type["class"])
         hocr = seg_type.find_next('div', 'hocr')
+        if hocr is None:
+            print(seg_type)
+            raise Exception('Invalid div found. Please account for said div')
         coordinates = hocr['data-coordinates']
         coordinates = coordinates.split(' ')
         coordinates = [int(x) for x in coordinates]
