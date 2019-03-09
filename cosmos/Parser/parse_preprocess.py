@@ -19,7 +19,7 @@ def coordinate(title,org_x=0, org_y=0, page_num=0,):
         'ymin': int(match.group(2)) + org_y,
         'xmax': int(match.group(3)) + org_x,
         'ymax': int(match.group(4)) + org_y,
-        'page_num': int(page_num),
+        'page_num': int(page_num) if page_num is not None else None,
     }
 
 
@@ -43,30 +43,41 @@ def load_file_to_tree(path):
 def get_ocr_segments(root):
     if 'page' not in root.attrib:
         print(INPUT_FILE)
-    assert 'page' in root.attrib
     yield from root
 
 
-def get_all_words_with_coordinates(root):
+def get_words_from_child(root, target, type=None):
+    meta_nodes = root.xpath(f".//*[@class='{target}']")
+    if len(meta_nodes) == 0:
+        print(etree.tostring(root, pretty_print=True))
+        print('----')
+        print(target)
+        raise Exception('Unable to find target on root')
+    meta_node = meta_nodes[0]
+    base_x, base_y = get_data_coordinate_pattern(meta_node.attrib['data-coordinates'])
+    page_num = None
+    if 'page' in root.attrib:
+        page_num = root.attrib['page']
+    for word in root.xpath(".//*[@class='ocrx_word']"):
+        if word.text is None:
+            continue
+        if word.text.strip():
+            # print(word.text)
+            yield {
+                'text': word.text,
+                'type': type,
+                'word_bbox': coordinate(word.attrib['title'], base_x, base_y, page_num),
+                'line_bbox': coordinate(word.getparent().attrib['title'], base_x, base_y, page_num),
+                'area_bbox': coordinate(word.getparent().getparent().attrib['title'], base_x, base_y, page_num),
+            }
+
+
+def get_all_words_with_coordinates(root, target='hocr'):
     for child in get_ocr_segments(root):
         type = child.attrib['class']
-        try:
-            meta_node = child.xpath(".//*[@class='hocr']")[0]
-            assert len(child.xpath(".//*[@class='hocr']")) == 1
-            base_x, base_y = get_data_coordinate_pattern(meta_node.attrib['data-coordinates'])
-            page_num = root.attrib['page']
-            for word in child.xpath(".//*[@class='ocrx_word']"):
-                if word.text.strip():
-                    # print(word.text)
-                    yield {
-                        'text': word.text,
-                        'type': type,
-                        'word_bbox': coordinate(word.attrib['title'], base_x, base_y, page_num),
-                        'line_bbox': coordinate(word.getparent().attrib['title'], base_x, base_y, page_num),
-                        'area_bbox': coordinate(word.getparent().getparent().attrib['title'], base_x, base_y, page_num),
-                    }
-        except:
-            loguru.logger.debug('hocr class not found ' + INPUT_FILE)
+        words = get_words_from_child(child, target, type=type)
+        yield from words
+        
 
 
 def add_name(root):

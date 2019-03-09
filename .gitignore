@@ -1,4 +1,5 @@
 exp/data/*
+output/
 exp/weights/*
 html_tmp/
 xml/
