@@ -202,7 +202,7 @@ def non_max_suppression_fast(boxes, overlapThresh):
     return final_boxes.tolist()
 
 
-def xml2list(fp, tres=0, feather=True):
+def xml2list(fp, tres=0, feather=False):
     """
     convert VOC XML to a list
     :param fp: file path to VOC XML file
