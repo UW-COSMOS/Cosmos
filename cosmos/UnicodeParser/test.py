@@ -26,5 +26,5 @@ db_connect_str = ingestion_settings['db_connect_str']
 strip_tags = ingestion_settings['strip_tags']
 ignored_file_when_link = ingestion_settings['ignored_file_when_link']
 
-parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, 'output.csv', store_into_postgres=True)
+parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, 'output.csv', '/home/vangle/corenlp/stanford-corenlp-full-2018-10-05',store_into_postgres=True)
 

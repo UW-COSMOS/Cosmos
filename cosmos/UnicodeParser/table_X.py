@@ -50,7 +50,7 @@ def build_table_X(db, corenlp):
                                 valid_phrase = ''
                                 for token in tokens:
                                     for char in token:
-                                        if not char.isalpha() and not char.isdigit():
+                                        if not char.isalpha():
                                             #print('Bad entity: '+sub)
                                             good_entity = False
                                     if token not in vars_used:
@@ -65,7 +65,7 @@ def build_table_X(db, corenlp):
                                 valid_phrase = ''
                                 for token in tokens:
                                     for char in token:
-                                        if not char.isalpha() and not char.isdigit():
+                                        if not char.isalpha():
                                             #print('Bad entity: '+obj)
                                             good_entity = False
                                     if token not in vars_used:
