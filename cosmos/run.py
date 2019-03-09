@@ -4,6 +4,8 @@ Script to run an end to end pipeline
 """
 
 from UnicodeParser.parse_html_to_postgres import parse_html_to_postgres
+from construct_caption_tables.construct import construct
+from Parser.parse_html_to_postgres import parse_html_to_postgres
 import multiprocessing as mp
 from argparse import ArgumentParser
 import torch
@@ -51,7 +53,7 @@ html = os.path.join(args.output, "html")
 img_d = os.path.join(tmp, 'images2')
 
 # Define and create required paths
-req_paths = [tmp, f'{tmp}/images', f'{tmp}/images2', f'{tmp}/cc_proposals']
+req_paths = [tmp, f'{tmp}/images', f'{tmp}/images2', f'{tmp}/cc_proposals', xml]
 for path in req_paths:
     if not os.path.exists(path):
         os.makedirs(path)
@@ -166,6 +168,11 @@ if not args.debug:
 
 results = [pool.apply_async(update_xmls, args=(x,)) for x in os.listdir(html) if x != 'img']
 [r.get() for r in results]
+
+# Construct handles multiprocessing within it.
+
+construct(html, 'Figure Caption', 'Figure', os.path.join(args.output, 'figures.csv'), processes=args.threads)
+construct(html, 'Table Caption', 'Table', os.path.join(args.output, 'tables.csv'), processes=args.threads)
 
 # Parse html files to postgres db
 input_folder = ingestion_settings['input_folder']
