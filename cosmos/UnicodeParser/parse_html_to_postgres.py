@@ -58,7 +58,7 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
     all_inputs = [f for f in os.listdir(merge_folder)]
     for html_file in all_inputs:
         preprocess(os.path.join(merge_folder, html_file), "%s.json" % (os.path.join(output_words, html_file)),
-                   os.path.join(output_html, html_file), "%s.json" % (os.path.join(output_equations, html_file)), strip_tags)
+                   os.path.join(output_html, html_file), "%s.json" % (os.path.join(output_equations, html_file)), "%s.json" % (os.path.join(output_words, 'path_info_'+html_file)), strip_tags)
 
     if store_into_postgres:
         """
@@ -82,7 +82,7 @@ def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words
 
         var_in_text(db_connect_str)
 
-        build_table_X(db_connect_str,'/app/stanford-corenlp-full-2018-10-05')
+        build_table_X(db_connect_str,'/home/vangle/corenlp/stanford-corenlp-full-2018-10-05/')
 
         generate_csv(db_connect_str, csv_file)
         
