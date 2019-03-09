@@ -102,6 +102,8 @@ def link(words_location, db_connect_str, ignored_files=[]):
         for sent in sentences_with_eq:
             xpath = sent.xpath
             match = XPATH_PATTERN.search(xpath)
+            if match is None:
+                continue
             index1 = match.group(1)
             index2 = match.group(2)
 
