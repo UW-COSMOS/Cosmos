@@ -28,12 +28,12 @@ def insert_equation_tuple(db, resource_loc):
                 if not sent.text.replace('-', '—').replace('−','—')\
                        .startswith(locs[locs_counter]['text'][:min(5,length_tmp-1)].replace('-', '—').replace('−','—')):
                     print('Not Aligned!!!')
-                    print(sent.id)
-                    print('*****************************************')
-                    print(sent.text)
-                    print('-----------------------------------------')
-                    print(locs[locs_counter]['text'])
-                    print('*****************************************')
+                    #print(sent.id)
+                    #print('*****************************************')
+                    #print(sent.text)
+                    #print('-----------------------------------------')
+                    #print(locs[locs_counter]['text'])
+                    #print('*****************************************')
                 e = Equation(
                     id = sent.id, name='Equation', document_id=doc.id, section_id=sent.section_id, paragraph_id=sent.paragraph_id,
                     text=sent.text, variables=[],
