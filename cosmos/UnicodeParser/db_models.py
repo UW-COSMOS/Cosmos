@@ -1,6 +1,6 @@
 from fonduer.meta import Meta
 from sqlalchemy.dialects import postgresql
-from sqlalchemy import Column, Integer, String, Text, Float
+from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey
 
 INT_ARRAY_TYPE = postgresql.ARRAY(Integer)
 STR_ARRAY_TYPE = postgresql.ARRAY(String)
@@ -29,17 +29,18 @@ class Variable(_meta.Base):
     id = Column(Integer, primary_key=True)
     text = Column(Text, nullable=False)
     document_id = Column(Integer)
-    equation_id = Column(Integer)
+    equation_id = Column(Integer, ForeignKey("equation.id"))
     equation_text = Column(Text, nullable=False)
     equation_offset = Column(Integer)
-    sentence_id = Column(Integer)
+    sentence_id = Column(Integer, ForeignKey("sentence.id"))
     sentence_offset = Column(Integer)
     sentence_text = Column(Text, nullable=False)
     score = Column(Float)
 
 class TableX(_meta.Base):
     __tablename__ = "table_x"
-    equation_id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    equation_id = Column(Integer, ForeignKey("equation.id"))
     symbols = Column(STR_ARRAY_TYPE)
     phrases = Column(STR_ARRAY_TYPE)
 

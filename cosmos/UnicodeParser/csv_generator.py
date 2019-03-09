@@ -58,20 +58,25 @@ def generate_csv(db,outputfile):
     """%(variable_lj_document_lj_sentence)
 
     variable_lj_document_lj_sentence_lj_equation_lj_corenlp = """
-    SELECT t.*, table_x.*
+    SELECT t.*, table_x.symbols, table_x.phrases
     FROM (%s) as t
     LEFT JOIN table_x ON table_x.equation_id=t.equation_id
     """%(variable_lj_document_lj_sentence_lj_equation)
 
     
     variable_lj_document_lj_sentence_lj_equation_lj_corenlp_lj_image = """
-    SELECT t.*, image.img_path
+    SELECT t.*, image.img_path as sentence_img
     FROM (%s) as t
     LEFT JOIN image ON image.id=t.sentence_id
     """%(variable_lj_document_lj_sentence_lj_equation_lj_corenlp)
 
+    variable_lj_document_lj_sentence_lj_equation_lj_corenlp_lj_image_lj_image = """
+    SELECT t.*, image.img_path as equation_img
+    FROM (%s) as t
+    LEFT JOIN image ON image.id=t.equation_id
+    """%(variable_lj_document_lj_sentence_lj_equation_lj_corenlp_lj_image)
 
-    query = variable_lj_document_lj_sentence_lj_equation_lj_corenlp_lj_image
+    query = variable_lj_document_lj_sentence_lj_equation_lj_corenlp_lj_image_lj_image
 
     #make connection between python and postgresql
     conn = psycopg2.connect(db)
