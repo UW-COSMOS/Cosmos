@@ -10,7 +10,6 @@ from utils.voc_utils import similar_class_sets, ICDAR_convert
 plt.style.use('ggplot')
 import pandas as pd
 import click
-import ipdb
 
 
 def rect(d, im, color, points):

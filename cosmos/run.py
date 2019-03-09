@@ -17,6 +17,7 @@ import re
 from converters.model2xml import model2xml
 from converters.xml2list import xml2list
 from converters.list2html import list2html
+from converters.html2xml import htmlfile2xml
 from converters.pdf_extractor import parse_pdf
 from tqdm import tqdm
 import shutil
@@ -93,6 +94,10 @@ def match_proposal(proposal_f):
     xml_f = f'{xml}/{proposal_f[:-4]}' + '.xml'
     process_doc(xml_f, proposal_f_full, xml_f)
 
+def update_xmls(html_f):
+    hpath = os.path.join(html, html_f)
+    htmlfile2xml(hpath, xml)
+
 pool = mp.Pool(processes=args.threads)
 results = [pool.apply_async(preprocess_pdfs, args=(x,)) for x in os.listdir(args.pdfdir)]
 [r.get() for r in results]
@@ -155,11 +160,13 @@ post.postprocess(html, tmp_html)
 
 # replace old html with corrected stuff.
 if not args.debug:
-    shutil.move(os.path.join(html,'img'),tmp_html)
+    shutil.move(os.path.join(html, 'img'), tmp_html)
     shutil.rmtree(html)
     shutil.move(tmp_html, html)
 
-print('Here')
+results = [pool.apply_async(update_xmls, args=(x,)) for x in os.listdir(html) if x != 'img']
+[r.get() for r in results]
+
 # Parse html files to postgres db
 input_folder = ingestion_settings['input_folder']
 print(input_folder)
