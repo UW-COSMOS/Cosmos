@@ -52,7 +52,7 @@ def var_in_text(db):
         sentences = get_sentences_in_doc(eqt.document_id)
         #print(sentences.count())
         paragraph_id = eqt.paragraph_id
-        print('*******************************************************')
+        #print('*******************************************************')
         count = 0
         id_temp = paragraph_id
         while count < MAX_RANGE:
@@ -69,7 +69,7 @@ def var_in_text(db):
                         if tmp not in valid_words:
                             offset, score = match(word, eqt.text)
                             if offset >= 0:
-                                print(str(offset)+' '+str(score)+' '+word)
+                                #print(str(offset)+' '+str(score)+' '+word)
                                 v = Variable(
                                     text = word,
                                     document_id = eqt.document_id,
@@ -86,9 +86,9 @@ def var_in_text(db):
                     #print(sent.text)
                 count += 1
 
-        print('-------------------------------------------------------')
-        print(eqt.text)
-        print('-------------------------------------------------------')
+        #print('-------------------------------------------------------')
+        #print(eqt.text)
+        #print('-------------------------------------------------------')
         count = 0
         id_temp = paragraph_id
         while count < MAX_RANGE:
@@ -105,7 +105,7 @@ def var_in_text(db):
                         if tmp not in valid_words:
                             offset, score = match(word, eqt.text)
                             if offset >= 0:
-                                print(str(offset)+' '+str(score)+' '+word)
+                                #print(str(offset)+' '+str(score)+' '+word)
                                 v = Variable(
                                     text = word,
                                     document_id = eqt.document_id,
@@ -121,7 +121,7 @@ def var_in_text(db):
                     #print(sent.paragraph_id)
                     #print(sent.text)
                 count += 1
-        print('*******************************************************')
+        #print('*******************************************************')
         session.commit()
 
 if __name__ == '__main__':

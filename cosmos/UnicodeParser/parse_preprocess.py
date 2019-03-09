@@ -42,7 +42,7 @@ def load_file_to_tree(path):
 
 def get_ocr_segments(root):
     if 'page' not in root.attrib:
-        print(INPUT_FILE)
+        print('structure broken')
     assert 'page' in root.attrib
     yield from root
 
@@ -85,23 +85,39 @@ def add_name(root):
 
 
 def generate_rawtext_from_ocrx(root):
+    paths = []
     for ocr_segment in get_ocr_segments(root):
+        text_tmp = ''
         if ocr_segment.attrib['class'] == 'Equation':
             try:
                 assert len(ocr_segment.xpath(".//*[@class='rawtext']")) == 1
                 rawtext_node = ocr_segment.xpath(".//*[@class='rawtext']")[0]
                 assert len(ocr_segment.xpath(".//*[@class='equation_unicode']")) == 1
                 unicode_node = ocr_segment.xpath(".//*[@class='equation_unicode']")[0]
-                loguru.logger.debug(rawtext_node.text)
+                #loguru.logger.debug(rawtext_node.text)
                 if unicode_node.text:
                     unicode_node.text = unicode_node.text.replace('\n', ' ')
                     unicode_node.text = unicode_node.text.replace('.', ' ')
+                    unicode_node.text = unicode_node.text.replace('!', ' ')
+                    unicode_node.text = unicode_node.text.replace('?', ' ')
+                    unicode_node.text = unicode_node.text.replace(';', ' ')
+                    unicode_node.text = re.sub('\(cid:[0-9]*\)', ' ', unicode_node.text)
+                    unicode_node.text = re.sub('¼', ' ', unicode_node.text)
                 else:
                     unicode_node.text = 'null'
                 rawtext_node.text = unicode_node.text
+                text_tmp = unicode_node.text
                 unicode_node.getparent().remove(unicode_node)
             except AssertionError:
                 loguru.logger.debug('Rawtext not found ' )
+
+            if len(text_tmp) > 0 and len(text_tmp.replace('\n','')) > 0:
+                for img_elem in ocr_segment.xpath('.//img'):
+                    #print('##########################################')
+                    #print(text_tmp.replace('\n',''))
+                    #print(img_elem.get('src'))
+                    img_path = img_elem.get('src')
+                    paths.append(img_path)
             continue
         rawtext = []
 
@@ -114,15 +130,29 @@ def generate_rawtext_from_ocrx(root):
                 words = []
                 for word in paragraph.xpath(".//*[@class='ocrx_word']"):
                     if word.text is not None:
+                        word.text = re.sub('\(cid:[0-9]*\)', ' ', word.text)
+                    if word.text is not None:
+                        word.text = re.sub('¼', ' ', word.text)
+                    if word.text is not None:
                         words.append(word.text)
                 rawtext.append(' '.join(words))
         try:
             assert len(ocr_segment.xpath(".//*[@class='rawtext']")) == 1
             rawtext_node = ocr_segment.xpath(".//*[@class='rawtext']")[0]
             rawtext_node.text = '\n\n'.join(rawtext)
+            text_tmp = rawtext_node.text
         except AssertionError:
             loguru.logger.debug('Rawtext not found ' )
 
+        if len(text_tmp) > 0 and len(text_tmp.replace('\n','')) > 0:
+            for img_elem in ocr_segment.xpath('.//img'):
+                #print('##########################################')
+                #print(text_tmp.replace('\n',''))
+                #print(img_elem.get('src'))
+                img_path = img_elem.get('src')
+                paths.append(img_path)
+    
+    return paths
 
 def remove_ocr_img_for_non_img(root):
     for ocr_segment in get_ocr_segments(root):
@@ -182,16 +212,17 @@ def get_equation(root):
 
 
 
-def preprocess(input_file, output_word, output_html, output_equation, strip_tags):
+def preprocess(input_file, output_word, output_html, output_equation, output_path, strip_tags):
     tree = load_file_to_tree(input_file)
     etree.strip_tags(tree, *strip_tags)
     all_words = []
     equations = []
+    paths = []
     # print(tree.attrib)
     for page_tree in tree:
-        generate_rawtext_from_ocrx(page_tree)
+        paths += generate_rawtext_from_ocrx(page_tree)
         remove_ocr_img_for_non_img(page_tree)
-        img_segment_clean_up(page_tree)
+        #img_segment_clean_up(page_tree)
         split_paragraph(page_tree)
         all_words += [*get_all_words_with_coordinates(page_tree)]
         equations += list(get_equation(page_tree))
@@ -206,6 +237,9 @@ def preprocess(input_file, output_word, output_html, output_equation, strip_tags
 
     with open(output_equation, 'w') as out_equ:
         json.dump(equations, out_equ, indent=4)
+
+    with open(output_path, 'w') as out_path:
+        json.dump(paths, out_path, indent=4)
 
 
 if __name__ == '__main__':
