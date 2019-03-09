@@ -118,7 +118,7 @@ def unicode_representation(unicode_df, page, root, base, t):
     return root,text,first_id
         
 
-def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, unicode_df,tesseract_hocr=True, tesseract_text=True, include_image=True):
+def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, unicode_df,tesseract_hocr=True, tesseract_text=True, include_image=True, feather_x=2, feather_y=2):
     input_list = group_cls(input_list, 'Table')
     input_list = group_cls(input_list, 'Figure')
     doc = dominate.document(title=image_name[:-4])
@@ -133,6 +133,11 @@ def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, u
         img = Image.open(os.path.join(image_dir, image_name))
         for ind, inp in enumerate(input_list):
             t, coords, score = inp
+            orig_image = Image.open(os.path.join(original_img_dir, image_name))
+            width, height = orig_image.size
+            # Feather the coords here a bit so we can get better OCR
+            coords = [max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
+                          min(coords[2]+feather_x, width), min(coords[3]+feather_y, height)]
             cropped = img.crop(coords)
             input_id = str(t) + str(ind)
             hocr = pytesseract.image_to_pdf_or_hocr(cropped, extension='hocr').decode('utf-8')
@@ -141,8 +146,6 @@ def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, u
             b_text = body.group(1)
             d = div(id=input_id, cls=str(t))
             with d:
-                orig_image = Image.open(os.path.join(original_img_dir, image_name))
-                width, height = orig_image.size
                 if include_image:
                     if not os.path.exists(inter_path):
                         os.makedirs(inter_path)
