@@ -15,7 +15,7 @@ def not_ocr(text):
     Returns: TODO
 
     """
-    return 'ocr' not in text and 'rawtext' not in text
+    return 'ocr' not in text and 'rawtext' not in text and 'unicode' not in text
 
 def construct_hocr_list(soup):
     hocr_list = []
