@@ -3,6 +3,7 @@ import numpy as np
 from os import listdir
 from os.path import splitext, join
 from .ingestion import ingest_file
+from .evaluate_config import EvaluationConfig as args
 
 def get_ious(pred_df, box):
     X = 0
@@ -54,8 +55,11 @@ def get_tp(combined_df, cls):
     """
     tp_candidates = combined_df[combined_df["pred_label"] == combined_df["gt_label"]]
     tp_candidates = tp_candidates[tp_candidates["pred_label"] == cls]
-    groups = tp_candidates.groupby("gt_id")
-    return float(len(groups))
+    tps = tp_candidates.shape[0]
+    if not args.multiple_proposals:
+        groups = tp_candidates.groupby("gt_id")
+        tps = len(groups)
+    return float(tps)
 
 def get_fp(combined_df, cls):
     fp_candidates = combined_df[combined_df["pred_label"] == cls] 
@@ -68,6 +72,8 @@ def get_fp(combined_df, cls):
     matches = len(groups)
     tot = groups.size()
     fp_type_2 += tot.sum() - matches
+    if args.multiple_proposals:
+        fn_type_2 = 0
     return float(fp_type_1 + fp_type_2)
 
 
@@ -75,6 +81,8 @@ def get_fn(combined_df, unmatched, cls):
     fn_candidates = combined_df[combined_df["gt_label"] == cls]
     fn_type_1 = fn_candidates[fn_candidates["pred_label"] != fn_candidates["gt_label"] ].shape[0]
     fn_type_2 = unmatched[unmatched["label"] == cls].shape[0]
+    if not args.e2e:
+        fn_type_2 = 0
     return float(fn_type_1 + fn_type_2)
 
 
