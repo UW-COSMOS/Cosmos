@@ -5,8 +5,36 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, LargeBinary, Sequence, PrimaryKeyConstraint, ForeignKeyConstraint, CheckConstraint
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 import pickle
 Base = declarative_base()
+
+class Neighbor(Base):
+    """
+    ORM mapping for Neighbors
+    """
+    __tablename__ = "neighborhoods"
+    id = Column(Integer, Sequence("neighbor_id_sequence"), primary_key=True)
+    center_doc_id = Column(Integer)
+    center_page_id = Column(Integer)
+    center_object_id = Column(Integer)
+    neighbor_doc_id = Column(Integer)
+    neighbor_page_id = Column(Integer) 
+    neighbor_object_id = Column(Integer)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["center_doc_id", "center_page_id", "center_object_id"],
+            ["examples.doc_id", "examples.page_id", "examples.object_id"]),
+        ForeignKeyConstraint(
+            ["neighbor_doc_id", "neighbor_page_id", "neighbor_object_id"],
+            ["examples.doc_id", "examples.page_id", "examples.object_id"]),
+        CheckConstraint("center_page_id = neighbor_page_id", name="same_page_check"),
+        CheckConstraint("center_doc_id = neighbor_doc_id", name="same_doc_check"),
+        CheckConstraint("center_object_id != neighbor_object_id", name="not_same_object_check")
+            )
+    neighbor = relationship("Example", 
+            foreign_keys=[center_doc_id, center_page_id, center_object_id], backref="neighbors")
+
 
 class Example(Base):
     """
@@ -38,26 +66,9 @@ class Example(Base):
         self._bbox = pickle.dumps(bbox)
 
     def __repr__(self):
-        return f"Example(id={self.id}, window={self.window.shape}, label=self.label)"
+        return f"Example(id={self.object_id},{self.page_id},{self.object_id}, window={self.window.shape}, label=self.label, bbox={self.bbox})"
 
 
-class Neighbor(Base):
-    """
-    ORM mapping for Neighbors
-    """
-    __tablename__ = "neighborhoods"
-    center_doc_id = Column(Integer)
-    center_page_id = Column(Integer)
-    center_object_id = Column(Integer)
-    neighbor_doc_id = Column(Integer)
-    neighbor_page_id = Column(Integer) 
-    neighbor_object_id = Column(Integer)
-    __table_args__ = (ForeignKeyConstraint(["center_doc_id", "center_page_id", "center_object_id"], ["examples.doc_id", "examples.page_id", "examples.object_id"]),
-                        ForeignKeyConstraint(["neighbor_doc_id", "neighbor_page_id", "neighbor_object_id"], ["examples.doc_id", "examples.page_id", "examples.object_id"]),
-                        CheckConstraint("center_page_id = neighbor_page_id", name="same_page_check"),
-                        CheckConstraint("center_doc_id = neighbor_doc_id", name="same_doc_check"),
-                        CheckConstraint("center_object_id != neighbor_object_id", name="not_same_object_check")
-            )
 
 
 class ImageDB:
