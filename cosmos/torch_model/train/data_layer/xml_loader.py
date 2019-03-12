@@ -19,6 +19,7 @@ from collections import namedtuple
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
+from ingestion.ingest_images import redis_ingest
 normalizer = NormalizeWrapper()
 
 tens = ToTensor()
@@ -59,46 +60,6 @@ def xml2list(fp):
     return lst
 
 
-def load_image(base_path, identifier, img_type):
-    """
-    load an image into memory
-    :param base_path: base path to image
-    :param identifier:
-    :param img_type:
-    :return: [3 x SIZE x SIZE] tensor
-    """
-    path = os.path.join(base_path, f"{identifier}.{img_type}")
-    pil = Image.open(path)
-    return pil
-
-def load_proposal(base_path, identifier):
-    """
-    Load a set of proposals into memory
-
-    """
-    path = os.path.join(base_path, f"{identifier}.csv")
-    np_arr = genfromtxt(path, delimiter=",")
-    bbox_absolute = torch.from_numpy(np_arr).reshape(-1,4)
-    return BBoxes(bbox_absolute, "xyxy")
-
-def load_gt(xml_dir, identifier):
-    """
-    Load an XML ground truth document
-    :param xml_dir: base path to xml
-    :param identifier: xml document identifier
-    :return: [K x 4] Tensor, [cls_names]
-    """
-    path = os.path.join(xml_dir, f"{identifier}.xml")
-    as_lst = xml2list(path)
-    if len(as_lst) == 0:
-        cls_list = [0]
-        tensor_list = [[0,0,0,0]]
-    else:
-        cls_list, tensor_list = zip(*as_lst)
-    # convert to tensors
-    gt_boxes = BBoxes(torch.tensor(tensor_list),"xyhw")
-    return gt_boxes, cls_list
-
 class XMLLoader(Dataset):
     """
     Loads examples and ground truth from given directories
@@ -107,7 +68,7 @@ class XMLLoader(Dataset):
     """
 
 
-    def __init__(self, img_dir,xml_dir=None, proposal_dir=None,warped_size=300, img_type="jpg", host="redis",debug=True):
+    def __init__(self, img_dir, xml_dir=None, proposal_dir=None, warped_size=300, img_type="jpg", host="redis", debug=True):
         """
         Initialize a XML loader object
         :param xml_dir: directory to get XML from
@@ -140,7 +101,6 @@ class XMLLoader(Dataset):
                 fh.write(f"{identifier}\n")
         
 
-
     def __len__(self):
         return len(self.uuids)
 
@@ -164,62 +124,10 @@ class XMLLoader(Dataset):
             weight[idx] = weight_per_class[lst.gt_cls]
         return weight
 
+
     def _ingest(self):
-        conn = redis.Redis(connection_pool=self.pool)
-        for identifier in tqdm(self.identifiers):
-            img = load_image(self.img_dir, identifier, self.img_type)
-            gt = None
-            proposals = None
-            if self.xml_dir is not None:
-                gt = load_gt(self.xml_dir, identifier)
-            if self.proposal_dir is not None:
-                proposals = load_proposal(self.proposal_dir, identifier)
-            ret = [img, gt, proposals, identifier]
-            pts = self._unpack_page(ret)
-            for pt in pts:
-                uuid = str(uuid4())
-                self.uuids.append(uuid)
-                label = pt.gt_cls
-                if label in self.class_stats:
-                    self.class_stats[label] +=1
-                else:
-                    self.class_stats[label] = 1
-                obj = pickle.dumps(pt)
-                conn.set(uuid, obj)
+        self.uuids, self.class_stats, self.nproposals, self.ngt_boxes = redis_ingest(self.img_dir, self.proposal_dir, self.xml_dir, self.warped_size, self.host)
 
-    def _unpack_page(self, page):
-
-        img, gt, proposals, identifier = page
-        gt_boxes, gt_cls = gt
-        matches = match(proposals,gt_boxes)
-        #filter 0 overlap examples
-        mask = matches != -1
-        idxs = mask.nonzero()
-        idxs = idxs.squeeze()
-        proposals.change_format("xyxy")
-        proposals = proposals[idxs, :].reshape(-1,4)
-        matches = list(filter(lambda x: x != -1, matches))
-        labels = [gt_cls[match] for match in matches]
-        windows = []
-        proposals_lst = proposals.tolist()
-        self.nproposals += len(proposals_lst)
-        gt_box_lst = gt_boxes.tolist()
-        self.ngt_boxes += len(gt_box_lst)
-        for idx, proposal in enumerate(proposals_lst):
-            proposal = [int(c) for c in proposal]
-            img_sub = img.crop(proposal)
-            img_sub = img_sub.resize((self.warped_size, self.warped_size))
-            img_data = tens(img_sub)
-            img_data = normalizer(img_data)
-            windows.append(img_data)
-        # switch to list of tensors
-        proposals_lst = [torch.tensor(prop) for prop in proposals_lst]
-        match_box_lst = []
-        for idx in range(len(proposals_lst)):
-            match_box_lst.append(torch.tensor(gt_box_lst[matches[idx]]))
-        collected = list(zip(windows,proposals_lst,labels,match_box_lst))
-        ret = [Example(*pt) for pt in collected]
-        return ret
 
     def print_stats(self):
         tot = len(self.uuids)
