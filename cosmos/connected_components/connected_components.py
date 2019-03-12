@@ -352,7 +352,7 @@ def run_write_proposals(img_dir, output_dir, procs):
 @click.command()
 @click.argument('img_dir')
 @click.argument('output_dir')
-@click.option("--n", help="number of pooled processes", default=240)
+@click.option("--procs", help="number of pooled processes", default=240)
 def run_write_proposals_cli(img_dir, output_dir, procs):
     run_write_proposals(img_dir, output_dir, procs)
 
