@@ -75,8 +75,9 @@ class ImageDB:
     """
     SQL alchemy session factory
     """
-    def __call__(self):
-        engine = create_engine('sqlite:///:memory:', echo=True)  
+    @staticmethod
+    def build(verbose=False):
+        engine = create_engine('sqlite:///:memory:', echo=verbose)  
         Base.metadata.create_all(engine)
         Session = sessionmaker()
         Session.configure(bind=engine)
