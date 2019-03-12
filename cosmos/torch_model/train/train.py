@@ -75,7 +75,7 @@ class TrainerHelper:
                             batch_size=int(self.params["BATCH_SIZE"]),
                             collate_fn=partial(collate,cls_dict=self.cls),
                             num_workers=int(self.params["BATCH_SIZE"]),
-														sampler=WeightedRandomSampler(self.weight_vec, int(len(self.train_set) *.7)))
+                            sampler=WeightedRandomSampler(self.weight_vec, int(len(self.train_set) *.7)))
                             
         self.model.train(mode=True)
         iteration = 0
