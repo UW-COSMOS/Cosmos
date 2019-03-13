@@ -25,8 +25,6 @@ class Neighbor(Base):
             ["examples.object_id"]),
         CheckConstraint("center_object_id != neighbor_object_id", name="not_same_object_check")
             )
-    neighbor = relationship("Example", 
-            foreign_keys=[center_object_id], backref="neighbors")
 
 
 class Example(Base):
@@ -68,7 +66,7 @@ class Example(Base):
     def gt_box(self, gt_box):
         self._gt_box = pickle.dumps(gt_box)
 
-    def neighbors(positive, uuids, session, n_neighbors=5):
+    def neighbors(self, positive, uuids, session, n_neighbors=5):
         if positive:
             neighbors = []
             for nbhr in session.query(Neighbor).filter(Neighbor.center_object_id == self.object_id):

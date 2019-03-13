@@ -49,7 +49,7 @@ class XMLLoader(Dataset):
         self.ngt_boxes = ingest_objs.ngt_boxes
         self.nproposals = ingest_objs.nproposals
         self.class_stats = ingest_objs.class_stats
-        print("ingested to db, printing class stats")
+        print("printing class stats")
         self.print_stats()
         print(f"# of gt boxes:{self.ngt_boxes}")
         print(f"# of proposals:{self.nproposals}")

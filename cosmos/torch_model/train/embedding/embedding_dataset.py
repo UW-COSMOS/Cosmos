@@ -6,34 +6,34 @@ Author: Josh McGrath
 from torch.utils.data import Dataset
 from collections import namedtuple
 import torch
-from ingestions.ingest_images import db_ingest
+from torch_model.train.data_layer.xml_loader import XMLLoader, Example
 
 
-class ImageEmbeddingDataset(Dataset):
-    def __init__(self, db):
+
+class ImageEmbeddingDataset(XMLLoader):
+    def __init__(self, session, ingest_objs):
         """
-        Create an Image DB
+        Create an image embedding db
         :param db: a sqlalchemy session to query for images
         """
-        super(ImageEmbeddingDataset, self).__init__()
-        self.db = db
-        self.identifiers = []
-        self._build()
+        super(ImageEmbeddingDataset, self).__init__(session, ingest_objs)
 
-    def _build(self):
-        pass
 
     @staticmethod
     def collate(batch):
-        words = torch.stack([item.word_window for item in batch])
-        contexts = torch.stack([item.context_window for item in batch])
-        word_bboxes = torch.stack([item.word_bbox for item in batch])
-        context_bboxes = torch.stack([item.context_bbox for item in batch])
-        labels = torch.stack([item.label for item in batch])
-        return Batch(words, contexts, word_bboxes, context_bboxes, labels)
+        return XMLLoader.collate(batch)
 
     def __getitem__(self, item):
-        pass
+        if item < len(self.uuids):
+            return XMLLoader.__getitem__(self, item)
+        # If item is out of index, grab a random obj and generate a negative sample
+        uuid = random.choice(self.uuids)
+        ex = get_example_for_uuid(uuid, self.session)
+        # We pass False here, which generates negative neighbors
+        neighbors = ex.neighbors(False, self.uuids, self.session)
+        neighbor_boxes = [n.bbox for n in neighbors]
+        neighbor_windows = [n.window for n in neighbors]
+        return Example(center_bb=ex.bbox, label=ex.label, center_window=ex.window, neighbor_boxes=neighbor_boxes, neighbor_windows=neighbor_windows)
 
     def __len__(self):
-        return len(self.identifiers)
+        return 2 * len(self.uuids)

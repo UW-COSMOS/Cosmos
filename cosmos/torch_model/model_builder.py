@@ -8,7 +8,9 @@ from torch_model.model.model import MMFasterRCNN
 from torch_model.train.train import TrainerHelper
 from torch_model.model.utils.config_manager import ConfigManager
 from torch_model.train.data_layer.xml_loader import XMLLoader
+from torch_model.train.embedding.embedding_dataset import ImageEmbeddingDataset
 from ingestion.ingest_images import ImageDB
+
 import yaml
 from os.path import join
 def get_img_dir(root):
@@ -28,6 +30,7 @@ def get_dataset(dir, warped_size, expansion_delta, img_type, partition):
                                                          partition,
                                                          expansion_delta)
     dataset = XMLLoader(session, ingest_objs)
+    embedding_dataset = ImageEmbeddingDataset(session, ingest_objs)
     return dataset
 
 class ModelBuilder:
