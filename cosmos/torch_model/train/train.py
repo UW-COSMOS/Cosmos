@@ -4,14 +4,14 @@ Takes a model, dataset, and training paramters
 as arguments
 """
 import torch
-from  torch import nn
+from torch import nn
 from os.path import join, isdir
 from os import mkdir
 import os
 from torch import optim
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from tqdm import tqdm
-from train.anchor_targets.head_target_layer import HeadTargetLayer
+from torch_model.train.anchor_targets.head_target_layer import HeadTargetLayer
 from functools import partial
 from tensorboardX import SummaryWriter
 
