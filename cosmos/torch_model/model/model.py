@@ -21,11 +21,12 @@ class MMFasterRCNN(nn.Module):
         self.featurizer = Featurizer(cfg)
         N, H, W, D = get_shape_info(self.featurizer.backbone, (1, 3, cfg.WARPED_SIZE, cfg.WARPED_SIZE))
         self.attention = MultiHeadAttention(cfg.NHEADS, cfg.EMBEDDING_DIM)
-        self.embedder = Im
+        self.embedder = ImageEmbedder(H,D, cfg.EMBEDDING_INTERMEDIATE, cfg.EMBEDDING_DIM)
         self.head = MultiModalClassifier(H,
                                          W,
                                          D,
                                          cfg.HEAD_DIM,
+                                         cfg.NHEADS,
                                          len(cfg.CLASSES))
         self.cls_names = cfg.CLASSES
 
@@ -36,8 +37,10 @@ class MMFasterRCNN(nn.Module):
         """
         maps = self.featurizer(input_windows, device)
         V = self.featurizer(neighbor_windows)
-        Q = I
-        cls_scores = self.head(maps)
+        Q = self.embedder(maps)
+        K = self.embedder(V)
+        attn_maps = self.attention(Q,K,V)
+        cls_scores = self.head(maps, attn_maps, proposals)
         return proposals,  cls_scores
 
 

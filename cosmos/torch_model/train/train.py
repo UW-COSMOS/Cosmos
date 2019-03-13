@@ -21,20 +21,6 @@ def unpack_cls(cls_dict, gt_label):
     return torch.tensor([label])
 
 
-def collate(batch, cls_dict):
-    """
-    collation function for GTDataset class
-    :param batch:
-    :return:
-    """
-    ex_windows = [item.ex_window for item in batch]
-    gt_box = [item.gt_box for item in batch]
-    gt_cls = [unpack_cls(cls_dict, item.gt_cls) for item in batch]
-    proposals = [item.ex_proposal for item in batch]
-    return torch.stack(ex_windows).float(), gt_box, torch.cat(gt_cls), proposals
-
-
-
 def prep_gt_boxes(boxes, device):
     boxes = [box.reshape(1,-1, 4).float().to(device) for box in boxes]
     return boxes
@@ -73,7 +59,7 @@ class TrainerHelper:
                               weight_decay=self.params["WEIGHT_DECAY"])
         train_loader = DataLoader(self.train_set,
                             batch_size=int(self.params["BATCH_SIZE"]),
-                            collate_fn=partial(collate,cls_dict=self.cls),
+                            collate_fn=partial(train_set.collate,cls_dict=self.cls),
                             num_workers=int(self.params["BATCH_SIZE"]),
                             sampler=WeightedRandomSampler(self.weight_vec, int(len(self.train_set) *.7)))
                             
@@ -81,12 +67,13 @@ class TrainerHelper:
         iteration = 0
         for epoch in tqdm(range(int(self.params["EPOCHS"])),desc="epochs"):
             tot_cls_loss = 0.0
-            for idx, batch in enumerate(tqdm(train_loader, desc="batches", leave=False)):
+            for batch in tqdm(train_loader, desc="batches", leave=False):
                 optimizer.zero_grad()
-                ex, gt_box, gt_cls, proposals = batch
-                ex = ex.to(self.device)
+                
+                windows = batch.target_windows.to(self.device)
+                ex = batch.center_window.to(self.device)
                 gt_cls = gt_cls.to(self.device)
-                rois, cls_scores= self.model(ex, self.device, proposals=proposals)
+                rois, cls_scores= self.model(ex,windows,proposals, self.device, proposals=proposals)
                 cls_loss = self.head_target_layer(cls_scores, gt_cls, self.device)
                 loss = cls_loss
                 tot_cls_loss += float(cls_loss)
