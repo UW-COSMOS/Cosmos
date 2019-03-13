@@ -4,6 +4,8 @@ Author: Josh McGrath
 """
 import torch
 from torch import nn
+from .attention.embedder import ImageEmbedder
+from .attention.transformer import MultiHeadAttention
 from .layers.featurization import Featurizer
 from .head.object_classifier import MultiModalClassifier
 from .utils.config_manager import ConfigManager
@@ -18,6 +20,8 @@ class MMFasterRCNN(nn.Module):
         cfg = ConfigManager(cfg)
         self.featurizer = Featurizer(cfg)
         N, H, W, D = get_shape_info(self.featurizer.backbone, (1, 3, cfg.WARPED_SIZE, cfg.WARPED_SIZE))
+        self.attention = MultiHeadAttention(cfg.NHEADS, cfg.EMBEDDING_DIM)
+        self.embedder = Im
         self.head = MultiModalClassifier(H,
                                          W,
                                          D,
@@ -26,11 +30,13 @@ class MMFasterRCNN(nn.Module):
         self.cls_names = cfg.CLASSES
 
 
-    def forward(self, *inputs, **kwargs):
+    def forward(self, input_windows,neighbor_windows, proposals, device):
         """
         Process an Image through the network
         """
-        maps, proposals = self.featurizer(*inputs, **kwargs)
+        maps = self.featurizer(input_windows, device)
+        V = self.featurizer(neighbor_windows)
+        Q = I
         cls_scores = self.head(maps)
         return proposals,  cls_scores
 
