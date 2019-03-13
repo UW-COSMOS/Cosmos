@@ -15,25 +15,19 @@ class Neighbor(Base):
     """
     __tablename__ = "neighborhoods"
     id = Column(Integer, Sequence("neighbor_id_sequence"), primary_key=True)
-    center_doc_id = Column(Integer)
-    center_page_id = Column(Integer)
-    center_object_id = Column(Integer)
-    neighbor_doc_id = Column(Integer)
-    neighbor_page_id = Column(Integer) 
-    neighbor_object_id = Column(Integer)
+    center_object_id = Column(String)
+    neighbor_object_id = Column(String)
     __table_args__ = (
         ForeignKeyConstraint(
-            ["center_doc_id", "center_page_id", "center_object_id"],
-            ["examples.doc_id", "examples.page_id", "examples.object_id"]),
+            ["center_object_id"],
+            ["examples.object_id"]),
         ForeignKeyConstraint(
-            ["neighbor_doc_id", "neighbor_page_id", "neighbor_object_id"],
-            ["examples.doc_id", "examples.page_id", "examples.object_id"]),
-        CheckConstraint("center_page_id = neighbor_page_id", name="same_page_check"),
-        CheckConstraint("center_doc_id = neighbor_doc_id", name="same_doc_check"),
+            ["neighbor_object_id"],
+            ["examples.object_id"]),
         CheckConstraint("center_object_id != neighbor_object_id", name="not_same_object_check")
             )
     neighbor = relationship("Example", 
-            foreign_keys=[center_doc_id, center_page_id, center_object_id], backref="neighbors")
+            foreign_keys=[center_page_id, center_object_id], backref="neighbors")
 
 
 class Example(Base):
@@ -41,13 +35,13 @@ class Example(Base):
     ORM mapping for examples
     """
     __tablename__ = "examples"
-    doc_id = Column(Integer)
-    page_id = Column(Integer)
-    object_id = Column(Integer)
+    page_id = Column(String)
+    object_id = Column(String)
     _window = Column("window",LargeBinary)
     _bbox = Column("bbox", LargeBinary)
+    _gt_box = Column("gt_box", LargeBinary)
     label = Column(String)
-    __table_args__ = (PrimaryKeyConstraint("doc_id", "page_id","object_id",name="example_pk"),)
+    __table_args__ = (PrimaryKeyConstraint("object_id",name="example_pk"),)
 
     @property
     def window(self):
@@ -59,16 +53,22 @@ class Example(Base):
 
     @property
     def bbox(self):
-        return pickle.loads(self._window)
+        return pickle.loads(self._bbox)
 
     @bbox.setter
     def bbox(self, bbox):
         self._bbox = pickle.dumps(bbox)
 
+    @property
+    def gt_box(self):
+        return pickle.loads(self.gt_box)
+
+    @gt_box.setter
+    def gt_box(self, bbox):
+        self._gt_box = pickle.dumps(gt_box)
+
     def __repr__(self):
         return f"Example(id={self.object_id},{self.page_id},{self.object_id}, window={self.window.shape}, label=self.label, bbox={self.bbox})"
-
-
 
 
 class ImageDB:

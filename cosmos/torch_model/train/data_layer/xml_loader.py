@@ -19,7 +19,10 @@ from collections import namedtuple
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
-from ingestion.ingest_images import redis_ingest, redis_get
+from ingestion.ingest_images import db_ingest, db_get
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from torch_model.train.data_layer.sql_types import ImageDB
 
 normalizer = NormalizeWrapper()
 
@@ -43,6 +46,8 @@ class XMLLoader(Dataset):
         :param img_dir: directory to load PNGs from
         :param img_type: the image format to load in
         """
+        # We're going to create our engine and associate it with the loader specifically
+        self.session = ImageDB.build()
         self.debug = debug
         self.xml_dir = xml_dir
         self.img_dir = img_dir
@@ -53,14 +58,15 @@ class XMLLoader(Dataset):
         self.identifiers = [splitext(img)[0] for img in self.imgs]
         self.uuids = []
         self.num_images = len(self.imgs)
-        self.pool = redis.ConnectionPool(host=host)
+        #self.pool = redis.ConnectionPool(host=host)
         self.no_overlaps = []
         self.ngt_boxes = 0
         self.nproposals = 0
         print(f"Constructed a {self.num_images} image dataset, ingesting to redis server")
         self.class_stats = {}
         self._ingest()
-        print("ingested to redis, printing class stats")
+        self.session.commit()
+        print("ingested to db, printing class stats")
         self.print_stats()
         print(f"# of gt boxes:{self.ngt_boxes}")
         print(f"# of proposals:{self.nproposals}")
@@ -74,7 +80,7 @@ class XMLLoader(Dataset):
 
     def __getitem__(self, item):
         uuid = self.uuids[item]
-        return redis_get(uuid, self.pool)
+        return db_get(uuid, self.session)
 
 
     def get_weight_vec(self, classes):
@@ -92,7 +98,7 @@ class XMLLoader(Dataset):
 
 
     def _ingest(self):
-        self.uuids, self.class_stats, self.nproposals, self.ngt_boxes = redis_ingest(self.img_dir, self.proposal_dir, self.xml_dir, self.warped_size, self.pool)
+        self.uuids, self.class_stats, self.nproposals, self.ngt_boxes = db_ingest(self.img_dir, self.proposal_dir, self.xml_dir, self.warped_size, self.session)
 
 
     def print_stats(self):

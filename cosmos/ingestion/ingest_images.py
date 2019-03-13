@@ -14,6 +14,7 @@ from torch_model.train.data_layer.transforms import NormalizeWrapper
 from uuid import uuid4
 from tqdm import tqdm
 import pickle
+from torch_model.train.data_layer.sql_types import Example as Ex
 
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
 normalizer = NormalizeWrapper()
@@ -168,8 +169,44 @@ def redis_ingest(img_dir, proposal_dir, xml_dir, warped_size, pool):
     return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
 
 
-def pg_ingest(img_dir, proposal_dir, xml_dir, warped_size):
-    pass
+def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, session):
+    class_stats = {}
+    uuids = []
+    nproposals = 0
+    ngt_boxes = 0
+    examples = []
+    for img_name in tqdm(img_names):
+        name, ext = os.path.splitext(img_name)
+        image = load_image(img_dir, name, ext)
+        gt = None
+        proposals = None
+        if xml_dir is not None:
+            gt = load_gt(xml_dir, name)
+        if proposal_dir is not None:
+            proposals = load_proposal(proposal_dir, name)
+        ret = [image, gt, proposals, name]
+        pts, proposals_len, gt_box_len = unpack_page(ret, warped_size)
+        nproposals += proposals_len
+        ngt_boxes += gt_box_len
+        for pt in pts:
+            uuid = str(uuid4())
+            uuids.append(uuid)
+            label = pt.gt_cls
+            if label in class_stats:
+                class_stats[label] += 1
+            else:
+                class_stats[label] = 1
+            obj = pickle.dumps(pt)
+            ex = Ex(page_id=name, object_id=uuid, window=pt['ex_windows'], bbox=pt['ex_proposal'], gt_box=pt['gt_box'], label=pt['gt_cls'])
+            examples.append(ex)
+    session.add_all(examples)
+    IngestObjs = namedtuple('IngestObjs', 'uuids class_stats nproposals ngt_boxes')
+    return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
+
+def db_get(uuid, session):
+    ex = session.query(Ex).filter_by(object_id=uuid).one()
+    example = Example(ex_window=ex.window, ex_proposal=ex.bbox, gt_cls=ex.label, gt_box=ex.gt_box)
+    return example
 
 
 
