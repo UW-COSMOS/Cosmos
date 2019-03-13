@@ -27,7 +27,7 @@ class Neighbor(Base):
         CheckConstraint("center_object_id != neighbor_object_id", name="not_same_object_check")
             )
     neighbor = relationship("Example", 
-            foreign_keys=[center_page_id, center_object_id], backref="neighbors")
+            foreign_keys=[center_object_id], backref="neighbors")
 
 
 class Example(Base):
@@ -37,6 +37,8 @@ class Example(Base):
     __tablename__ = "examples"
     page_id = Column(String)
     object_id = Column(String)
+    partition = Column(String)
+    index = Column(Integer, autoincrement=True)
     _window = Column("window",LargeBinary)
     _bbox = Column("bbox", LargeBinary)
     _gt_box = Column("gt_box", LargeBinary)
@@ -61,10 +63,10 @@ class Example(Base):
 
     @property
     def gt_box(self):
-        return pickle.loads(self.gt_box)
+        return pickle.loads(self._gt_box)
 
     @gt_box.setter
-    def gt_box(self, bbox):
+    def gt_box(self, gt_box):
         self._gt_box = pickle.dumps(gt_box)
 
     def __repr__(self):
