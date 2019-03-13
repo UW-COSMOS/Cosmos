@@ -19,45 +19,13 @@ from collections import namedtuple
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
-from ingestion.ingest_images import redis_ingest
+from ingestion.ingest_images import redis_ingest, redis_get
+
 normalizer = NormalizeWrapper()
 
 tens = ToTensor()
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
 
-def mapper(obj, preprocessor=None):
-    """
-    map a single object to the list structure
-    :param obj: an Etree node
-    :return: (type, (x1, y1, x2, y2))
-    """
-    bnd = obj.find("bndbox")
-    coords = ["xmin", "ymin", "xmax", "ymax"]
-    pts = [int(float(bnd.find(coord).text)) for coord in coords]
-    x1, y1, x2, y2 = pts
-    w = x2 - x1
-    h = y2 - y1
-    # get centers
-    x = x1 + w/2
-    y = y1 + h/2
-    cls = obj.find("name").text
-    if preprocessor is not None:
-        cls = preprocessor[cls]
-    return cls, (x, y, h,w)
-
-
-def xml2list(fp):
-    """
-    convert VOC XML to a list
-    :param fp: file path to VOC XML file
-    :return: [(type,(x1, y1, x2, y2))]
-    """
-    tree = ET.parse(fp)
-    root = tree.getroot()
-    objects = root.findall("object")
-    lst = [mapper(obj) for obj in objects]
-    lst.sort(key=lambda x: x[1])
-    return lst
 
 
 class XMLLoader(Dataset):
@@ -105,10 +73,8 @@ class XMLLoader(Dataset):
         return len(self.uuids)
 
     def __getitem__(self, item):
-        conn = redis.Redis(connection_pool=self.pool)
-        bytes_rep = conn.get(self.uuids[item])
-        lst = pickle.loads(bytes_rep)
-        return lst
+        uuid = self.uuids[item]
+        return redis_get(uuid, self.pool)
 
 
     def get_weight_vec(self, classes):
@@ -126,7 +92,7 @@ class XMLLoader(Dataset):
 
 
     def _ingest(self):
-        self.uuids, self.class_stats, self.nproposals, self.ngt_boxes = redis_ingest(self.img_dir, self.proposal_dir, self.xml_dir, self.warped_size, self.host)
+        self.uuids, self.class_stats, self.nproposals, self.ngt_boxes = redis_ingest(self.img_dir, self.proposal_dir, self.xml_dir, self.warped_size, self.pool)
 
 
     def print_stats(self):

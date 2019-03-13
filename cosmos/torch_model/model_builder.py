@@ -4,10 +4,10 @@ Implements the expected HyperYAML interface
 import torch
 import click
 from hyperyaml.hyperyaml import HyperYaml
-from model.model import MMFasterRCNN
-from train.train import TrainerHelper
-from model.utils.config_manager import ConfigManager
-from train.data_layer.xml_loader import XMLLoader
+from torch_model.model.model import MMFasterRCNN
+from torch_model.train.train import TrainerHelper
+from torch_model.model.utils.config_manager import ConfigManager
+from torch_model.train.data_layer.xml_loader import XMLLoader
 import yaml
 from os.path import join
 def get_img_dir(root):

@@ -1,11 +1,58 @@
-import psycopg2
+import sqlalchemy
 from collections import namedtuple
 import torch
 from torch_model.utils.bbox import BBoxes
 from PIL import Image
 import redis
 import os
+from xml.etree import ElementTree as ET
+from converters.xml2list import xml2list
+from numpy import genfromtxt
+from torch_model.utils.matcher import match
+from torchvision.transforms import ToTensor
+from torch_model.train.data_layer.transforms import NormalizeWrapper
+from uuid import uuid4
+from tqdm import tqdm
+import pickle
 
+Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
+normalizer = NormalizeWrapper()
+tens = ToTensor()
+
+
+def mapper(obj, preprocessor=None):
+    """
+    map a single object to the list structure
+    :param obj: an Etree node
+    :return: (type, (x1, y1, x2, y2))
+    """
+    bnd = obj.find("bndbox")
+    coords = ["xmin", "ymin", "xmax", "ymax"]
+    pts = [int(float(bnd.find(coord).text)) for coord in coords]
+    x1, y1, x2, y2 = pts
+    w = x2 - x1
+    h = y2 - y1
+    # get centers
+    x = x1 + w/2
+    y = y1 + h/2
+    cls = obj.find("name").text
+    if preprocessor is not None:
+        cls = preprocessor[cls]
+    return cls, (x, y, h,w)
+
+
+def xml2list(fp):
+    """
+    convert VOC XML to a list
+    :param fp: file path to VOC XML file
+    :return: [(type,(x1, y1, x2, y2))]
+    """
+    tree = ET.parse(fp)
+    root = tree.getroot()
+    objects = root.findall("object")
+    lst = [mapper(obj) for obj in objects]
+    lst.sort(key=lambda x: x[1])
+    return lst
 
 def load_gt(xml_dir, identifier):
     """
@@ -34,7 +81,7 @@ def load_image(base_path, identifier, img_type):
     :param img_type:
     :return: [3 x SIZE x SIZE] tensor
     """
-    path = os.path.join(base_path, f"{identifier}.{img_type}")
+    path = os.path.join(base_path, f"{identifier}{img_type}")
     pil = Image.open(path)
     return pil
 
@@ -48,7 +95,7 @@ def load_proposal(base_path, identifier):
     bbox_absolute = torch.from_numpy(np_arr).reshape(-1,4)
     return BBoxes(bbox_absolute, "xyxy")
 
-def unpack_page(self, page, warped_size):
+def unpack_page(page, warped_size):
     img, gt, proposals, identifier = page
     gt_boxes, gt_cls = gt
     matches = match(proposals,gt_boxes)
@@ -80,26 +127,31 @@ def unpack_page(self, page, warped_size):
     ExampleData = namedtuple('ExampleData', 'examples proposals_len gt_box_len')
     return ExampleData(examples=ret, proposals_len=len(proposals_lst), gt_box_len=len(gt_box_lst))
 
+def redis_get(uuid, pool):
+    conn = redis.Redis(connection_pool=pool)
+    bytes_rep = conn.get(uuid)
+    lst = pickle.loads(bytes_rep)
+    return lst
 
-def redis_ingest(img_dir, proposal_dir, xml_dir, warped_size, host):
+
+def redis_ingest(img_dir, proposal_dir, xml_dir, warped_size, pool):
     img_names = os.listdir(img_dir)
-    pool = redis.ConnectionPool(host=host)
-    conn = redis.Redis(pool=pool)
+    conn = redis.Redis(connection_pool=pool)
     class_stats = {}
     uuids = []
     nproposals = 0
     ngt_boxes = 0
-    for img_name in img_names:
-        name, ext = splitext(img_name)
+    for img_name in tqdm(img_names):
+        name, ext = os.path.splitext(img_name)
         image = load_image(img_dir, name, ext)
         gt = None
         proposals = None
         if xml_dir is not None:
-            gt = load_gt(xml_dir, identifier)
+            gt = load_gt(xml_dir, name)
         if proposal_dir is not None:
-            proposals = load_proposal(proposal_dir, identifier)
-        ret = [img, gt, proposals, identifier]
-        pts, proposals_len, gt_box_len = unpack_page(ret)
+            proposals = load_proposal(proposal_dir, name)
+        ret = [image, gt, proposals, name]
+        pts, proposals_len, gt_box_len = unpack_page(ret, warped_size)
         nproposals += proposals_len
         ngt_boxes += gt_box_len
         for pt in pts:
@@ -116,7 +168,7 @@ def redis_ingest(img_dir, proposal_dir, xml_dir, warped_size, host):
     return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
 
 
-def pg_ingest(img_dir, proposals_dir):
+def pg_ingest(img_dir, proposal_dir, xml_dir, warped_size):
     pass
 
 
