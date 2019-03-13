@@ -1,4 +1,5 @@
 import sqlalchemy
+from evaluate.evaluate import calculate_iou
 from collections import namedtuple
 import torch
 from torch_model.utils.bbox import BBoxes
@@ -15,6 +16,7 @@ from uuid import uuid4
 from tqdm import tqdm
 import pickle
 from torch_model.train.data_layer.sql_types import Example as Ex
+from torch_model.train.data_layer.sql_types import Neighbor
 
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
 normalizer = NormalizeWrapper()
@@ -169,13 +171,13 @@ def redis_ingest(img_dir, proposal_dir, xml_dir, warped_size, pool):
     return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
 
 
-def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, session):
+def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
     class_stats = {}
     uuids = []
     nproposals = 0
     ngt_boxes = 0
     examples = []
-    for img_name in tqdm(img_names):
+    for img_name in tqdm(os.listdir(img_dir)):
         name, ext = os.path.splitext(img_name)
         image = load_image(img_dir, name, ext)
         gt = None
@@ -196,17 +198,34 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, session):
                 class_stats[label] += 1
             else:
                 class_stats[label] = 1
-            obj = pickle.dumps(pt)
-            ex = Ex(page_id=name, object_id=uuid, window=pt['ex_windows'], bbox=pt['ex_proposal'], gt_box=pt['gt_box'], label=pt['gt_cls'])
+            ex = Ex(page_id=name, object_id=uuid, window=pt.ex_window, bbox=pt.ex_proposal, gt_box=pt.gt_box, label=pt.gt_cls, partition=partition)
             examples.append(ex)
     session.add_all(examples)
     IngestObjs = namedtuple('IngestObjs', 'uuids class_stats nproposals ngt_boxes')
     return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
 
-def db_get(uuid, session):
+
+def get_example_for_uuid(uuid, session):
     ex = session.query(Ex).filter_by(object_id=uuid).one()
     example = Example(ex_window=ex.window, ex_proposal=ex.bbox, gt_cls=ex.label, gt_box=ex.gt_box)
     return example
+
+
+def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
+    print('Computing neighborhoods')
+    for ex in tqdm(session.query(Ex).filter(Ex.partition == partition)):
+        orig_bbox = ex.bbox
+        nbhd_bbox = [max(0, orig_bbox[0]-expansion_delta), max(0, orig_bbox[1]-expansion_delta), min(orig_size, orig_bbox[2]+expansion_delta), min(orig_size, orig_bbox[3]+expansion_delta)]
+        # Get all the examples on the same page
+        nbhd = []
+        for page_ex in session.query(Ex).filter(Ex.partition == ex.partition).filter(Ex.page_id == ex.page_id).filter(Ex.object_id != ex.object_id):
+            target_bbox = page_ex.bbox
+            iou = calculate_iou(nbhd_bbox, target_bbox)
+            if iou > 0:
+                nbhr = Neighbor(center_object_id=ex.object_id, neighbor_object_id=page_ex.object_id)
+                nbhd.append(nbhr)
+        session.add_all(nbhd)
+
 
 
 

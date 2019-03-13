@@ -19,7 +19,7 @@ from collections import namedtuple
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
-from ingestion.ingest_images import db_ingest, db_get
+from ingestion.ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from torch_model.train.data_layer.sql_types import ImageDB
@@ -30,7 +30,6 @@ tens = ToTensor()
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
 
 
-
 class XMLLoader(Dataset):
     """
     Loads examples and ground truth from given directories
@@ -39,7 +38,7 @@ class XMLLoader(Dataset):
     """
 
 
-    def __init__(self, img_dir, xml_dir=None, proposal_dir=None, warped_size=300, img_type="jpg", host="redis", debug=True):
+    def __init__(self, img_dir, xml_dir=None, proposal_dir=None, warped_size=300, partition='train', img_type="jpg", host="redis", debug=True, expansion_delta=200):
         """
         Initialize a XML loader object
         :param xml_dir: directory to get XML from
@@ -48,7 +47,9 @@ class XMLLoader(Dataset):
         """
         # We're going to create our engine and associate it with the loader specifically
         self.session = ImageDB.build()
+        self.expansion_delta = expansion_delta
         self.debug = debug
+        self.partition = partition
         self.xml_dir = xml_dir
         self.img_dir = img_dir
         self.proposal_dir = proposal_dir
@@ -62,7 +63,7 @@ class XMLLoader(Dataset):
         self.no_overlaps = []
         self.ngt_boxes = 0
         self.nproposals = 0
-        print(f"Constructed a {self.num_images} image dataset, ingesting to redis server")
+        print(f"Constructed a {self.num_images} image dataset, ingesting to db")
         self.class_stats = {}
         self._ingest()
         self.session.commit()
@@ -80,25 +81,27 @@ class XMLLoader(Dataset):
 
     def __getitem__(self, item):
         uuid = self.uuids[item]
-        return db_get(uuid, self.session)
+        return get_example_for_uuid(uuid, self.session)
 
 
     def get_weight_vec(self, classes):
         weight_per_class = {}                                    
         N = len(self.uuids)
-        for name in classes:                                                   
-            weight_per_class[name] = N/float(self.class_stats[name])                                 
+        for name in classes:
+            if name not in self.class_stats:
+                weight_per_class[name] = 0
+            else:
+                weight_per_class[name] = N/float(self.class_stats[name])                                 
         weight = [0] * N                                              
-        for idx, uuid in tqdm(enumerate(self.uuids)):                                          
-            conn = redis.Redis(connection_pool=self.pool)
-            bytes_rep = conn.get(uuid)
-            lst = pickle.loads(bytes_rep)
+        for idx, uuid in tqdm(enumerate(self.uuids)):
+            lst = get_example_for_uuid(uuid, self.session)
             weight[idx] = weight_per_class[lst.gt_cls]
         return weight
 
 
     def _ingest(self):
-        self.uuids, self.class_stats, self.nproposals, self.ngt_boxes = db_ingest(self.img_dir, self.proposal_dir, self.xml_dir, self.warped_size, self.session)
+        self.uuids, self.class_stats, self.nproposals, self.ngt_boxes = db_ingest(self.img_dir, self.proposal_dir, self.xml_dir, self.warped_size, self.partition, self.session)
+        compute_neighborhoods(self.session, self.partition, self.expansion_delta)
 
 
     def print_stats(self):
