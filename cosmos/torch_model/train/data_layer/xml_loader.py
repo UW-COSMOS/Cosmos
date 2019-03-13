@@ -19,15 +19,15 @@ from collections import namedtuple
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
-from ingestion.ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods
+from ingestion.ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods, ImageDB
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from torch_model.train.data_layer.sql_types import ImageDB
 
 normalizer = NormalizeWrapper()
 
 tens = ToTensor()
-Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
+Example = namedtuple('Example', ['center_bb', 'label', 'center_window', 'neighbor_boxes', 'neighbor_windows'])
+Batch = namedtuple('Batch', ['center_bbs', 'labels', 'center_windows', 'neighbor_boxes', 'neighbor_windows'])
 
 
 class XMLLoader(Dataset):
@@ -37,52 +37,43 @@ class XMLLoader(Dataset):
     other than annotations
     """
 
-
-    def __init__(self, img_dir, xml_dir=None, proposal_dir=None, warped_size=300, partition='train', img_type="jpg", host="redis", debug=True, expansion_delta=200):
+    def __init__(self, session, ingest_objs):
         """
         Initialize a XML loader object
         :param xml_dir: directory to get XML from
         :param img_dir: directory to load PNGs from
         :param img_type: the image format to load in
         """
-        # We're going to create our engine and associate it with the loader specifically
-        self.session = ImageDB.build()
-        self.expansion_delta = expansion_delta
-        self.debug = debug
-        self.partition = partition
-        self.xml_dir = xml_dir
-        self.img_dir = img_dir
-        self.proposal_dir = proposal_dir
-        self.img_type = img_type
-        self.warped_size = warped_size
-        self.imgs = os.listdir(img_dir)
-        self.identifiers = [splitext(img)[0] for img in self.imgs]
-        self.uuids = []
-        self.num_images = len(self.imgs)
-        #self.pool = redis.ConnectionPool(host=host)
-        self.no_overlaps = []
-        self.ngt_boxes = 0
-        self.nproposals = 0
-        print(f"Constructed a {self.num_images} image dataset, ingesting to db")
-        self.class_stats = {}
-        self._ingest()
-        self.session.commit()
+        self.session = session
+        self.uuids = ingest_objs.uuids
+        self.ngt_boxes = ingest_objs.ngt_boxes
+        self.nproposals = ingest_objs.nproposals
+        self.class_stats = ingest_objs.class_stats
         print("ingested to db, printing class stats")
         self.print_stats()
         print(f"# of gt boxes:{self.ngt_boxes}")
         print(f"# of proposals:{self.nproposals}")
-        with open("no_overlaps.txt","w") as fh:
-            for identifier in self.no_overlaps:
-                fh.write(f"{identifier}\n")
-        
+
 
     def __len__(self):
         return len(self.uuids)
 
     def __getitem__(self, item):
         uuid = self.uuids[item]
-        return get_example_for_uuid(uuid, self.session)
+        ex = get_example_for_uuid(uuid, self.session)
+        neighbors = ex.neighbors(True, self.uuids, self.session)
+        neighbor_boxes = [n.bbox for n in neighbors]
+        neighbor_windows = [n.window for n in neighbors]
+        return Example(center_bb=ex.bbox, label=ex.label, center_window=ex.window, neighbor_boxes=neighbor_boxes, neighbor_windows=neighbor_windows)
 
+    @staticmethod
+    def collate(batch):
+        center_bbs = torch.stack([ex.center_bb for ex in batch])
+        labels = torch.stack([ex.label for ex in batch])
+        center_windows = torch.stack([ex.center_window for ex in batch])
+        neighbor_boxes = torch.stack([ex.neighbor_boxes for ex in batch])
+        neighbor_windows = torch.stack([ex.neighbor_window for ex in batch])
+        return Batch(center_bbs=center_bbs, labels=labels, center_windows=center_windows, neighbor_boxes=neighbor_boxes, neighbor_windows=neighbor_windows)
 
     def get_weight_vec(self, classes):
         weight_per_class = {}                                    
@@ -95,13 +86,8 @@ class XMLLoader(Dataset):
         weight = [0] * N                                              
         for idx, uuid in tqdm(enumerate(self.uuids)):
             lst = get_example_for_uuid(uuid, self.session)
-            weight[idx] = weight_per_class[lst.gt_cls]
+            weight[idx] = weight_per_class[lst.label]
         return weight
-
-
-    def _ingest(self):
-        self.uuids, self.class_stats, self.nproposals, self.ngt_boxes = db_ingest(self.img_dir, self.proposal_dir, self.xml_dir, self.warped_size, self.partition, self.session)
-        compute_neighborhoods(self.session, self.partition, self.expansion_delta)
 
 
     def print_stats(self):

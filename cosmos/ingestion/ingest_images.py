@@ -16,7 +16,9 @@ from uuid import uuid4
 from tqdm import tqdm
 import pickle
 from torch_model.train.data_layer.sql_types import Example as Ex
-from torch_model.train.data_layer.sql_types import Neighbor
+from torch_model.train.data_layer.sql_types import Neighbor, Base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
 normalizer = NormalizeWrapper()
@@ -207,8 +209,7 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
 
 def get_example_for_uuid(uuid, session):
     ex = session.query(Ex).filter_by(object_id=uuid).one()
-    example = Example(ex_window=ex.window, ex_proposal=ex.bbox, gt_cls=ex.label, gt_box=ex.gt_box)
-    return example
+    return ex
 
 
 def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
@@ -227,12 +228,28 @@ def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
         session.add_all(nbhd)
 
 def get_neighbors_for_uuid(uuid, session):
-    neighbors = []
-    for ex in session.query(Neighbor).filter(Neighbor.center_object_id == uuid):
-        example = Example(ex_window=ex.window, ex_proposal=ex.bbox, gt_cls=ex.label, gt_box=ex.gt_box)
-        neighbors.append(example)
-    return neighbors
+    ex = get_example_for_uuid(uuid)
+    return ex.neighbors
 
 
 
+class ImageDB:
+    """
+    SQL alchemy session factory
+    """
+    @staticmethod
+    def build(verbose=False):
+        engine = create_engine('sqlite:///:memory:', echo=verbose)  
+        Base.metadata.create_all(engine)
+        Session = sessionmaker()
+        Session.configure(bind=engine)
+        return Session() 
+
+    @staticmethod
+    def initialize_and_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, expansion_delta):
+        session = ImageDB.build()
+        ingest_objs = db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session)
+        compute_neighborhoods(session, partition, expansion_delta)
+        session.commit()
+        return session, ingest_objs
 

@@ -6,7 +6,7 @@ Author: Josh McGrath
 from torch.utils.data import Dataset
 from collections import namedtuple
 import torch
-
+from ingestions.ingest_images import db_ingest
 
 
 class ImageEmbeddingDataset(Dataset):

@@ -8,6 +8,7 @@ from torch_model.model.model import MMFasterRCNN
 from torch_model.train.train import TrainerHelper
 from torch_model.model.utils.config_manager import ConfigManager
 from torch_model.train.data_layer.xml_loader import XMLLoader
+from ingestion.ingest_images import ImageDB
 import yaml
 from os.path import join
 def get_img_dir(root):
@@ -20,13 +21,13 @@ def get_proposal_dir(root):
     return join(root, "proposals")
 
 def get_dataset(dir, warped_size, expansion_delta, img_type, partition):
-    dataset = XMLLoader(get_img_dir(dir),
-                    xml_dir= get_anno_dir(dir),
-                    proposal_dir=get_proposal_dir(dir),
-                    expansion_delta=expansion_delta,
-                    warped_size=warped_size,
-                    partition=partition,
-                    img_type=img_type)
+    session, ingest_objs = ImageDB.initialize_and_ingest(get_img_dir(dir),
+                                                         get_proposal_dir(dir),
+                                                         get_anno_dir(dir),
+                                                         warped_size,
+                                                         partition,
+                                                         expansion_delta)
+    dataset = XMLLoader(session, ingest_objs)
     return dataset
 
 class ModelBuilder:

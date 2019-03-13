@@ -59,7 +59,7 @@ class TrainerHelper:
                               weight_decay=self.params["WEIGHT_DECAY"])
         train_loader = DataLoader(self.train_set,
                             batch_size=int(self.params["BATCH_SIZE"]),
-                            collate_fn=partial(train_set.collate,cls_dict=self.cls),
+                            collate_fn=partial(self.train_set.collate,cls_dict=self.cls),
                             num_workers=int(self.params["BATCH_SIZE"]),
                             sampler=WeightedRandomSampler(self.weight_vec, int(len(self.train_set) *.7)))
                             

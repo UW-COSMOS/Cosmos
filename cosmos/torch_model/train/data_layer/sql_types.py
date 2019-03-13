@@ -1,14 +1,13 @@
 """
 Place holder for Sql Alchemy mappings
 """
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import random
 from sqlalchemy import Column, Integer, String, LargeBinary, Sequence, PrimaryKeyConstraint, ForeignKeyConstraint, CheckConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import pickle
-Base = declarative_base()
 
+Base = declarative_base()
 class Neighbor(Base):
     """
     ORM mapping for Neighbors
@@ -69,18 +68,22 @@ class Example(Base):
     def gt_box(self, gt_box):
         self._gt_box = pickle.dumps(gt_box)
 
+    def neighbors(positive, uuids, session, n_neighbors=5):
+        if positive:
+            neighbors = []
+            for nbhr in session.query(Neighbor).filter(Neighbor.center_object_id == self.object_id):
+                obj = session.query(Example).filter(Example.object_id == nbhr.neighbor_object_id).one()
+                neighbors.append(obj)
+            return neighbors
+        sampled_uuids = random.sample(uuids, n_neighbors)
+        while self.object_id in sampled_uuids:
+            sampled_uuids = random.sample(uuids, n_neighbors)
+        neighbors = session.query(Example).filter(Example.object_id.in_(sampled_uuids)).all()
+        return neighbors
+
+
     def __repr__(self):
         return f"Example(id={self.object_id},{self.page_id},{self.object_id}, window={self.window.shape}, label=self.label, bbox={self.bbox})"
 
 
-class ImageDB:
-    """
-    SQL alchemy session factory
-    """
-    @staticmethod
-    def build(verbose=False):
-        engine = create_engine('sqlite:///:memory:', echo=verbose)  
-        Base.metadata.create_all(engine)
-        Session = sessionmaker()
-        Session.configure(bind=engine)
-        return Session() 
+
