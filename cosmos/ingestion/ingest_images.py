@@ -226,6 +226,13 @@ def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
                 nbhd.append(nbhr)
         session.add_all(nbhd)
 
+def get_neighbors_for_uuid(uuid, session):
+    neighbors = []
+    for ex in session.query(Neighbor).filter(Neighbor.center_object_id == uuid):
+        example = Example(ex_window=ex.window, ex_proposal=ex.bbox, gt_cls=ex.label, gt_box=ex.gt_box)
+        neighbors.append(example)
+    return neighbors
+
 
 
 
