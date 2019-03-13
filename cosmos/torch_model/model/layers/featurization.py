@@ -23,7 +23,7 @@ class Featurizer(nn.Module):
         :param input:
         :return: [N x L x H x W x K], [N x L x 4] convolutional maps and locations
         """
-        return windows = self._forward_CC(*input, **kwargs)
+        return self._forward_CC(*input, **kwargs)
 
 
     def _forward_CC(self, img_windows,device):

@@ -18,16 +18,24 @@ class MMFasterRCNN(nn.Module):
         """
         super(MMFasterRCNN, self).__init__()
         cfg = ConfigManager(cfg)
+        print("===== BUILDING MODEL ======")
         self.featurizer = Featurizer(cfg)
-        N, H, W, D = get_shape_info(self.featurizer.backbone, (1, 3, cfg.WARPED_SIZE, cfg.WARPED_SIZE))
+        print(f"Built backbone {cfg.BACKBONE}")
+        print("Building downstream components via shape testing")
+        N, D, H,W  = get_shape_info(self.featurizer.backbone, (1, 3, cfg.WARPED_SIZE, cfg.WARPED_SIZE))
+        print("done shape testing, building, attention mechanisms")
         self.attention = MultiHeadAttention(cfg.NHEADS, cfg.EMBEDDING_DIM)
+        print("built multi head attention")
+        print(f"{H}, {W}, {D}")
         self.embedder = ImageEmbedder(H,D, cfg.EMBEDDING_INTERMEDIATE, cfg.EMBEDDING_DIM)
+        print("built embeddings")
         self.head = MultiModalClassifier(H,
                                          W,
                                          D,
                                          cfg.HEAD_DIM,
                                          cfg.NHEADS,
                                          len(cfg.CLASSES))
+        print("done")
         self.cls_names = cfg.CLASSES
 
 

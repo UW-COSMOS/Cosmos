@@ -29,6 +29,7 @@ class MultiModalClassifier(nn.Module):
         self.depth = pool_depth
         self.dropout = nn.Dropout(p=0.4)
         self.intermediate = int(intermediate)
+        print(f"going to build a {self.height*self.width*self.depth} by {self.intermediate} matrix of weights")
         self.FC = nn.Linear(self.height*self.width*self.depth,self.intermediate)
         self.attn_FC = nn.Linear(self.height*self.width*self.depth, self.intermediate)
         self.FC_2 = nn.Linear(self.intermediate*(nheads+1), self.intermediate)
