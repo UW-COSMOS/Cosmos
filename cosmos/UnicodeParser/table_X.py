@@ -1,10 +1,12 @@
 import os
 import re
 import string
+import pandas as pd
 from stanfordnlp.server import CoreNLPClient
 from db_models import Equation, Variable, TableX
 from sqlalchemy.dialects import postgresql
 from fonduer.meta import Meta
+from fonduer.parser.models import Sentence
 
 from stanfordnlp.server import CoreNLPClient
 
@@ -28,8 +30,13 @@ def get_token_index(char_positions, text):
     space = [' ','\n','\t']
     res = []
     index = 0
+
+    start = False
+    
     for i in range(len(text)-1):
-        if text[i] in space and text[i+1] not in space:
+        if text[i] not in space:
+            start = True
+        if text[i] in space and text[i+1] not in space and start:
             index += 1
         if i in char_positions:
             res.append(index)
@@ -93,6 +100,7 @@ def build_table_X(db, corenlp):
     session = Meta.init(db).Session()
     variables = session.query(Variable).order_by(Variable.equation_id)
     equations = session.query(Equation).order_by(Equation.id)
+    sentences = session.query(Sentence).order_by(Sentence.id)
     with CoreNLPClient(annotators=['openie','pos']) as client:
         for eqt in equations:
             print(eqt.id)
@@ -103,6 +111,14 @@ def build_table_X(db, corenlp):
                 vars_used = []
                 sent_used = []
                 entities = []
+                phrases_top = []
+                phrases_bottom = []
+                phrases_left = []
+                phrases_right = []
+                var_top = []
+                var_bottom = []
+                var_left = []
+                var_right = []
 
                 for var in vars_in_eqt:
                     text = var.text.strip(',').strip('.').strip('?')
@@ -110,6 +126,19 @@ def build_table_X(db, corenlp):
                         vars_used.append(text)
                 for var in vars_in_eqt:
                     sent_id = var.sentence_id
+                    target_sent = sentences.filter(Sentence.id == sent_id)[0]
+
+                    top = target_sent.top
+                    bottom = target_sent.bottom
+                    left = target_sent.left
+                    right = target_sent.right
+
+                    var_top.append(str(top[var.sentence_offset]))
+                    var_bottom.append(str(bottom[var.sentence_offset]))
+                    var_left.append(str(left[var.sentence_offset]))
+                    var_right.append(str(right[var.sentence_offset]))
+                    
+
                     if sent_id not in sent_used:
                         sent_used.append(sent_id)
                         sent_text = var.sentence_text
@@ -139,12 +168,59 @@ def build_table_X(db, corenlp):
 
                                 if good_entity(valid_phrase) and len(valid_phrase) > 0 and valid_phrase not in vars_used and valid_phrase not in entities:
                                     entities.append(valid_phrase)
+                                    top_tmp = []
+                                    bottom_tmp = []
+                                    left_tmp = []
+                                    right_tmp = []
+                                    top_str = ''
+                                    bottom_str = ''
+                                    left_str = ''
+                                    right_str = ''
+                                    for valid_index in valid_indices:
+                                        if valid_index >= len(top):
+                                            print('top:')
+                                            print(top)
+                                            print('index:')
+                                            print(valid_indices)
+                                            print('sentense_id:')
+                                            print(sent_id)
+                                        top_tmp.append(top[valid_index])
+                                        bottom_tmp.append(bottom[valid_index])
+                                        left_tmp.append(left[valid_index])
+                                        right_tmp.append(right[valid_index])
 
-                        
+                                    df = pd.DataFrame({'top':top_tmp,'bottom':bottom_tmp, 'left':left_tmp, 'right':right_tmp})
+                                    maxV = df.groupby('top').max()
+                                    minV = df.groupby('top').min()
+
+                                    for index, row in minV.iterrows():
+                                        top_str += str(index)
+                                        top_str += ' ' 
+                                        left_str += str(row['left'])
+                                        left_str += ' '
+                                        bottom_str += str(row['bottom'])
+                                        bottom_str += ' '
+                                    for index, row in maxV.iterrows():
+                                        right_str += str(row['right'])
+                                        right_str += ' '
+                                    phrases_top.append(top_str)
+                                    phrases_left.append(left_str)
+                                    phrases_right.append(right_str)
+                                    phrases_bottom.append(bottom_str)
+                                    
+                
                 x = TableX(
                     equation_id=eqt.id,
                     symbols=vars_used,
-                    phrases=entities
+                    phrases=entities,
+                    phrases_top = phrases_top,
+                    phrases_bottom = phrases_bottom,
+                    phrases_left = phrases_left,
+                    phrases_right = phrases_right,
+                    symbols_top = var_top,
+                    symbols_bottom = var_bottom,
+                    symbols_left = var_left,
+                    symbols_right = var_right
                 )
 
                 session.add(x)
