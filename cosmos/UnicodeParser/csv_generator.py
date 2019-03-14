@@ -58,7 +58,7 @@ def generate_csv(db,outputfile):
     """%(variable_lj_document_lj_sentence)
 
     variable_lj_document_lj_sentence_lj_equation_lj_corenlp = """
-    SELECT t.*, table_x.symbols, table_x.phrases, table_x.phrases_top, table_x.phrases_bottom, table_x.phrases_left, table_x.phrases_right, table_x.symbols_top, table_x.symbols_bottom, table_x.symbols_left, table_x.symbols_right 
+    SELECT t.*, table_x.symbols, table_x.phrases, table_x.phrases_top, table_x.phrases_bottom, table_x.phrases_left, table_x.phrases_right, table_x.phrases_page, table_x.symbols_top, table_x.symbols_bottom, table_x.symbols_left, table_x.symbols_right, table_x.symbols_page 
     FROM (%s) as t
     LEFT JOIN table_x ON table_x.equation_id=t.equation_id
     """%(variable_lj_document_lj_sentence_lj_equation)

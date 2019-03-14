@@ -115,10 +115,12 @@ def build_table_X(db, corenlp):
                 phrases_bottom = []
                 phrases_left = []
                 phrases_right = []
+                phrases_page = []
                 var_top = []
                 var_bottom = []
                 var_left = []
                 var_right = []
+                var_page = []
 
                 for var in vars_in_eqt:
                     text = var.text.strip(',').strip('.').strip('?')
@@ -132,11 +134,13 @@ def build_table_X(db, corenlp):
                     bottom = target_sent.bottom
                     left = target_sent.left
                     right = target_sent.right
+                    page = target_sent.page
 
                     var_top.append(str(top[var.sentence_offset]))
                     var_bottom.append(str(bottom[var.sentence_offset]))
                     var_left.append(str(left[var.sentence_offset]))
                     var_right.append(str(right[var.sentence_offset]))
+                    var_page.append(str(page[var.sentence_offset]))
                     
 
                     if sent_id not in sent_used:
@@ -172,10 +176,12 @@ def build_table_X(db, corenlp):
                                     bottom_tmp = []
                                     left_tmp = []
                                     right_tmp = []
+                                    page_tmp = []
                                     top_str = ''
                                     bottom_str = ''
                                     left_str = ''
                                     right_str = ''
+                                    page_str = ''
                                     for valid_index in valid_indices:
                                         if valid_index >= len(top):
                                             print('top:')
@@ -188,8 +194,9 @@ def build_table_X(db, corenlp):
                                         bottom_tmp.append(bottom[valid_index])
                                         left_tmp.append(left[valid_index])
                                         right_tmp.append(right[valid_index])
+                                        page_tmp.append(page[valid_index])
 
-                                    df = pd.DataFrame({'top':top_tmp,'bottom':bottom_tmp, 'left':left_tmp, 'right':right_tmp})
+                                    df = pd.DataFrame({'top':top_tmp,'bottom':bottom_tmp, 'left':left_tmp, 'right':right_tmp, 'page':page_tmp})
                                     maxV = df.groupby('top').max()
                                     minV = df.groupby('top').min()
 
@@ -200,6 +207,8 @@ def build_table_X(db, corenlp):
                                         left_str += ' '
                                         bottom_str += str(row['bottom'])
                                         bottom_str += ' '
+                                        page_str += str(row['page'])
+                                        page_str += ' '
                                     for index, row in maxV.iterrows():
                                         right_str += str(row['right'])
                                         right_str += ' '
@@ -207,6 +216,7 @@ def build_table_X(db, corenlp):
                                     phrases_left.append(left_str)
                                     phrases_right.append(right_str)
                                     phrases_bottom.append(bottom_str)
+                                    phrases_page.append(page_str)
                                     
                 
                 x = TableX(
@@ -217,10 +227,12 @@ def build_table_X(db, corenlp):
                     phrases_bottom = phrases_bottom,
                     phrases_left = phrases_left,
                     phrases_right = phrases_right,
+                    phrases_page = phrases_page,
                     symbols_top = var_top,
                     symbols_bottom = var_bottom,
                     symbols_left = var_left,
-                    symbols_right = var_right
+                    symbols_right = var_right,
+                    symbols_page = var_page
                 )
 
                 session.add(x)
