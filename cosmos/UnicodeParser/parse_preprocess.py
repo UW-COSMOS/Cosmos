@@ -5,10 +5,14 @@ sys.path.append(os.path.dirname(__file__))
 import json
 import argparse
 import loguru
+import string
 
 BBOX_COORDINATES_PATTERN = re.compile(".*bbox\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)")
 DATA_COORDINATES_PATTERN = re.compile("(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+)\s(-?[0-9]+).")
 INPUT_FILE = None
+
+with open('words_alpha.txt') as word_file:
+    valid_words = set(word_file.read().split())
 
 
 def coordinate(title, org_x=0, org_y=0, page_num=0):
@@ -83,6 +87,13 @@ def add_name(root):
             for para in area.xpath(".//*[@class='rawtext']/*"):
                 para.attrib['name'] = class_name
 
+def all_valid_word(token):
+    token = re.sub('['+string.punctuation+']', '', token)
+    words = token.split()
+    for word in words:
+        if word.lower() not in valid_words:
+            return False
+    return True
 
 def generate_rawtext_from_ocrx(root):
     paths = []
@@ -128,13 +139,30 @@ def generate_rawtext_from_ocrx(root):
         for hocr in ocr_segment.xpath(".//*[@class='text_unicode']"):
             for paragraph in hocr.xpath(".//*[@class='ocr_par']"):
                 words = []
-                for word in paragraph.xpath(".//*[@class='ocrx_word']"):
-                    if word.text is not None:
-                        word.text = re.sub('\(cid:[0-9]*\)', ' ', word.text)
-                    if word.text is not None:
-                        word.text = re.sub('¼', ' ', word.text)
-                    if word.text is not None:
+                ocrx_words = paragraph.xpath(".//*[@class='ocrx_word']")
+                for word_i in range(len(ocrx_words)-1):
+                    if ocrx_words[word_i].text:
+                        word_no_space = ocrx_words[word_i].text.strip()
+                        if word_no_space.endswith('-') and ocrx_words[word_i+1].text:
+                            word_no_space_next = ocrx_words[word_i+1].text.strip()
+                            if all_valid_word(word_no_space.rstrip('-')+word_no_space_next):
+                                #print('valid word: '+word_no_space.rstrip('-')+word_no_space_next)
+                                ocrx_words[word_i].text = word_no_space.rstrip('-')+word_no_space_next
+                            else:
+                                #print('invalid word: '+word_no_space+word_no_space_next)
+                                ocrx_words[word_i].text = word_no_space+word_no_space_next
+                            ocrx_words[word_i+1].text = ''
+
+                for word in ocrx_words:
+                    #print(word)
+                    if word.text and word.text.strip():
+                        word.text = re.sub('\(cid:[0-9]*\)', '', word.text)
+                        word.text = re.sub('¼', '', word.text)
+
+                    if word.text and word.text.strip():
                         words.append(word.text)
+                #print(words)
+
                 rawtext.append(' '.join(words))
         try:
             assert len(ocr_segment.xpath(".//*[@class='rawtext']")) == 1

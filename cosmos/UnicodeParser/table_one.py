@@ -8,6 +8,10 @@ import re
 import string
 
 db_connect_str = "postgres://postgres:vangle@localhost:5432/cosmos5"
+stop_words = ['a', 'all', 'am', 'an', 'and', 'any', 'are', 'as', 'at', 'be', 'but', 'by', 'can', 'did', 'do', 'few', \
+'for', 'get', 'had', 'has', 'he', 'her', 'him', 'his', 'how', 'if', 'in', 'is', 'it', 'its', 'me', \
+'my', 'nor', 'of', 'on', 'or', 'our', 'out', 'own', 'set', 'she', 'so', 'the', 'to', 'too', 'use', 'up', \
+'was', 'we', 'who', 'why', 'you']
 
 def similarity(token1, token2):
     total = len(token1)
@@ -19,9 +23,8 @@ def similarity(token1, token2):
 
 def match(word, equation):
     word = re.sub('['+string.punctuation+']', '', word)
-    word = re.sub('cid[0-9]*', '', word)
     equation = re.sub('['+string.punctuation+']', '', equation)
-    equation = re.sub('cid[0-9]*', '', equation)
+
     if len(word) > len(equation) or len(word) == 0 or word.isdigit():
         return -1, -1
     if word == '∗':
@@ -65,8 +68,10 @@ def var_in_text(db):
                 for sent in sents:
                     for idx, word in enumerate(sent.text.split()):
                         tmp = re.sub('['+string.punctuation+']', '', word)
+                        if tmp in stop_words:
+                            continue
                         tmp = tmp.lower()
-                        if tmp not in valid_words:
+                        if tmp not in valid_words or len(tmp) <= 2:
                             offset, score = match(word, eqt.text)
                             if offset >= 0:
                                 #print(str(offset)+' '+str(score)+' '+word)
@@ -101,8 +106,10 @@ def var_in_text(db):
                 for sent in sents:
                     for idx, word in enumerate(sent.text.split()):
                         tmp = re.sub('['+string.punctuation+']', '', word)
+                        if tmp in stop_words:
+                            continue
                         tmp = tmp.lower()
-                        if tmp not in valid_words:
+                        if tmp not in valid_words or len(tmp) <= 2:
                             offset, score = match(word, eqt.text)
                             if offset >= 0:
                                 #print(str(offset)+' '+str(score)+' '+word)

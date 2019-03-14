@@ -9,7 +9,81 @@ from fonduer.meta import Meta
 from stanfordnlp.server import CoreNLPClient
 
 db_connect_str = "postgres://postgres:password@localhost:5432/cosmos_unicode_1"
+stop_words = [ "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "could", "did", "do", "does", "doing", "down", "during", "each", "few", "for", "from", "further", "had", "has", "have", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "it", "it's", "its", "itself", "let's", "me", "more", "most", "my", "myself", "nor", "of", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "she", "she'd", "she'll", "she's", "should", "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until", "up", "us", "very", "was", "we", "we'd", "we'll", "we're", "we've", "were", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "would", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"]
 
+def all_alpha(word):
+    for char in word:
+        if not char.isalpha():
+            return False
+    return True
+
+def good_entity(token):
+    words = token.split()
+    for word in words:
+        if all_alpha(word) and word not in stop_words:
+            return True
+    return False
+
+def get_token_index(char_positions, text):
+    space = [' ','\n','\t']
+    res = []
+    index = 0
+    for i in range(len(text)-1):
+        if text[i] in space and text[i+1] not in space:
+            index += 1
+        if i in char_positions:
+            res.append(index)
+    if len(text)-1 in char_positions:
+        res.append(index)
+    return res
+    
+def get_phrase_info(sentenses, text):
+    index_base = 0
+    for sent in sentenses:
+        token_value = {}
+        token_pos = {}
+        token_begin_char = {}
+        for token in sent.token:
+            index = token.tokenBeginIndex
+            token_value[index] = token.value
+            token_pos[index] = token.pos
+            token_begin_char[index] = token.beginChar
+        for triple in sent.openieTriple:
+            sub_pos = []
+            sub_begin_char = []
+            sub = triple.subject
+            for subToken in triple.subjectTokens:
+                sub_index = subToken.tokenIndex
+                sub_pos.append(token_pos[index_base+sub_index])
+                sub_begin_char.append(token_begin_char[index_base+sub_index])
+            sub_indices = get_token_index(sub_begin_char, text)
+            yield {'text':triple.subject,'indices':sub_indices,'pos':sub_pos}
+
+            obj_pos = []
+            obj_begin_char = []
+            obj = triple.object
+            for objToken in triple.objectTokens:
+                obj_index = objToken.tokenIndex
+                obj_pos.append(token_pos[index_base+obj_index])
+                obj_begin_char.append(token_begin_char[index_base+obj_index])
+            obj_indices = get_token_index(obj_begin_char, text)
+            yield {'text':triple.object,'indices':obj_indices,'pos':obj_pos}
+        index_base += len(token_value)
+
+def isSinleVerb(pos_list):
+    if len(pos_list) == 1 and pos_list[0].startswith('VB'):
+        return True
+    return False
+
+def strip_stop_word(token):
+    words = token.split()
+    if len(words) == 0:
+        return ''
+    if words[0].lower() in stop_words:
+        words[0] = ''
+    if words[-1].lower() in stop_words:
+        words[-1] = ''
+    return ' '.join(words).strip()
 
 def build_table_X(db, corenlp):
     os.environ["CORENLP_HOME"] = corenlp
@@ -19,7 +93,7 @@ def build_table_X(db, corenlp):
     session = Meta.init(db).Session()
     variables = session.query(Variable).order_by(Variable.equation_id)
     equations = session.query(Equation).order_by(Equation.id)
-    with CoreNLPClient(annotators=['openie']) as client:
+    with CoreNLPClient(annotators=['openie','pos']) as client:
         for eqt in equations:
             print(eqt.id)
             vars_in_eqt = variables.filter(Variable.equation_id == eqt.id)
@@ -40,40 +114,33 @@ def build_table_X(db, corenlp):
                         sent_used.append(sent_id)
                         sent_text = var.sentence_text
                         ann = client.annotate(sent_text)
-                        for sent in ann.sentence:
-                            for triple in sent.openieTriple:
-                                sub = triple.subject
-                                obj = triple.object
-                                tokens = re.sub('[' + string.punctuation + ']', ' ', sub)
-                                tokens = tokens.split()
-                                good_entity = True
-                                valid_phrase = ''
-                                for token in tokens:
-                                    for char in token:
-                                        if not char.isalpha():
-                                            #print('Bad entity: '+sub)
-                                            good_entity = False
-                                    if token not in vars_used:
-                                        valid_phrase += token+' '
+                        phrase_info_all = []
+                        indices_all = []
+                        for phrase_info in get_phrase_info(ann.sentence, sent_text):
+                            phrase_info_all.append(phrase_info)
+                        phrase_info_all = sorted(phrase_info_all, key=lambda a: len(a['indices']))
 
-                                if good_entity and len(valid_phrase) > 0 and valid_phrase not in vars_used and valid_phrase not in entities:
+                        for p_i in range(len(phrase_info_all)):
+                            phrase_info_all[p_i]['isSubStr'] = False
+                            for p_j in range(p_i+1,len(phrase_info_all)):
+                                setA = set(phrase_info_all[p_i]['indices'])
+                                setB = set(phrase_info_all[p_j]['indices'])
+                                if setA.issubset(setB):
+                                    phrase_info_all[p_i]['isSubStr'] = True
+
+                        for phrase_info in phrase_info_all:
+                            if not phrase_info['isSubStr'] and not isSinleVerb(phrase_info['pos']):
+                                valid_phrase = phrase_info['text']
+                                valid_pos = phrase_info['pos']
+                                valid_indices = phrase_info['indices']
+
+                                valid_phrase = re.sub('[' + string.punctuation + ']', '', valid_phrase)
+                                valid_phrase = strip_stop_word(valid_phrase)
+
+                                if good_entity(valid_phrase) and len(valid_phrase) > 0 and valid_phrase not in vars_used and valid_phrase not in entities:
                                     entities.append(valid_phrase)
 
-                                tokens = re.sub('[' + string.punctuation + ']', ' ', obj)
-                                tokens = tokens.split()
-                                good_entity = True
-                                valid_phrase = ''
-                                for token in tokens:
-                                    for char in token:
-                                        if not char.isalpha():
-                                            #print('Bad entity: '+obj)
-                                            good_entity = False
-                                    if token not in vars_used:
-                                        valid_phrase += token+' '
-
-                                if good_entity and len(valid_phrase) > 0 and valid_phrase not in vars_used and valid_phrase not in entities:
-                                    entities.append(valid_phrase)
-
+                        
                 x = TableX(
                     equation_id=eqt.id,
                     symbols=vars_used,

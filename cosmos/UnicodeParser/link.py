@@ -52,7 +52,6 @@ class Image(_meta.Base):
 def link(words_location, db_connect_str, ignored_files=[]):
     XPATH_PATTERN = re.compile("/html/body/div\[([0-9]+)\]/div\[([0-9]+)\]/div\[.*\]/p.*")
     session = Meta.init(db_connect_str).Session()
-    print("Type of session: "+str(type(session)))
 
     def get_word_bag(html_source):
         with open(words_location + html_source + '.html.json', encoding='utf-8') as words:
@@ -79,8 +78,8 @@ def link(words_location, db_connect_str, ignored_files=[]):
             continue
         word_bag = get_word_bag(doc.name)
         paths = get_img_path(doc.name)
-        for path in paths:
-            print(path)
+        #for path in paths:
+            #print(path)
         sentences = get_all_sentence_from_a_doc(doc.id)
         sentences_with_eq = get_all_sentence_with_equation(doc.id)
         word_bag_count = 0
@@ -108,9 +107,9 @@ def link(words_location, db_connect_str, ignored_files=[]):
             index2 = match.group(2)
 
             if index1 == index1_prev and index2 == index2_prev:
-                print('the same')
-                print(path_count)
-                print(paths[path_count])
+                #print('the same')
+                #print(path_count)
+                #print(paths[path_count])
                 img_p = Image(
                     id = sent.id,
                     img_path = paths[path_count]
@@ -121,9 +120,9 @@ def link(words_location, db_connect_str, ignored_files=[]):
                 if path_count >= len(paths):
                     print("There is no path available")
                 else:
-                    print('different')
-                    print(path_count)
-                    print(paths[path_count])
+                    #print('different')
+                    #print(path_count)
+                    #print(paths[path_count])
                     img_p = Image(
                         id = sent.id,
                         img_path = paths[path_count]
