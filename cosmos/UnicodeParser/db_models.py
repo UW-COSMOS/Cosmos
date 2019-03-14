@@ -47,9 +47,11 @@ class TableX(_meta.Base):
     phrases_bottom = Column(STR_ARRAY_TYPE)
     phrases_left = Column(STR_ARRAY_TYPE)
     phrases_right = Column(STR_ARRAY_TYPE)
+    phrases_page = Column(STR_ARRAY_TYPE)
     symbols_top = Column(STR_ARRAY_TYPE)
     symbols_bottom = Column(STR_ARRAY_TYPE)
     symbols_left = Column(STR_ARRAY_TYPE)
     symbols_right = Column(STR_ARRAY_TYPE)
+    symbols_page = Column(STR_ARRAY_TYPE)
 
 
