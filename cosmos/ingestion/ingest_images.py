@@ -214,6 +214,8 @@ def get_example_for_uuid(uuid, session):
 
 def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
     print('Computing neighborhoods')
+    avg_nbhd_size = 0.0
+    nbhds = 0.0
     for ex in tqdm(session.query(Ex).filter(Ex.partition == partition)):
         orig_bbox = ex.bbox
         nbhd_bbox = [max(0, orig_bbox[0]-expansion_delta), max(0, orig_bbox[1]-expansion_delta), min(orig_size, orig_bbox[2]+expansion_delta), min(orig_size, orig_bbox[3]+expansion_delta)]
@@ -225,7 +227,11 @@ def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
             if iou > 0:
                 nbhr = Neighbor(center_object_id=ex.object_id, neighbor_object_id=page_ex.object_id)
                 nbhd.append(nbhr)
+        nbhds += 1.0
+        avg_nbhd_size += len(nbhd)
         session.add_all(nbhd)
+    print("=== Done Computing Neighborhoods ===")
+    print(f"Average of {avg_nbhd_size/nbhds} neighbors")
 
 def get_neighbors_for_uuid(uuid, session):
     ex = get_example_for_uuid(uuid)

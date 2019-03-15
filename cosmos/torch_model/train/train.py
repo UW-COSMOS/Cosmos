@@ -57,26 +57,31 @@ class TrainerHelper:
         optimizer = optim.Adam(self.model.parameters(), 
                               lr=self.params["LEARNING_RATE"],
                               weight_decay=self.params["WEIGHT_DECAY"])
-        train_loader = DataLoader(self.train_set,
-                            batch_size=int(self.params["BATCH_SIZE"]),
-                            collate_fn=partial(self.train_set.collate,cls_dict=self.cls),
-                            num_workers=int(self.params["BATCH_SIZE"]),
-                            sampler=WeightedRandomSampler(self.weight_vec, int(len(self.train_set) *.7)))
-                            
+                           
         self.model.train(mode=True)
         iteration = 0
-        for epoch in tqdm(range(int(self.params["EPOCHS"])),desc="epochs"):
+        for epoch in tqdm(range(int(self.params["EPOCHS"])),desc="epochs", leave=False):
             tot_cls_loss = 0.0
-            for batch in tqdm(train_loader, desc="batches", leave=False):
+            train_loader = DataLoader(self.train_set,
+                            batch_size=int(self.params["BATCH_SIZE"]),
+                            collate_fn=self.train_set.collate,
+                            num_workers=int(self.params["BATCH_SIZE"]*2))
+         
+            for batch in tqdm(train_loader, desc="training"):
+                # print(batch)  
                 optimizer.zero_grad()
-                
-                windows = batch.target_windows.to(self.device)
-                ex = batch.center_window.to(self.device)
-                gt_cls = gt_cls.to(self.device)
-                rois, cls_scores= self.model(ex,windows,proposals, self.device, proposals=proposals)
-                cls_loss = self.head_target_layer(cls_scores, gt_cls, self.device)
-                loss = cls_loss
-                tot_cls_loss += float(cls_loss)
+                windows = batch.neighbor_windows.to(self.device)
+                ex = batch.center_windows.to(self.device)
+                gt_cls = batch.labels.to(self.device)
+                batch_cls_scores = []
+                for i in range(windows.shape[0]):
+                  windows_sub = windows[i]
+                  ex_sub = ex[i].unsqueeze(0)
+                  rois, cls_scores= self.model(ex_sub, windows_sub, batch.center_bbs, self.device)
+                  batch_cls_scores.append(cls_scores)
+                batch_cls_scores = torch.cat(batch_cls_scores)
+                loss = self.head_target_layer(batch_cls_scores, gt_cls.reshape(-1).long(), self.device)
+                tot_cls_loss += float(loss)
                 loss.backward()
                 nn.utils.clip_grad_value_(self.model.parameters(), 5)
                 optimizer.step()
@@ -86,6 +91,8 @@ class TrainerHelper:
                 if not isdir(self.params["SAVE_DIR"]):
                     mkdir(self.params["SAVE_DIR"])
                 torch.save(self.model.state_dict(), path)
+            del train_loader
+            optimizer.zero_grad()
             self.validate(iteration)
             self.writer.add_scalar("train_cls_loss", tot_cls_loss / len(self.train_set), iteration)
             iteration += 1
@@ -93,22 +100,19 @@ class TrainerHelper:
     def validate(self, iteration=0, to_tensorboard=True):
         loader = DataLoader(self.val_set,
                             batch_size=1,
-                            collate_fn=partial(collate,cls_dict=self.cls),
+                            collate_fn=self.val_set.collate,
                             num_workers=3)
         tot_cls_loss = 0.0
         self.model.train(mode=False)
         for batch in tqdm(loader, desc="validation"):
-            ex, gt_box, gt_cls, proposals = batch
-            ex = ex.to(self.device)
-            gt_box = gt_box
-            gt_cls = gt_cls.to(self.device)
-            gt_box = prep_gt_boxes(gt_box, self.device)
-            # forward pass
-            rois, cls_scores, = self.model(ex, self.device, proposals=proposals)
-            # calculate losses
-            cls_loss = self.head_target_layer(
-                    cls_scores, gt_cls, self.device)
-            # update batch losses, cast as float so we don't keep gradient history
+          windows = batch.neighbor_windows.to(self.device)
+          ex = batch.center_windows.to(self.device)
+          gt_cls = batch.labels.to(self.device)
+          for i in range(windows.shape[0]):
+            windows_sub = windows[i]
+            ex_sub = ex[i].unsqueeze(0)
+            rois, cls_scores= self.model(ex_sub, windows_sub, batch.center_bbs, self.device)
+            cls_loss = self.head_target_layer(cls_scores, gt_cls.reshape(-1).long(), self.device)
             tot_cls_loss += float(cls_loss)
         if to_tensorboard:
                 self.output_batch_losses(

@@ -44,7 +44,7 @@ class MMFasterRCNN(nn.Module):
         Process an Image through the network
         """
         maps = self.featurizer(input_windows, device)
-        V = self.featurizer(neighbor_windows)
+        V = self.featurizer(neighbor_windows, device)
         Q = self.embedder(maps)
         K = self.embedder(V)
         attn_maps = self.attention(Q,K,V)

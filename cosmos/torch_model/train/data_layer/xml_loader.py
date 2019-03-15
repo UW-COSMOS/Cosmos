@@ -11,11 +11,13 @@ from torchvision.transforms import ToTensor
 from numpy import genfromtxt
 import redis
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from xml.etree import ElementTree as ET
 from .transforms import NormalizeWrapper
 import pickle
 from torch_model.utils.matcher import match
 from collections import namedtuple
+from dataclasses import dataclass
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
@@ -26,8 +28,18 @@ from sqlalchemy import create_engine
 normalizer = NormalizeWrapper()
 
 tens = ToTensor()
-Example = namedtuple('Example', ['center_bb', 'label', 'center_window', 'neighbor_boxes', 'neighbor_windows'])
+#Example = namedtuple('Example', ['center_bb', 'label', 'center_window', 'neighbor_boxes', 'neighbor_windows'])
+@dataclass
+class Example:
+  center_bb: torch.Tensor
+  label: torch.Tensor
+  center_window: torch.Tensor
+  neighbor_boxes: torch.Tensor
+  neighbor_windows: torch.Tensor
+
 Batch = namedtuple('Batch', ['center_bbs', 'labels', 'center_windows', 'neighbor_boxes', 'neighbor_windows'])
+
+
 
 
 class XMLLoader(Dataset):
@@ -37,7 +49,7 @@ class XMLLoader(Dataset):
     other than annotations
     """
 
-    def __init__(self, session, ingest_objs):
+    def __init__(self, session, ingest_objs,classes):
         """
         Initialize a XML loader object
         :param xml_dir: directory to get XML from
@@ -49,6 +61,7 @@ class XMLLoader(Dataset):
         self.ngt_boxes = ingest_objs.ngt_boxes
         self.nproposals = ingest_objs.nproposals
         self.class_stats = ingest_objs.class_stats
+        self.classes = classes
         print("printing class stats")
         self.print_stats()
         print(f"# of gt boxes:{self.ngt_boxes}")
@@ -62,17 +75,24 @@ class XMLLoader(Dataset):
         uuid = self.uuids[item]
         ex = get_example_for_uuid(uuid, self.session)
         neighbors = ex.neighbors(True, self.uuids, self.session)
+        #print(len(neighbors), " neighbors")
         neighbor_boxes = [n.bbox for n in neighbors]
         neighbor_windows = [n.window for n in neighbors]
-        return Example(center_bb=ex.bbox, label=ex.label, center_window=ex.window, neighbor_boxes=neighbor_boxes, neighbor_windows=neighbor_windows)
+        if len(neighbors) == 0:
+           neighbor_boxes = [torch.zeros(4), torch.zeros(4)]
+           neighbor_windows = [torch.zeros(ex.window.shape), torch.zeros(ex.window.shape)]
+        label = torch.Tensor([self.classes.index(ex.label)])
+        return Example(ex.bbox, label, ex.window, neighbor_boxes, neighbor_windows)
 
     @staticmethod
     def collate(batch):
         center_bbs = torch.stack([ex.center_bb for ex in batch])
         labels = torch.stack([ex.label for ex in batch])
         center_windows = torch.stack([ex.center_window for ex in batch])
-        neighbor_boxes = torch.stack([ex.neighbor_boxes for ex in batch])
-        neighbor_windows = torch.stack([ex.neighbor_window for ex in batch])
+        # padding will put number of neighbors before the batch size
+        neighbor_boxes = pad_sequence([torch.stack(ex.neighbor_boxes) for ex in batch]).permute(1,0,2)
+        neighbor_windows = [torch.stack(ex.neighbor_windows) for ex in batch]
+        neighbor_windows = pad_sequence(neighbor_windows).permute(1,0,2,3,4)
         return Batch(center_bbs=center_bbs, labels=labels, center_windows=center_windows, neighbor_boxes=neighbor_boxes, neighbor_windows=neighbor_windows)
 
     def get_weight_vec(self, classes):
