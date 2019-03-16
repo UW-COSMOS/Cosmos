@@ -75,6 +75,8 @@ def var_in_text(db):
                             offset, score = match(word, eqt.text)
                             if offset >= 0:
                                 #print(str(offset)+' '+str(score)+' '+word)
+                                print(sent.page[idx])
+
                                 v = Variable(
                                     text = word,
                                     document_id = eqt.document_id,
@@ -84,7 +86,12 @@ def var_in_text(db):
                                     sentence_id = sent.id,
                                     sentence_offset = idx,
                                     sentence_text = sent.text,
-                                    score = score
+                                    score = score,
+                                    var_top = sent.top[idx],
+                                    var_bottom = sent.bottom[idx],
+                                    var_left = sent.left[idx],
+                                    var_right = sent.right[idx],
+                                    var_page = sent.page[idx]
                                 )
                                 session.add(v)
                     #print(sent.paragraph_id)
@@ -122,7 +129,12 @@ def var_in_text(db):
                                     sentence_id = sent.id,
                                     sentence_offset = idx,
                                     sentence_text = sent.text,
-                                    score = score
+                                    score = score,
+                                    var_top = sent.top[idx],
+                                    var_bottom = sent.bottom[idx],
+                                    var_left = sent.left[idx],
+                                    var_right = sent.right[idx],
+                                    var_page = sent.page[idx]
                                 )
                                 session.add(v)
                     #print(sent.paragraph_id)

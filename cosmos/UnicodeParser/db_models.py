@@ -36,6 +36,11 @@ class Variable(_meta.Base):
     sentence_offset = Column(Integer)
     sentence_text = Column(Text, nullable=False)
     score = Column(Float)
+    var_top = Column(Integer)
+    var_bottom = Column(Integer)
+    var_left = Column(Integer)
+    var_right = Column(Integer)
+    var_page = Column(Integer)
 
 class TableX(_meta.Base):
     __tablename__ = "table_x"
@@ -48,10 +53,6 @@ class TableX(_meta.Base):
     phrases_left = Column(STR_ARRAY_TYPE)
     phrases_right = Column(STR_ARRAY_TYPE)
     phrases_page = Column(STR_ARRAY_TYPE)
-    symbols_top = Column(STR_ARRAY_TYPE)
-    symbols_bottom = Column(STR_ARRAY_TYPE)
-    symbols_left = Column(STR_ARRAY_TYPE)
-    symbols_right = Column(STR_ARRAY_TYPE)
-    symbols_page = Column(STR_ARRAY_TYPE)
+
 
 

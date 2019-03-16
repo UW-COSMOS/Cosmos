@@ -19,7 +19,21 @@ def all_alpha(word):
             return False
     return True
 
+def alpha_ratio(token):
+    token = token.replace(' ','')
+    if len(token) == 0:
+        return 0
+    num_alpha = 0
+    for char in token:
+        if char.isalpha():
+            num_alpha += 1
+    return float(num_alpha)/len(token)
+
 def good_entity(token):
+    if alpha_ratio(token) < 0.7:
+        print('Bad one:')
+        print(token)
+        return False
     words = token.split()
     for word in words:
         if all_alpha(word) and word not in stop_words:
@@ -92,6 +106,20 @@ def strip_stop_word(token):
         words[-1] = ''
     return ' '.join(words).strip()
 
+def remove_symbol(phrase, indices, sent_id, vars_index):
+    words = phrase.split()
+    if len(words) == 0:
+        return ''
+    if (sent_id,indices[0]) in vars_index:
+        #print('Found 0')
+        #print(phrase)
+        words[0] = ''
+    if (sent_id,indices[-1]) in vars_index:
+        #print('Found 1')
+        #print(phrase)
+        words[-1] = ''
+    return ' '.join(words).strip()
+
 def build_table_X(db, corenlp):
     os.environ["CORENLP_HOME"] = corenlp
 
@@ -109,6 +137,7 @@ def build_table_X(db, corenlp):
                 print('No Variable found for equation ' + str(eqt.id))
             else:
                 vars_used = []
+                vars_used_index = []
                 sent_used = []
                 entities = []
                 phrases_top = []
@@ -116,13 +145,9 @@ def build_table_X(db, corenlp):
                 phrases_left = []
                 phrases_right = []
                 phrases_page = []
-                var_top = []
-                var_bottom = []
-                var_left = []
-                var_right = []
-                var_page = []
-
+                
                 for var in vars_in_eqt:
+                    vars_used_index.append((var.sentence_id, var.sentence_offset))
                     text = var.text.strip(',').strip('.').strip('?')
                     if text not in vars_used:
                         vars_used.append(text)
@@ -135,12 +160,6 @@ def build_table_X(db, corenlp):
                     left = target_sent.left
                     right = target_sent.right
                     page = target_sent.page
-
-                    var_top.append(str(top[var.sentence_offset]))
-                    var_bottom.append(str(bottom[var.sentence_offset]))
-                    var_left.append(str(left[var.sentence_offset]))
-                    var_right.append(str(right[var.sentence_offset]))
-                    var_page.append(str(page[var.sentence_offset]))
                     
 
                     if sent_id not in sent_used:
@@ -169,6 +188,7 @@ def build_table_X(db, corenlp):
 
                                 valid_phrase = re.sub('[' + string.punctuation + ']', '', valid_phrase)
                                 valid_phrase = strip_stop_word(valid_phrase)
+                                valid_phrase = remove_symbol(valid_phrase, valid_indices, sent_id, vars_used_index)
 
                                 if good_entity(valid_phrase) and len(valid_phrase) > 0 and valid_phrase not in vars_used and valid_phrase not in entities:
                                     entities.append(valid_phrase)
@@ -228,11 +248,6 @@ def build_table_X(db, corenlp):
                     phrases_left = phrases_left,
                     phrases_right = phrases_right,
                     phrases_page = phrases_page,
-                    symbols_top = var_top,
-                    symbols_bottom = var_bottom,
-                    symbols_left = var_left,
-                    symbols_right = var_right,
-                    symbols_page = var_page
                 )
 
                 session.add(x)
