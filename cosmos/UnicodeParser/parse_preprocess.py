@@ -62,7 +62,6 @@ def get_all_words_with_coordinates(root):
             page_num = root.attrib['page']
             for word in meta_node.xpath(".//*[@class='ocrx_word']"):
                 if word.text and word.text.strip():
-                    # print(word.text)
                     word_id = word.attrib['id']
                     latex = latex_node.xpath(".//*[@id='"+word_id+"']")[0]
                     yield {
@@ -124,9 +123,6 @@ def generate_rawtext_from_ocrx(root):
 
             if len(text_tmp) > 0 and len(text_tmp.replace('\n','')) > 0:
                 for img_elem in ocr_segment.xpath('.//img'):
-                    #print('##########################################')
-                    #print(text_tmp.replace('\n',''))
-                    #print(img_elem.get('src'))
                     img_path = img_elem.get('src')
                     paths.append(img_path)
             continue
@@ -146,22 +142,20 @@ def generate_rawtext_from_ocrx(root):
                         if word_no_space.endswith('-') and ocrx_words[word_i+1].text:
                             word_no_space_next = ocrx_words[word_i+1].text.strip()
                             if all_valid_word(word_no_space.rstrip('-')+word_no_space_next):
-                                #print('valid word: '+word_no_space.rstrip('-')+word_no_space_next)
                                 ocrx_words[word_i].text = word_no_space.rstrip('-')+word_no_space_next
                             else:
-                                #print('invalid word: '+word_no_space+word_no_space_next)
                                 ocrx_words[word_i].text = word_no_space+word_no_space_next
                             ocrx_words[word_i+1].text = ''
 
                 for word in ocrx_words:
-                    #print(word)
+            
                     if word.text and word.text.strip():
                         word.text = re.sub('\(cid:[0-9]*\)', '', word.text)
                         word.text = re.sub('¼', '', word.text)
 
                     if word.text and word.text.strip():
                         words.append(word.text)
-                #print(words)
+
 
                 rawtext.append(' '.join(words))
         try:
@@ -174,9 +168,6 @@ def generate_rawtext_from_ocrx(root):
 
         if len(text_tmp) > 0 and len(text_tmp.replace('\n','')) > 0:
             for img_elem in ocr_segment.xpath('.//img'):
-                #print('##########################################')
-                #print(text_tmp.replace('\n',''))
-                #print(img_elem.get('src'))
                 img_path = img_elem.get('src')
                 paths.append(img_path)
     
@@ -246,7 +237,6 @@ def preprocess(input_file, output_word, output_html, output_equation, output_pat
     all_words = []
     equations = []
     paths = []
-    # print(tree.attrib)
     for page_tree in tree:
         paths += generate_rawtext_from_ocrx(page_tree)
         remove_ocr_img_for_non_img(page_tree)
