@@ -11,7 +11,7 @@ from fonduer.parser.models import Sentence
 from stanfordnlp.server import CoreNLPClient
 
 db_connect_str = "postgres://postgres:password@localhost:5432/cosmos_unicode_1"
-stop_words = [ "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "could", "did", "do", "does", "doing", "down", "during", "each", "few", "for", "from", "further", "had", "has", "have", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "it", "it's", "its", "itself", "let's", "me", "more", "most", "my", "myself", "nor", "of", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "she", "she'd", "she'll", "she's", "should", "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until", "up", "us", "very", "was", "we", "we'd", "we'll", "we're", "we've", "were", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "would", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"]
+stop_words = [ "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "could", "did", "do", "does", "doing", "down", "during", "each", "eq","few", "for", "from", "further", "had", "has", "have", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "it", "it's", "its", "itself", "let's", "me", "more", "most", "my", "myself", "nor", "of", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "she", "she'd", "she'll", "she's", "should", "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until", "up", "us", "very", "was", "we", "we'd", "we'll", "we're", "we've", "were", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "would", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"]
 
 def all_alpha(word):
     for char in word:
@@ -31,8 +31,8 @@ def alpha_ratio(token):
 
 def good_entity(token):
     if alpha_ratio(token) < 0.7:
-        print('Bad one:')
-        print(token)
+        #print('Bad one:')
+        #print(token)
         return False
     words = token.split()
     for word in words:
@@ -104,21 +104,26 @@ def strip_stop_word(token):
         words[0] = ''
     if words[-1].lower() in stop_words:
         words[-1] = ''
-    return ' '.join(words).strip()
+    new_token = ' '.join(words).strip()
+    if alpha_ratio(new_token) < 0.7:
+        return ''
+    else:
+        return token
 
-def remove_symbol(phrase, indices, sent_id, vars_index):
+def remove_symbol(phrase, indices, sent_id, doc_id, vars_index):
     words = phrase.split()
     if len(words) == 0:
         return ''
-    if (sent_id,indices[0]) in vars_index:
-        #print('Found 0')
-        #print(phrase)
-        words[0] = ''
-    if (sent_id,indices[-1]) in vars_index:
-        #print('Found 1')
-        #print(phrase)
-        words[-1] = ''
-    return ' '.join(words).strip()
+
+    for i in range(len(words)):   
+        if (doc_id, sent_id, indices[i]) in vars_index:
+            words[i] = ''
+
+    new_token = ' '.join(words).strip()
+    if alpha_ratio(new_token) < 0.7:
+        return ''
+    else:
+        return phrase
 
 def build_table_X(db, corenlp):
     os.environ["CORENLP_HOME"] = corenlp
@@ -130,14 +135,13 @@ def build_table_X(db, corenlp):
     equations = session.query(Equation).order_by(Equation.id)
     sentences = session.query(Sentence).order_by(Sentence.id)
     with CoreNLPClient(annotators=['openie','pos']) as client:
+        vars_used_index = []
         for eqt in equations:
-            print(eqt.id)
             vars_in_eqt = variables.filter(Variable.equation_id == eqt.id)
             if vars_in_eqt.count() == 0:
                 print('No Variable found for equation ' + str(eqt.id))
             else:
                 vars_used = []
-                vars_used_index = []
                 sent_used = []
                 entities = []
                 phrases_top = []
@@ -147,7 +151,7 @@ def build_table_X(db, corenlp):
                 phrases_page = []
                 
                 for var in vars_in_eqt:
-                    vars_used_index.append((var.sentence_id, var.sentence_offset))
+                    vars_used_index.append((eqt.document_id, var.sentence_id, var.sentence_offset))
                     text = var.text.strip(',').strip('.').strip('?')
                     if text not in vars_used:
                         vars_used.append(text)
@@ -186,9 +190,11 @@ def build_table_X(db, corenlp):
                                 valid_pos = phrase_info['pos']
                                 valid_indices = phrase_info['indices']
 
+                                valid_phrase = remove_symbol(valid_phrase, valid_indices, sent_id, eqt.document_id, vars_used_index)
+
                                 valid_phrase = re.sub('[' + string.punctuation + ']', '', valid_phrase)
                                 valid_phrase = strip_stop_word(valid_phrase)
-                                valid_phrase = remove_symbol(valid_phrase, valid_indices, sent_id, vars_used_index)
+        
 
                                 if good_entity(valid_phrase) and len(valid_phrase) > 0 and valid_phrase not in vars_used and valid_phrase not in entities:
                                     entities.append(valid_phrase)

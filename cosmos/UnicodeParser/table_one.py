@@ -53,9 +53,9 @@ def var_in_text(db):
 
     for eqt in get_all_equations():
         sentences = get_sentences_in_doc(eqt.document_id)
-        #print(sentences.count())
+       
         paragraph_id = eqt.paragraph_id
-        #print('*******************************************************')
+       
         count = 0
         id_temp = paragraph_id
         while count < MAX_RANGE:
@@ -74,9 +74,7 @@ def var_in_text(db):
                         if tmp not in valid_words or len(tmp) <= 2:
                             offset, score = match(word, eqt.text)
                             if offset >= 0:
-                                #print(str(offset)+' '+str(score)+' '+word)
-                                print(sent.page[idx])
-
+                               
                                 v = Variable(
                                     text = word,
                                     document_id = eqt.document_id,
@@ -94,13 +92,9 @@ def var_in_text(db):
                                     var_page = sent.page[idx]
                                 )
                                 session.add(v)
-                    #print(sent.paragraph_id)
-                    #print(sent.text)
                 count += 1
 
-        #print('-------------------------------------------------------')
-        #print(eqt.text)
-        #print('-------------------------------------------------------')
+     
         count = 0
         id_temp = paragraph_id
         while count < MAX_RANGE:
@@ -119,7 +113,7 @@ def var_in_text(db):
                         if tmp not in valid_words or len(tmp) <= 2:
                             offset, score = match(word, eqt.text)
                             if offset >= 0:
-                                #print(str(offset)+' '+str(score)+' '+word)
+                    
                                 v = Variable(
                                     text = word,
                                     document_id = eqt.document_id,
@@ -137,10 +131,8 @@ def var_in_text(db):
                                     var_page = sent.page[idx]
                                 )
                                 session.add(v)
-                    #print(sent.paragraph_id)
-                    #print(sent.text)
+                  
                 count += 1
-        #print('*******************************************************')
         session.commit()
 
 if __name__ == '__main__':
