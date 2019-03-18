@@ -1,4 +1,5 @@
 import pandas as pd
+import click
 import numpy as np
 from os import listdir
 from os.path import splitext, join
@@ -141,7 +142,31 @@ def evaluate_dir(pred_dir, gt_dir, classes=None):
     final_df_rec = aggregate(results_rec)
     df = pd.concat((final_df_prec, final_df_rec),axis=1)
     df.columns = ["precision", "recall"]
+    df['f1'] = 2 * (df['precision'] * df['recall'] / (df['precision'] + df['recall']))
     print(df)
     return df
-    
+
+@click.command()
+@click.argument('pred_dir')
+@click.argument('xml_dir')
+@click.argument('output_dir')
+def run_evaluate(pred_dir, xml_dir, output_dir):
+    classes = [ 'Figure Caption',
+                'Figure',
+                'Table Caption',
+                'Table',
+                'Body Text',
+                'Page Footer',
+                'Page Header',
+                'Equation',
+                'Section Header',
+                'Reference text',
+                'Other'
+              ]
+    df = evaluate_dir(pred_dir, xml_dir, classes=classes)
+    df.to_csv(join(output_dir, 'results.csv'))
+
+
+if __name__ == '__main__':
+    run_evaluate()
 
