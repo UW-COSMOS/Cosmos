@@ -102,19 +102,23 @@ def load_proposal(base_path, identifier):
 
 def unpack_page(page, warped_size):
     img, gt, proposals, identifier = page
-    gt_boxes, gt_cls = gt
-    matches = match(proposals,gt_boxes)
-    #filter 0 overlap examples
-    mask = matches != -1
-    idxs = mask.nonzero()
-    idxs = idxs.squeeze()
-    proposals.change_format("xyxy")
-    proposals = proposals[idxs, :].reshape(-1,4)
-    matches = list(filter(lambda x: x != -1, matches))
-    labels = [gt_cls[match] for match in matches]
+    labels = None
+    gt_box_lst = None
+    matches = None
+    if gt is not None:
+        gt_boxes, gt_cls = gt
+        matches = match(proposals,gt_boxes)
+        labels = [gt_cls[match] for match in matches]
+        gt_box_lst = gt_boxes.tolist()
+        #filter 0 overlap examples
+        mask = matches != -1
+        idxs = mask.nonzero()
+        idxs = idxs.squeeze()
+        proposals.change_format("xyxy")
+        proposals = proposals[idxs, :].reshape(-1,4)
+        matches = list(filter(lambda x: x != -1, matches))
     windows = []
     proposals_lst = proposals.tolist()
-    gt_box_lst = gt_boxes.tolist()
     for idx, proposal in enumerate(proposals_lst):
         proposal = [int(c) for c in proposal]
         img_sub = img.crop(proposal)
@@ -124,13 +128,18 @@ def unpack_page(page, warped_size):
         windows.append(img_data)
     # switch to list of tensors
     proposals_lst = [torch.tensor(prop) for prop in proposals_lst]
-    match_box_lst = []
-    for idx in range(len(proposals_lst)):
-        match_box_lst.append(torch.tensor(gt_box_lst[matches[idx]]))
+    match_box_lst = None
+    if gt is not None:
+        match_box_lst = []
+        for idx in range(len(proposals_lst)):
+            match_box_lst.append(torch.tensor(gt_box_lst[matches[idx]]))
+    else:
+        labels = [None for n in proposals_lst]
+        match_box_lst = [None for n in proposals_lst]
     collected = list(zip(windows,proposals_lst,labels,match_box_lst))
     ret = [Example(*pt) for pt in collected]
     ExampleData = namedtuple('ExampleData', 'examples proposals_len gt_box_len')
-    return ExampleData(examples=ret, proposals_len=len(proposals_lst), gt_box_len=len(gt_box_lst))
+    return ExampleData(examples=ret, proposals_len=len(proposals_lst), gt_box_len=(len(gt_box_lst) if gt_box_lst is not None else 0))
 
 def redis_get(uuid, pool):
     conn = redis.Redis(connection_pool=pool)
