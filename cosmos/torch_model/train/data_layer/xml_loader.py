@@ -17,7 +17,7 @@ from .transforms import NormalizeWrapper
 import pickle
 from torch_model.utils.matcher import match
 from collections import namedtuple
-from dataclasses import dataclass
+#from dataclasses import dataclass
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
@@ -28,14 +28,14 @@ from sqlalchemy import create_engine
 normalizer = NormalizeWrapper()
 
 tens = ToTensor()
-#Example = namedtuple('Example', ['center_bb', 'label', 'center_window', 'neighbor_boxes', 'neighbor_windows'])
-@dataclass
-class Example:
-  center_bb: torch.Tensor
-  label: torch.Tensor
-  center_window: torch.Tensor
-  neighbor_boxes: torch.Tensor
-  neighbor_windows: torch.Tensor
+Example = namedtuple('Example', ['center_bb', 'label', 'center_window', 'neighbor_boxes', 'neighbor_windows'])
+#@dataclass
+#class Example:
+#  center_bb: torch.Tensor
+#  label: torch.Tensor
+#  center_window: torch.Tensor
+#  neighbor_boxes: torch.Tensor
+#  neighbor_windows: torch.Tensor
 
 Batch = namedtuple('Batch', ['center_bbs', 'labels', 'center_windows', 'neighbor_boxes', 'neighbor_windows'])
 
@@ -49,7 +49,7 @@ class XMLLoader(Dataset):
     other than annotations
     """
 
-    def __init__(self, session, ingest_objs,classes):
+    def __init__(self, session, ingest_objs, classes):
         """
         Initialize a XML loader object
         :param xml_dir: directory to get XML from
@@ -81,13 +81,19 @@ class XMLLoader(Dataset):
         if len(neighbors) == 0:
            neighbor_boxes = [torch.zeros(4), torch.zeros(4)]
            neighbor_windows = [torch.zeros(ex.window.shape), torch.zeros(ex.window.shape)]
-        label = torch.Tensor([self.classes.index(ex.label)])
+        label = torch.Tensor([self.classes.index(ex.label)]) if ex.label is not None else None
         return Example(ex.bbox, label, ex.window, neighbor_boxes, neighbor_windows)
 
     @staticmethod
     def collate(batch):
+        print(batch)
         center_bbs = torch.stack([ex.center_bb for ex in batch])
-        labels = torch.stack([ex.label for ex in batch])
+        ex_labels = [ex.label for ex in batch]
+        labels = None
+        if None in ex_labels:
+            labels = None
+        else:
+            labels = torch.stack([ex.label for ex in batch])
         center_windows = torch.stack([ex.center_window for ex in batch])
         # padding will put number of neighbors before the batch size
         neighbor_boxes = pad_sequence([torch.stack(ex.neighbor_boxes) for ex in batch]).permute(1,0,2)
