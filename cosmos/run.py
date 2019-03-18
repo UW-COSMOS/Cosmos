@@ -45,7 +45,7 @@ parser.add_argument('--debug', help="Ingest html documents and create postgres d
 args = parser.parse_args()
 
 # Path variables
-model_config = "torch_model/model_config.yaml"
+model_config = "model_config.yaml"
 weights = args.weights
 tmp = args.tmp_path
 xml = os.path.join(args.output, "xml")
