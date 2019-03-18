@@ -1,4 +1,5 @@
 opencv-python
+chainercv
 pascal-voc-writer
 imgaug
 dominate
