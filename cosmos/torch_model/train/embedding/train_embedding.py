@@ -33,17 +33,19 @@ class EmbeddingTrainer:
         for epoch in  tqdm(range(self.epochs)):
             train_loss = 0.0
             for batch in tqdm(loader):
+                N = batch.neighbor_windows.shape[0]
+                radii_vec = torch.zeros(N,1).to(self.device)
+                angles_vec = torch.zeros(N,1).to(self.device)
                 optimizer.zero_grad()
                 word_maps = self.featurizer(batch.center_windows.to(self.device), self.device)
-                word_vecs = self.model(word_maps)
+                word_vecs = self.model(word_maps,radii_vec, angles_vec)
                 neighbor_windows = batch.neighbor_windows.to(self.device)
-                #print(neighbor_windows.shape)
+                neighbor_radii = batch.neighbor_radii.to(self.device)
+                neighbor_angles = batch.neighbor_angles.to(self.device)
                 for i in range(neighbor_windows.shape[0]):
                   neighbor_windows_sub = neighbor_windows[i]
                   context_maps = self.featurizer(neighbor_windows_sub,self.device)
-                  context_vecs = self.model(context_maps)
-                  #print(word_vecs[i].shape)
-                  #print(context_vecs.shape)
+                  context_vecs = self.model(context_maps, neighbor_radii[i].reshape(-1,1), neighbor_angles[i].reshape(-1,1))
                   preds = torch.sum(word_vecs[i]*context_vecs, dim=1)
                   loss = self.bce_loss(preds, batch.labels[i].expand(neighbor_windows_sub.shape[0]).to(self.device))
                   train_loss += float(loss)/len(self.train_set)
@@ -57,13 +59,18 @@ class EmbeddingTrainer:
         loader = DataLoader(self.val_set, num_workers=4, batch_size=1, collate_fn=self.val_set.collate)
         avg_loss = 0.0
         for batch in tqdm(loader):
+            N = batch.neighbor_windows.shape[0]
+            radii_vec = torch.zeros(N,1).to(self.device)
+            angles_vec = torch.zeros(N,1).to(self.device)
             word_maps = self.featurizer(batch.center_windows.to(self.device), self.device)
-            word_vecs = self.model(word_maps)
+            word_vecs = self.model(word_maps, radii_vec, angles_vec)
             neighbor_windows = batch.neighbor_windows.to(self.device)
+            neighbor_radii = batch.neighbor_radii.to(self.device)
+            neighbor_angles = batch.neighbor_angles.to(self.device)
             for i in range(neighbor_windows.shape[0]):
                 neighbor_windows_sub = neighbor_windows[i]
                 context_maps = self.featurizer(neighbor_windows_sub,self.device)
-                context_vecs = self.model(context_maps)
+                context_vecs = self.model(context_maps, neighbor_radii[i].reshape(-1,1), neighbor_angles.reshape(-1,1))
                 preds = torch.sum(word_vecs[i]*context_vecs, dim=1)
                 loss = self.bce_loss(preds, batch.labels[i].expand(neighbor_windows_sub.shape[0]).to(self.device))
                 avg_loss += float(loss)/len(self.val_set)
