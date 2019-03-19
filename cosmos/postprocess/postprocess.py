@@ -65,7 +65,7 @@ def check_caption_body(soup):
                 if len(matches) >0:
                     seg_type["class"] = "Figure Caption"
                 matches = re.findall('^(table|tbl|tab)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', clean_line, flags=re.IGNORECASE|re.MULTILINE)
-                if len(matches) >0:
+                if len(matches) >0 and seg_class != 'Table':
                     seg_type["class"] = "Table Caption"
     
     return soup
@@ -73,7 +73,7 @@ def check_caption_body(soup):
 def check_overlap(obj_list, box, check_above_below=False, check_cls=None):
     for cls, bb, _ in obj_list:
         iou = calculate_iou(bb, box)
-        if check_cls is not None and iou > 0 and cls == check_cls:
+        if check_cls is not None and iou > 0 and cls in check_cls:
             continue
         if check_above_below:
             intersection = max(0, min(bb[2], box[2]) - max(bb[0], box[0]))
@@ -121,7 +121,7 @@ def group_cls_columnwise(obj_list, g_cls):
         new_obj_list.append((g_cls, nbhd, 1))
     return new_obj_list
 
-def group_cls(obj_list, g_cls):
+def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
     '''
     Given a list output from xml2list, group the class in that list
     :param obj_list: [(cls, coords, score)] list
@@ -138,7 +138,10 @@ def group_cls(obj_list, g_cls):
             for nbhd_bb in nbhds:
                 # construct a bounding box over this table and the neighborhood
                 new_box = [min(nbhd_bb[0], coords[0]), min(nbhd_bb[1], coords[1]), max(nbhd_bb[2], coords[2]), max(nbhd_bb[3], coords[3])]
-                if check_overlap(obj_list, new_box, check_cls=g_cls):
+                ccls = [g_cls]
+                if merge_over_classes is not None:
+                    ccls.extend(merge_over_classes)
+                if check_overlap(obj_list, new_box, check_cls=ccls):
                     new_nbhd_list.append(new_box)
                     added = True
                 else:
@@ -147,6 +150,40 @@ def group_cls(obj_list, g_cls):
             if not added:
                 new_nbhd_list.append(coords)
             nbhds = new_nbhd_list
+    if do_table_merge:
+        while True:
+            new_nbhds = []
+            merged_nbhds = []
+            # Now we check for intersecting table neighborhoods
+            for nbhd in nbhds:
+                for nbhd2 in nbhds:
+                    if nbhd2 == nbhd:
+                        continue
+                    iou = calculate_iou(nbhd, nbhd2) 
+                    if iou > 0:
+                        # merge the neighborhoods
+                        new_box = [min(nbhd[0], nbhd2[0]), min(nbhd[1], nbhd2[1]), max(nbhd[2], nbhd2[2]), max(nbhd[3], nbhd2[3])]
+                        if new_box in new_nbhds:
+                            continue
+                        merged_nbhds.append(nbhd)
+                        merged_nbhds.append(nbhd2)
+                        new_nbhds.append(new_box)
+            for nbhd in nbhds:
+                if nbhd not in merged_nbhds:
+                    new_nbhds.append(nbhd)
+            if new_nbhds == nbhds:
+                break
+            nbhds = new_nbhds
+
+    filter_objs = []
+    # now we need to check for other overlaps
+    for nbhd in nbhds:
+        for obj in obj_list:
+            cls, coords, _ = obj
+            obj_iou = calculate_iou(coords, nbhd)
+            if obj_iou > 0:
+                filter_objs.append(obj)
+    obj_list = [o for o in obj_list if o not in filter_objs]
     new_obj_list = []
     for obj in obj_list:
         cls, coords, _ = obj
