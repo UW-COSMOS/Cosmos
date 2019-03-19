@@ -51,12 +51,12 @@ def check_caption_body(soup):
     for seg_type in soup.find_all('div', not_ocr):
         seg_class = " ".join(seg_type["class"])
         hocr = seg_type.find_next('div', 'hocr')
-        if hocr is not None:
-            coordinates = hocr['data-coordinates']
-            spl = coordinates.split(' ')
-            spl = [int(x) for x in spl]
-            if spl == ph:
-                seg_type["class"] = "Page Header"
+        #if hocr is not None:
+        #    coordinates = hocr['data-coordinates']
+        #    spl = coordinates.split(' ')
+        #    spl = [int(x) for x in spl]
+        #    if spl == ph:
+        #        seg_type["class"] = "Page Header"
         lines = seg_type.find_all('span', 'ocr_line')
         if len(lines) > 0:
             for line in lines:
@@ -70,14 +70,56 @@ def check_caption_body(soup):
     
     return soup
 
-def check_overlap(obj_list, box):
+def check_overlap(obj_list, box, check_above_below=False, check_cls=None):
     for cls, bb, _ in obj_list:
         iou = calculate_iou(bb, box)
-        if (iou > 0 and cls == 'Table') or iou == 0:
+        if check_cls is not None and iou > 0 and cls == check_cls:
+            continue
+        if check_above_below:
+            intersection = max(0, min(bb[2], box[2]) - max(bb[0], box[0]))
+            if intersection == 0:
+                return False
+        if iou == 0:
             continue
         return False
     return True
  
+
+def group_cls_columnwise(obj_list, g_cls):
+    '''
+    Given a list output from xml2list, group the class via columns
+    :param obj_list: [(cls, coords, score)] list
+    :return: Updated [(cls, coords, score)] list
+    '''
+    nbhds = []
+    for obj in obj_list:
+        cls, coords, _ = obj
+        if cls == g_cls:
+            if len(nbhds) == 0:
+                nbhds.append(coords)
+                continue
+            new_nbhd_list = []
+            added = False
+            for nbhd_bb in nbhds:
+                # construct a bounding box over this table and the neighborhood
+                new_box = [min(nbhd_bb[0], coords[0]), min(nbhd_bb[1], coords[1]), max(nbhd_bb[2], coords[2]), max(nbhd_bb[3], coords[3])]
+                if check_overlap(obj_list, new_box, check_above_below=True):
+                    new_nbhd_list.append(new_box)
+                    added = True
+                else:
+                    new_nbhd_list.append(nbhd_bb)
+            # If we didn't merge with an existing neighborhood, create a new neighborhood
+            if not added:
+                new_nbhd_list.append(coords)
+            nbhds = new_nbhd_list
+    new_obj_list = []
+    for obj in obj_list:
+        cls, coords, _ = obj
+        if cls != g_cls:
+            new_obj_list.append(obj)
+    for nbhd in nbhds:
+        new_obj_list.append((g_cls, nbhd, 1))
+    return new_obj_list
 
 def group_cls(obj_list, g_cls):
     '''
@@ -96,7 +138,7 @@ def group_cls(obj_list, g_cls):
             for nbhd_bb in nbhds:
                 # construct a bounding box over this table and the neighborhood
                 new_box = [min(nbhd_bb[0], coords[0]), min(nbhd_bb[1], coords[1]), max(nbhd_bb[2], coords[2]), max(nbhd_bb[3], coords[3])]
-                if check_overlap(obj_list, new_box):
+                if check_overlap(obj_list, new_box, check_cls=g_cls):
                     new_nbhd_list.append(new_box)
                     added = True
                 else:

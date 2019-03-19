@@ -10,6 +10,7 @@ import numpy as np
 from tqdm import tqdm
 import yaml
 import pandas as pd
+import click
 
 def get_identifiers(dir):
     files = os.listdir(dir)
@@ -63,7 +64,7 @@ def run_eval(pred_dir, gt_dir, eval_func, classes):
         gt_labels.append(gt_label)
         gt_bboxes.append(gt_bbox)
         scores.append(score)
-    eval_result = eval_func(pred_bboxes, pred_labels, scores, gt_bboxes, gt_labels)
+    eval_result = eval_func(pred_bboxes, pred_labels, scores, gt_bboxes, gt_labels, iou_thresh=0.1)
     return format_result(eval_result, classes) 
 
 
@@ -73,3 +74,27 @@ def run_voc(pred_dir, gt_dir, classes):
 
 def run_coco(pred_dir, gt_dir, classes):
     return run_eval(pred_dir, gt_dir, eval_detection_coco, classes)
+
+
+@click.command()
+@click.argument('pred_dir')
+@click.argument('output_dir')
+def run_evaluate_voc(pred_dir, output_dir):
+    classes = [ 'Figure Caption',
+                'Figure',
+                'Table Caption',
+                'Table',
+                'Body Text',
+                'Page Footer',
+                'Page Header',
+                'Equation',
+                'Section Header',
+                'Reference text',
+                'Other'
+              ]
+    run_voc(pred_dir, output_dir, classes)
+
+
+if __name__ == '__main__':
+    run_evaluate_voc()
+
