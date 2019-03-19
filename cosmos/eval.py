@@ -11,11 +11,12 @@ with open("classes.yaml") as stream:
 @click.argument("annotations_dir")
 @click.argument("out_d")
 def run_eval(preds_dir, annotations_dir, out_d):
-    iccv = evaluate_dir(preds_dir, annotations_dir, classes)
+    iccv,confusion = evaluate_dir(preds_dir, annotations_dir, classes)
     voc = run_voc(preds_dir, annotations_dir,classes)
     os.mkdir(out_d)
     iccv.to_csv(os.path.join(out_d, "iccv.csv"))
     voc.to_csv(os.path.join(out_d,"voc.csv"))
+    confusion.to_csv(os.path.join(out_d, "confusion.csv"))
 
 
 if __name__ == "__main__":
