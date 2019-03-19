@@ -12,6 +12,7 @@ import os
 
 def convert_to_html(xpath, img_dir):
     l = xml2list(xpath)
+    print(f'{os.path.basename(xpath)[:-4]}.png')
     list2html(l, f'{os.path.basename(xpath)[:-4]}.png', img_dir, 'html2')
 
 def update_xmls(hpath, output_dir):
