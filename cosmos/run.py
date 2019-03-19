@@ -3,6 +3,7 @@
 Script to run an end to end pipeline
 """
 
+from torch_model.infer import run_inference
 from UnicodeParser.parse_html_to_postgres import parse_html_to_postgres
 from construct_caption_tables.construct import construct
 import multiprocessing as mp
@@ -44,7 +45,7 @@ parser.add_argument('--debug', help="Ingest html documents and create postgres d
 args = parser.parse_args()
 
 # Path variables
-model_config = "torch_model/model_config.yaml"
+model_config = "model_config.yaml"
 weights = args.weights
 tmp = args.tmp_path
 xml = os.path.join(args.output, "xml")
@@ -122,13 +123,14 @@ with open('test.txt', 'w') as wf:
 
 shutil.move('test.txt', f'{tmp}/test.txt')
 
-model_config = ConfigManager(model_config)
-model = MMFasterRCNN(model_config)
-model.load_state_dict(torch.load(weights, map_location={"cuda:0": "cpu"}))
-loader = InferenceLoader(f"{tmp}/images", f"{tmp}/cc_proposals", "png", model_config.WARPED_SIZE)
-runner = InferenceHelper(model, loader, torch.device("cpu"))
-
-runner.run(xml)
+run_inference(f'{tmp}/images', f'{tmp}/cc_proposals', model_config, weights, xml)
+#model_config = ConfigManager(model_config)
+#model = MMFasterRCNN(model_config)
+#model.load_state_dict(torch.load(weights, map_location={"cuda:0": "cpu"}))
+#loader = InferenceLoader(f"{tmp}/images", f"{tmp}/cc_proposals", "png", model_config.WARPED_SIZE)
+#runner = InferenceHelper(model, loader, torch.device("cpu"))
+#
+#runner.run(xml)
 # for idx, image_id in enumerate(tqdm(image_ids)):
     # # Load image and ground truth data
     # image, image_meta, gt_class_id, gt_bbox, gt_mask = \

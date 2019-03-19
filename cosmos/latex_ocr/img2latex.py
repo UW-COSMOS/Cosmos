@@ -7,6 +7,7 @@ from scipy.misc import imread
 import PIL
 from PIL import Image
 import os
+import uuid
 from imgaug import augmenters as iaa
 from model.img2seq import Img2SeqModel
 from model.utils.general import Config, run
@@ -35,9 +36,9 @@ def img2latex(
 ):
     dir_output = "tmp/"
     run(["mkdir -p tmp"], TIMEOUT)
-    img_path = os.path.join("tmp/", "%d.png" % random.randint(0, 10000))
+    name = str(uuid.uuid4())
+    img_path = os.path.join("tmp/", f"{name}.png")
     img.save(img_path)
-    name = img_path.split("/")[-1].split(".")[0]
     buckets = [
         [240, 100],
         [320, 80],

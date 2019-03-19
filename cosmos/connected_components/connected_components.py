@@ -204,7 +204,7 @@ def get_blank_rows(inp_np, blank_row_h):
         curr_bot = curr_top + blank_row_h
     return white_rows
 
-def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=10, filter_thres=5):
+def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=15, filter_thres=5):
     img = Image.open(img_p)
     fn = lambda x : 0 if x > white_thresh else 255
     img_np = np.array(img.convert('RGB'))
@@ -224,6 +224,8 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
     block_coords = set()
     block_coords2 = {}
     blocks_list = []
+    obj_count = 0
+    obj_heights = 0
     for row, top_coord, bottom_coord in rows:
         num_cols = get_columns_for_row(row)
         blocks, coords, col_idx = divide_row_into_columns(row, num_cols)
@@ -252,10 +254,19 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
 
                 key = (num_cols, column_index)
                 val = (top_coord + c2 + y1, c[0] + x1, top_coord + c2 + y2, c[0]+x2)
+                obj_count += 1
+                obj_heights += y2 - y1
+
                 if key in block_coords2:
                     block_coords2[key].append(val)
                 else:
                     block_coords2[key] = [val]
+    
+    if obj_count > 0:
+        avg_height = obj_heights / obj_count
+        if avg_height < 3 * blank_row_height:
+            write_proposals(img_p, output_dir, white_thresh=white_thresh, blank_row_height=2 * blank_row_height, filter_thres=filter_thres)
+            return
     for key in block_coords2:
         coords_list = block_coords2[key]
         for ind2, bc in enumerate(coords_list):
@@ -309,7 +320,7 @@ def get_columns_for_row(row):
     test_width = int(math.ceil(row.shape[1] / 200))
     half_test_width = int(math.ceil(test_width / 2))
     curr_c = 1
-    for c in range(2, 6):
+    for c in range(2, 4):
         # Attempt to divide rows into c columns
         row_w = row.shape[1]
         # Check the row at the middle positions for column
