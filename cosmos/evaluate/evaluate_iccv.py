@@ -161,7 +161,7 @@ def evaluate_dir(pred_dir, gt_dir, classes=None):
     df['f1'] = 2 * (df['precision'] * df['recall'] / (df['precision'] + df['recall']))
     print(df)
     print(confusion_df)
-    return df
+    return df, confusion_df
 
 @click.command()
 @click.argument('pred_dir')
