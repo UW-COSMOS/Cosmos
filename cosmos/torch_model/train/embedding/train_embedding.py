@@ -10,6 +10,10 @@ from torch.optim import Adam
 from .embedding_dataset import ImageEmbeddingDataset
 from tqdm import tqdm
 
+def check_nan(tensor, name):
+    mask = tensor != tensor
+    if mask.sum() >= 1:
+        print(name, "  ", tensor)
 class EmbeddingTrainer:
 
     def __init__(self,featurizer ,model,device, epochs,train_set, val_set):
@@ -32,7 +36,7 @@ class EmbeddingTrainer:
                         weight_decay = 0.00005)
         for epoch in  tqdm(range(self.epochs)):
             train_loss = 0.0
-            for batch in tqdm(loader):
+            for  batch in tqdm(loader):
                 N = batch.neighbor_windows.shape[0]
                 radii_vec = torch.zeros(N,1).to(self.device)
                 angles_vec = torch.zeros(N,1).to(self.device)
@@ -41,7 +45,9 @@ class EmbeddingTrainer:
                 word_vecs = self.model(word_maps,radii_vec, angles_vec)
                 neighbor_windows = batch.neighbor_windows.to(self.device)
                 neighbor_radii = batch.neighbor_radii.to(self.device)
+                check_nan(neighbor_radii, "radii")
                 neighbor_angles = batch.neighbor_angles.to(self.device)
+                check_nan(neighbor_angles, "angles")
                 for i in range(neighbor_windows.shape[0]):
                   neighbor_windows_sub = neighbor_windows[i]
                   context_maps = self.featurizer(neighbor_windows_sub,self.device)
@@ -49,6 +55,8 @@ class EmbeddingTrainer:
                   preds = torch.sum(word_vecs[i]*context_vecs, dim=1)
                   loss = self.bce_loss(preds, batch.labels[i].expand(neighbor_windows_sub.shape[0]).to(self.device))
                   train_loss += float(loss)/len(self.train_set)
+                #if idx % 100 == 0:
+                 #   print(f"train checkpoint: {train_loss}")
                 loss.backward()
                 optimizer.step()
             val_loss = self.validate()
