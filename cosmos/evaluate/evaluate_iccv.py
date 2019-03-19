@@ -29,6 +29,17 @@ def get_ious(pred_df, box):
     return iou_df
 
    
+def get_confusion(combined_df, classes):
+    cols = ["ground_truth"] + classes
+    preds = np.zeros(len(classes))
+    data = [classes] + ([preds]*len(classes))
+    pd_dict = dict(zip(cols, data))
+    confusion_df = pd.DataFrame(pd_dict)
+    confusion_df = confusion_df.set_index("ground_truth")
+    for row in combined_df.itertuples():
+        confusion_df.at[row.gt_label, row.pred_label] +=1
+    return confusion_df
+
 
 def match(pred_df, gt_df, thres=0.5):
     for idx, row in enumerate(gt_df.itertuples()):
@@ -68,7 +79,6 @@ def get_fp(combined_df, cls):
     tp_candidates = combined_df[combined_df["pred_label"] == combined_df["gt_label"]]
     tp_candidates = tp_candidates[tp_candidates["pred_label"] == cls]
     groups = tp_candidates.groupby("gt_id")
-
     matches = len(groups)
     tot = groups.size()
     fp_type_2 += tot.sum() - matches
@@ -114,11 +124,12 @@ def evaluate_single(pred_path, gt_path, classes=None, thres=0.5):
         rec = get_recall(combined, unmatched, cls)
         prec_cls[cls] = prec
         rec_cls[cls] = rec
+    confusion_df = get_confusion(combined, classes)
     prec_df = pd.Series(prec_cls,name="precisions")
     prec_df["total"] = prec_df.mean(skipna=True)
     rec_df = pd.Series(rec_cls, name="recalls")
     rec_df["total"] = rec_df.mean(skipna=True)
-    return prec_df, rec_df
+    return prec_df, rec_df, confusion_df
 
 
 
@@ -131,17 +142,23 @@ def evaluate_dir(pred_dir, gt_dir, classes=None):
     identifiers = [splitext(fp)[0] for fp in files]
     results_prec = []
     results_rec = []
+    confusion_df = None
     for identifier in identifiers:
         pred_path = join(pred_dir, f"{identifier}.xml")
         gt_path = join(gt_dir, f"{identifier}.xml")
-        precs, recs = evaluate_single(pred_path, gt_path, classes)
+        precs, recs, confusions = evaluate_single(pred_path, gt_path, classes)
         results_prec.append(precs)
         results_rec.append(recs)
+        if confusion_df is None:
+            confusion_df = confusions
+        else:
+            confusion_df = pd.concat((confusion_df, confusions)).groupby("ground_truth").sum()
     final_df_prec = aggregate(results_prec)
     final_df_rec = aggregate(results_rec)
     df = pd.concat((final_df_prec, final_df_rec),axis=1)
     df.columns = ["precision", "recall"]
     print(df)
+    print(confusion_df)
     return df
     
 
