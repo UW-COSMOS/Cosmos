@@ -7,7 +7,7 @@ from pagemerger import pagemerger
 from parse import parse
 from parse_preprocess import preprocess
 from insert_equation import insert_equation_tuple
-from table_X import build_table_X
+from table_X_plus import build_table_X
 from csv_generator import generate_csv
 from table_one import var_in_text
 
