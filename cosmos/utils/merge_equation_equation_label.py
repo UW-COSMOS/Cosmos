@@ -25,7 +25,14 @@ def convert_annotations(xml_dir, output_dir):
         eq_list = [x for x in xlist if x[0] == 'Equation']
         not_eq_list = [x for x in xlist if x not in eq_list and x not in eq_label_list]
         for x in not_eq_list:
-            writer.addObject(x[0], *x[1])
+            if x[0] == 'Table Note':
+                writer.addObject('Body Text', *x[1])
+            elif x[0] == 'Figure Note':
+                writer.addObject('Body Text', *x[1])
+            elif x[0] == 'Abstract':
+                writer.addObject('Body Text', *x[1])
+            else:
+                writer.addObject(x[0], *x[1])
 
         # Now for each equation label, we associate the closest equation to the left of the equation label
         # Remember that el[1] and x[1] are coordinates in (tl_x, tl_y, br_x, br_y) form
