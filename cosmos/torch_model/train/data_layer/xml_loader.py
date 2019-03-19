@@ -17,18 +17,18 @@ from .transforms import NormalizeWrapper
 import pickle
 from torch_model.utils.matcher import match
 from collections import namedtuple
-from dataclasses import dataclass
+#from dataclasses import dataclass
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
 from ingestion.ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods, ImageDB
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
+from dataclasses import dataclass
 
 normalizer = NormalizeWrapper()
 
 tens = ToTensor()
-#Example = namedtuple('Example', ['center_bb', 'label', 'center_window', 'neighbor_boxes', 'neighbor_windows'])
 @dataclass
 class Example:
   center_bb: torch.Tensor
@@ -42,6 +42,12 @@ class Example:
 
 Batch = namedtuple('Batch', ['center_bbs', 'labels', 'center_windows', 'neighbor_boxes', 'neighbor_windows', 'neighbor_radii', 'neighbor_angles', 'colorfulness'])
 
+def containsNone(lst):
+    flag = False
+    for o in lst:
+        if o is None:
+            flag = True
+    return flag
 
 def get_colorfulness(window):
     diffs = window.max(dim=0)[0] - window.min(dim=0)[0]
@@ -62,8 +68,11 @@ def get_angles(center_bbox, neighbor_boxes):
     center_center = torch.stack([center_bbox[:,0] -center_bbox[:,2], center_bbox[:,1] - center_bbox[:,3]])
     neighbor_center = torch.stack([neighbor_boxes[:,0] -neighbor_boxes[:,2], neighbor_boxes[:,1] - neighbor_boxes[:,3]])
     # clamp required to not produce nan at asin
-    delta_y = torch.abs(center_center[1] - neighbor_center[1]).clamp(-1 + 1e-7, 1 - 1e-7)
-    out = torch.asin(delta_y/radii)
+    delta_y = torch.abs(center_center[1] - neighbor_center[1])
+    ratios = delta_y/radii
+    out = torch.asin(ratios.clamp(-1 + 1e-4, 1- 1e-4))
+    mask = out != out
+    out[mask] = 0.4
     return out
 
 class XMLLoader(Dataset):
@@ -73,7 +82,7 @@ class XMLLoader(Dataset):
     other than annotations
     """
 
-    def __init__(self, session, ingest_objs,classes):
+    def __init__(self, session, ingest_objs, classes):
         """
         Initialize a XML loader object
         :param xml_dir: directory to get XML from
@@ -111,14 +120,18 @@ class XMLLoader(Dataset):
            neighbor_windows = [n.window for n in neighbors]
            neighbor_radii = get_radii(ex.bbox, torch.stack(neighbor_boxes))
            neighbor_angles = get_angles(ex.bbox, torch.stack(neighbor_boxes))
-           
         label = torch.Tensor([self.classes.index(ex.label)])
         return Example(ex.bbox, label, ex.window, neighbor_boxes, neighbor_windows, neighbor_radii, neighbor_angles,colorfulness)
 
     @staticmethod
     def collate(batch):
         center_bbs = torch.stack([ex.center_bb for ex in batch])
-        labels = torch.stack([ex.label for ex in batch])
+        ex_labels = [ex.label for ex in batch]
+        labels = None
+        if containsNone(ex_labels):
+            labels = None
+        else:
+            labels = torch.stack([ex.label for ex in batch])
         center_windows = torch.stack([ex.center_window for ex in batch])
         colorfulness = torch.stack([ex.colorfulness for ex in batch])
         # padding will put number of neighbors before the batch size
