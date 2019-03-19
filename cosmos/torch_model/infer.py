@@ -13,6 +13,11 @@ def run_inference(img_dir, proposal_dir, model_config, weights, out_dir):
     model = MMFasterRCNN(cfg)
     # TODO file checking and GPU inference
     model.load_state_dict(torch.load(weights, map_location={"cuda:0": "cuda:0"}))
+    model.eval()
+    def bn_train(m):
+        if type(m) == torch.nn.BatchNorm2d:
+            m.train()
+    model.apply(bn_train)
     session, ingest_objs = ImageDB.initialize_and_ingest(img_dir,
                                                          proposal_dir,
                                                          None,
