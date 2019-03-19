@@ -120,7 +120,7 @@ def unicode_representation(unicode_df, page, root, base, t):
         
 
 def list2html(input_list, image_name, image_dir, output_dir, unicode_df=None,tesseract_hocr=True, tesseract_text=True, include_image=True, feather_x=2, feather_y=2):
-    input_list = group_cls(input_list, 'Table')
+    input_list = group_cls(input_list, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
     input_list = group_cls(input_list, 'Figure')
     #input_list = group_cls_columnwise(input_list, 'Body Text')
     doc = dominate.document(title=image_name[:-4])
