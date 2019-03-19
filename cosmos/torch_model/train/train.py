@@ -74,6 +74,7 @@ class TrainerHelper:
                 radii = batch.neighbor_radii.to(self.device)
                 angles = batch.neighbor_angles.to(self.device)
                 ex = batch.center_windows.to(self.device)
+                colors = batch.colorfulness.to(self.device)
                 gt_cls = batch.labels.to(self.device)
                 batch_cls_scores = []
                 for i in range(windows.shape[0]):
@@ -81,7 +82,8 @@ class TrainerHelper:
                   ex_sub = ex[i].unsqueeze(0)
                   radii_sub = radii[i].reshape(-1,1)
                   angles_sub = angles[i].reshape(-1,1)
-                  rois, cls_scores= self.model(ex_sub, windows_sub,radii_sub,angles_sub, batch.center_bbs, self.device)
+                  colors_sub = colors[i].reshape(-1,1)
+                  rois, cls_scores= self.model(ex_sub, windows_sub,radii_sub,angles_sub,colors_sub, batch.center_bbs, self.device)
                   batch_cls_scores.append(cls_scores)
                 batch_cls_scores = torch.cat(batch_cls_scores)
                 loss = self.head_target_layer(batch_cls_scores, gt_cls.reshape(-1).long(), self.device)
@@ -107,9 +109,16 @@ class TrainerHelper:
                             collate_fn=self.val_set.collate,
                             num_workers=3)
         tot_cls_loss = 0.0
+        self.model.eval()
+        def train_bn(m):
+            if type(m) == torch.nn.BatchNorm2d:
+                m.train()
+
+        self.model.apply(train_bn)
         for batch in tqdm(loader, desc="validation"):
           windows = batch.neighbor_windows.to(self.device)
           ex = batch.center_windows.to(self.device)
+          colors = batch.colorfulness.to(self.device)
           radii = batch.neighbor_radii.to(self.device)
           angles = batch.neighbor_angles.to(self.device)
           gt_cls = batch.labels.to(self.device)
@@ -118,13 +127,15 @@ class TrainerHelper:
             ex_sub = ex[i].unsqueeze(0)
             radii_sub = radii[i].reshape(-1,1)
             angles_sub = angles[i].reshape(-1,1)
-            rois, cls_scores= self.model(ex_sub, windows_sub, radii_sub, angles_sub, batch.center_bbs, self.device)
+            colors_sub = colors[i].reshape(-1,1)
+            rois, cls_scores= self.model(ex_sub, windows_sub, radii_sub, angles_sub,colors_sub,batch.center_bbs, self.device)
             cls_loss = self.head_target_layer(cls_scores, gt_cls.reshape(-1).long(), self.device)
             tot_cls_loss += float(cls_loss)
         if to_tensorboard:
                 self.output_batch_losses(
                                  tot_cls_loss/len(self.val_set),
                                  iteration)
+        self.model.train()
         return tot_cls_loss/len(self.val_set)
 
 

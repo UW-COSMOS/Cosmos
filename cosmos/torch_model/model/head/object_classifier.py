@@ -29,14 +29,14 @@ class MultiModalClassifier(nn.Module):
         self.depth = pool_depth
         self.dropout = nn.Dropout(p=0.5)
         self.intermediate = int(intermediate)
-        print(f"going to build a {self.height*self.width*self.depth} by {self.intermediate} matrix of weights")
         self.FC = nn.Linear(self.height*self.width*self.depth,self.intermediate)
         self.attn_FC = nn.Linear(self.height*self.width*self.depth, self.intermediate)
-        self.FC_2 = nn.Linear(self.intermediate*(nheads+1), self.intermediate)
+        #one extra for colorfulness
+        self.FC_2 = nn.Linear(1+self.intermediate*(nheads+1), self.intermediate)
         self.cls_branch = nn.Linear(self.intermediate, ncls)
 
 
-    def forward(self, roi_maps,attn_maps, proposals=None):
+    def forward(self, roi_maps,attn_maps, colors,proposals=None):
         """
 
         :param roi_maps: [NxLxDHxW]
@@ -55,6 +55,7 @@ class MultiModalClassifier(nn.Module):
         x = self.FC(x)
         x = torch.cat((x, attn_processed))
         x = x.view(1,(self.nheads+1)*self.intermediate)
+        x = torch.cat((x, colors), dim=1)
         x = self.dropout(x)
         x = relu(x)
         x = self.FC_2(x)
