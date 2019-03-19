@@ -39,7 +39,7 @@ class MMFasterRCNN(nn.Module):
         self.cls_names = cfg.CLASSES
 
 
-    def forward(self, input_windows,neighbor_windows, radii, angles, proposals, device):
+    def forward(self, input_windows,neighbor_windows, radii, angles, colors,proposals, device):
         """
         Process an Image through the network
         """
@@ -48,7 +48,7 @@ class MMFasterRCNN(nn.Module):
         Q = self.embedder(maps, torch.tensor([[0.0]]).to(device),torch.tensor([[0.0]]).to(device))
         K = self.embedder(V, radii, angles)
         attn_maps = self.attention(Q,K,V)
-        cls_scores = self.head(maps, attn_maps, proposals)
+        cls_scores = self.head(maps, attn_maps,colors, proposals)
         return proposals,  cls_scores
 
 

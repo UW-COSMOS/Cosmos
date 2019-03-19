@@ -6,7 +6,7 @@ Author: Josh McGrath
 from torch.utils.data import Dataset
 from collections import namedtuple
 import torch
-from torch_model.train.data_layer.xml_loader import XMLLoader, Example, get_radii, get_angles
+from torch_model.train.data_layer.xml_loader import XMLLoader, Example, get_radii, get_angles, get_colorfulness
 from ingestion.ingest_images import get_example_for_uuid
 import random
 
@@ -38,7 +38,8 @@ class ImageEmbeddingDataset(XMLLoader):
         neighbor_windows = [n.window for n in neighbors]
         radii = get_radii(ex.bbox, torch.stack(neighbor_boxes))
         angles = get_angles(ex.bbox, torch.stack(neighbor_boxes))
-        return Example(ex.bbox, label, ex.window, neighbor_boxes, neighbor_windows, radii, angles)
+        colorfulness = get_colorfulness(ex.window)
+        return Example(ex.bbox, label, ex.window, neighbor_boxes, neighbor_windows, radii, angles,colorfulness)
 
     def __len__(self):
         return 2 * len(self.uuids)
