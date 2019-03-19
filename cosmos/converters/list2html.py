@@ -6,7 +6,8 @@ import dominate
 from dominate.tags import *
 import os
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 import re
 import string
 from lxml import html, etree
