@@ -52,7 +52,7 @@ def generate_csv(db,outputfile):
 
 
     variable_lj_document_lj_sentence_lj_equation = """
-    SELECT t.*, equation.top AS equation_top, equation.bottom AS equation_bottom, equation.left AS equation_left, equation.right AS equation_right, equation.page AS equation_page, equation.text AS equation_text
+    SELECT t.*, equation.top AS equation_top, equation.bottom AS equation_bottom, equation.left AS equation_left, equation.right AS equation_right, equation.page AS equation_page
     FROM (%s) as t
     LEFT JOIN equation ON equation.id=t.equation_id
     """%(variable_lj_document_lj_sentence)
