@@ -62,7 +62,29 @@ def subTreeConstruct(edges, root_id, dep_type, index_base, token_value, token_po
         node.add_child(child)
     return node
 
-def parseTreeConstruct(sentences):
+def token_begin_char_calibrate(token_value, text):
+    res = {}
+    ptr = 0
+ 
+    for key in sorted(token_value.keys()):
+        token = token_value[key]
+        ptr_t = 0
+        while ptr_t < len(token):
+            if ptr >= len(text):
+                print('Calibration failed!')
+                return None
+            if text[ptr] == token[ptr_t]:
+                if ptr_t == 0:
+                    res[key] = ptr
+                ptr += 1
+                ptr_t += 1
+            else:
+                ptr += 1           
+            
+    assert len(token_value) == len(res)
+    return res
+
+def parseTreeConstruct(sentences, text):
     trees = []
     index_base = 0
     for sent in sentences:
@@ -70,11 +92,16 @@ def parseTreeConstruct(sentences):
         token_value = {}
         token_pos = {}
         token_begin_char = {}
+
         for token in sent.token:
             index = token.tokenBeginIndex
-            token_value[index] = token.value
+            token_value[index] = token.originalText
             token_pos[index] = token.pos
             token_begin_char[index] = token.beginChar
+
+        if token_begin_char_calibrate(token_value, text):
+            token_begin_char = token_begin_char_calibrate(token_value, text)
+
         dependency_parse = sent.basicDependencies
         if len(dependency_parse.root) != 1:
             print('The number of root is '+str(len(dependency_parse.root)))
@@ -121,7 +148,7 @@ def get_phrase_based_on_NN(node, text, parent_id):
     tokens[this_node_index] = node.value
     node.isUsed = True
     for child in node.children:
-        if child.dep in MODS:
+        if child.dep in MODS and child.pos != 'FW':
             child_node_index = get_token_index([child.begin_char], text)[0]
             tokens[child_node_index] = child.value
             child.isUsed = True
@@ -138,7 +165,14 @@ def get_phrase_based_on_NN(node, text, parent_id):
             tokens = {**tokens, **child_tokens}
     return tokens
 
-
+def cc_strip(tokens):
+    cc = ['and', 'but', 'for', 'nor', 'or', 'so', 'and', 'yet']
+    sortedKey = sorted(tokens.keys())
+    if tokens[sortedKey[0]].lower() in cc:
+        tokens.pop(sortedKey[0])
+    if tokens[sortedKey[-1]].lower() in cc:
+        tokens.pop(sortedKey[-1])
+    return tokens
 
 def get_phrases(tree, text, indices_banned):
     phrases = []
@@ -148,14 +182,24 @@ def get_phrases(tree, text, indices_banned):
     index = get_token_index([tree.begin_char],text)[0]
     if tree.pos.startswith('NN') and tree.isUsed == False and not index in indices_banned and contain_alpha(tree.value):
         tokens = get_phrase_based_on_NN(tree, text, -1)
-        phrases.append(tokens)
+        tokens = cc_strip(tokens)
+        if len(tokens) > 0:
+            phrases.append(tokens)
     for child in tree.children:
         child_phrases = get_phrases(child, text, indices_banned)
         phrases += child_phrases
     return phrases
 
 
-
+def remove_symbol(phrases, indices_banned):
+    res = []
+    for phrase in phrases:
+        for key in phrase.keys():
+            token = phrase[key]
+            if key not in indices_banned and contain_alpha(token):
+                res.append(phrase)
+                break
+    return res
 
 def build_table_X(db, corenlp):
     os.environ["CORENLP_HOME"] = corenlp
@@ -203,9 +247,10 @@ def build_table_X(db, corenlp):
                         ann = client.annotate(sent_text)
 
                         sentences_ann = ann.sentence
-                        trees = parseTreeConstruct(sentences_ann)
+                        trees = parseTreeConstruct(sentences_ann, sent_text)
                         for tree in trees:
-                            phrases = get_phrases(tree, sent_text, indices_banned)
+                            phrases = get_phrases(tree, sent_text, [])
+                            phrases = remove_symbol(phrases, indices_banned)
                             for phrase in phrases:
                                 phrase_text = ''
                                 top_tmp = []
