@@ -12,6 +12,8 @@ from stanfordnlp.server import CoreNLPClient
 
 db_connect_str = "postgres://postgres:password@localhost:5432/cosmos_unicode_1"
 
+stop_words = [ "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "could", "did", "do", "does", "doing", "down", "during", "each", "eq", "eqs", "equation", "equations", "few", "for", "from", "further", "had", "has", "have", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "it", "it's", "its", "itself", "let's", "me", "more", "most", "my", "myself", "nor", "of", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "she", "she'd", "she'll", "she's", "should", "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until", "up", "us", "very", "was", "we", "we'd", "we'll", "we're", "we've", "were", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "would", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"]
+
 class parseTree(object):
     "Parse tree node."
     def __init__(self, dep='root', pos='NULL', begin_char=-1, value = '', isUsed = False, children=None):
@@ -42,6 +44,13 @@ def contain_alpha(word):
         if char.isalpha():
             return True
     return False
+
+def alpha_ratio(word):
+    num = 0
+    for char in word:
+        if char >= 'a' and char <= 'z':
+            num += 1
+    return float(num)/len(word)
 
 def get_edges_by_source_id(edges, source_id):
     res = []
@@ -191,12 +200,12 @@ def get_phrases(tree, text, indices_banned):
     return phrases
 
 
-def remove_symbol(phrases, indices_banned):
+def remove_symbol(phrases, indices_banned, text_banned):
     res = []
     for phrase in phrases:
         for key in phrase.keys():
             token = phrase[key]
-            if key not in indices_banned and contain_alpha(token):
+            if key not in indices_banned and alpha_ratio(token) > 0.5 and token not in text_banned and token.lower() not in stop_words:
                 res.append(phrase)
                 break
     return res
@@ -210,8 +219,10 @@ def build_table_X(db, corenlp):
     sentences = session.query(Sentence).order_by(Sentence.id)
     with CoreNLPClient(annotators=['pos','depparse']) as client:
         vars_used_index = []
+        vars_used_text = []
+
         for eqt in equations:
-            vars_in_eqt = variables.filter(Variable.equation_id == eqt.id)
+            vars_in_eqt = variables.filter(Variable.equation_id == eqt.id).order_by(Variable.sentence_id)
             if vars_in_eqt.count() == 0:
                 print('No Variable found for equation ' + str(eqt.id))
             else:
@@ -226,7 +237,11 @@ def build_table_X(db, corenlp):
                 
                 for var in vars_in_eqt:
                     vars_used_index.append((eqt.document_id, var.sentence_id, var.sentence_offset))
-                    text = var.text.strip(',').strip('.').strip('?')
+                    PUNC_TO_STRIP = [',','.','?','(',')','{','}','[',']']
+                    text = var.text
+                    for punc in PUNC_TO_STRIP:
+                        text = text.strip(punc)
+                    vars_used_text.append((eqt.document_id, text))
                     if text not in vars_used:
                         vars_used.append(text)
                 for var in vars_in_eqt:
@@ -240,6 +255,7 @@ def build_table_X(db, corenlp):
                     page = target_sent.page
 
                     indices_banned = [t[2] for t in vars_used_index if t[0] == eqt.document_id and t[1] == sent_id]
+                    text_banned = [t[1] for t in vars_used_text if t[0] == eqt.document_id]
                     
                     if sent_id not in sent_used:
                         sent_used.append(sent_id)
@@ -250,7 +266,7 @@ def build_table_X(db, corenlp):
                         trees = parseTreeConstruct(sentences_ann, sent_text)
                         for tree in trees:
                             phrases = get_phrases(tree, sent_text, [])
-                            phrases = remove_symbol(phrases, indices_banned)
+                            phrases = remove_symbol(phrases, indices_banned, text_banned)
                             for phrase in phrases:
                                 phrase_text = ''
                                 top_tmp = []

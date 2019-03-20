@@ -70,8 +70,11 @@ def link(words_location, db_connect_str, ignored_files=[]):
         return session.query(Sentence).filter(Sentence.document_id == doc_id).order_by(Sentence.paragraph_id)
 
     def same(w1, w2):
-        return w1.replace('-', '—').replace('−','—').replace('–','—').strip() \
-            == w2.replace('-', '—').replace('−','—').replace('–','—').strip()
+        hyphens = ['\u2010','\u2011','\u2012','\u2013','\u2014','\u2212']
+        for hyphen in hyphens:
+            w1 = w1.replace(hyphen,'-')
+            w2 = w2.replace(hyphen,'-')
+        return w1 == w2
 
     for doc in get_all_documents():
         if doc.name + '.html' in ignored_files:
@@ -158,8 +161,8 @@ def link(words_location, db_connect_str, ignored_files=[]):
                     word_bag_count += 1
                 else:
                     str_buffer += word
-                    #print('*********'+str_buffer)
-                    #print(word_bag[word_bag_count]['text'].replace(' ',''))
+                    print('*********'+str_buffer)
+                    print(word_bag[word_bag_count]['text'].replace(' ',''))
                     if same(str_buffer, word_bag[word_bag_count]['text'].replace(' ','')):
                         # loguru.logger.debug("%s : %s" % (str_buffer, word_bag[word_bag_count]['text']))
                         str_buffer = ''
