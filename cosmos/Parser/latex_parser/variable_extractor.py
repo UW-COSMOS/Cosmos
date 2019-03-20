@@ -6,6 +6,11 @@ import os
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def unparse(node):
+    """
+    Transform a tree node to a string representation
+    :param node: An etree node
+    :return: String representation of a given etree node
+    """
 
     if isinstance(node, str):
         return node
@@ -22,6 +27,11 @@ def unparse(node):
     return node.text
 
 def get_variables(latex):
+    """
+    Parse latex code into a list of strings where each string represents one variable
+    :param latex: Latex code
+    :return: List of strings if successful; ['-1'] if parse error
+    """
     processed = latex.replace(' ', '[space]')
     processed = processed.replace('\\', '[backslash]')
     processed = processed.replace('(', '{')
@@ -74,7 +84,7 @@ def get_variables(latex):
 # @click.command()
 @click.option('--latex', required=True, help='Source latex code to be parsed')
 def get_variables_cli(latex):
-    '''Variable extractor that finds variables in the Latex code'''
+    """Variable extractor that finds variables in the Latex code"""
     for g in get_variables(latex):
         click.echo(unparse(g))
 

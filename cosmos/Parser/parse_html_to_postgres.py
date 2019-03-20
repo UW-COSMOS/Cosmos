@@ -12,6 +12,15 @@ from insert_equation import insert_equation_tuple
 
 def parse_html_to_postgres(input_folder, output_html, db_connect_str,
                            strip_tags, ignored_file_when_link, store_into_postgres=True):
+    """
+    Helper function for database ingestion.
+    :param input_folder: Location of input folder containing source XML files from image segmentation.
+    :param output_html: Intermediate HTML files which will be consumed by the Fonduer parser.
+    :param db_connect_str: Database connection string.
+    :param strip_tags: Tags to be flatten.
+    :param ignored_file_when_link: Files to be ignored when linking.
+    :param store_into_postgres: Flag for whether to ingest data into Postgres.
+    """
     # assert os.path.isabs(input_folder)
     # assert os.path.isabs(output_html)
     # assert os.path.isabs(merge_folder)
