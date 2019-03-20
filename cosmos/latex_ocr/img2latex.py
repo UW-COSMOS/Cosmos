@@ -33,6 +33,17 @@ def img2latex(
     img_augment=None,
     gray_scale=True,
 ):
+    """
+    Predict a latex code for an input equation image.
+    :param model: model to be used
+    :param img: input equation image
+    :param downsample_image_ratio: down sampling ratio
+    :param cropping: whether to crop
+    :param padding: whether to pad
+    :param img_augment: img augmentation filter
+    :param gray_scale:whether to gray scale
+    :return: latex prediction, processed img, processed img location
+    """
     dir_output = "tmp/"
     run(["mkdir -p tmp"], TIMEOUT)
     img_path = os.path.join("tmp/", "%d.png" % random.randint(0, 10000))
@@ -97,7 +108,13 @@ def img2latex(
     return hyps[0], img, os.path.abspath(img_path_tmp)
 
 
-def pdf2latex(model, img_path):
+def pdf2latex(model, pdf_path):
+    """
+    Make prediction for PDF
+    :param model: model to be used
+    :param pdf_path: PDF location
+    :return:
+    """
     buckets = [
         [240, 100],
         [320, 80],
@@ -123,29 +140,34 @@ def pdf2latex(model, img_path):
     ]
 
     dir_output = "tmp/"
-    name = img_path.split("/")[-1].split(".")[0]
+    name = pdf_path.split("/")[-1].split(".")[0]
     run(
         "magick convert -density {} -quality {} {} {}".format(
-            200, 100, img_path, dir_output + "{}.png".format(name)
+            200, 100, pdf_path, dir_output + "{}.png".format(name)
         ),
         TIMEOUT,
     )
-    img_path = dir_output + "{}.png".format(name)
-    crop_image(img_path, img_path)
-    pad_image(img_path, img_path, buckets=buckets)
-    downsample_image(img_path, img_path, 2)
+    pdf_path = dir_output + "{}.png".format(name)
+    crop_image(pdf_path, pdf_path)
+    pad_image(pdf_path, pdf_path, buckets=buckets)
+    downsample_image(pdf_path, pdf_path, 2)
 
-    img = imread(img_path)
+    img = imread(pdf_path)
 
     img = greyscale(img)
     hyps = model.predict(img)
 
     # model.logger.info(hyps[0])
 
-    return hyps[0], img_path
+    return hyps[0], pdf_path
 
 
 def easiest_latex_fix_from_left(tokens):
+    """
+    Fix imbalance brackets iterating from left
+    :param tokens: List of tokens
+    :return: Fixed sequence
+    """
     c = 0
     for w in tokens:
         if w == "{":
@@ -162,6 +184,11 @@ def easiest_latex_fix_from_left(tokens):
 
 
 def easiest_latex_fix_from_right(tokens):
+    """
+    Fix imbalance brackets iterating from right
+    :param tokens: List of tokens
+    :return: Fixed sequence
+    """
     c = 0
     for w in tokens[::-1]:
         if w == "{":
@@ -177,6 +204,11 @@ def easiest_latex_fix_from_right(tokens):
 
 
 def remove_bad_underscore(tokens):
+    """
+    Fix invalid underscore sequence
+    :param tokens: List of tokens
+    :return: Fixed sequence
+    """
     merged = "".join(tokens)
     merged = re.sub(r"[_]{2,}", "_", merged)
     merged = merged.replace("}_}", "}}")
@@ -188,12 +220,23 @@ def remove_bad_underscore(tokens):
 
 
 def remove_bad_camma(tokens):
+    """
+    Remove invalid camma
+    :param tokens: List of tokens
+    :return: Fixed sequence
+    """
     merged = "".join(tokens)
     merged = re.sub(r"\\,", "", merged)
     return merged
 
 
 def strip(tokens, forbidden=[]):
+    """
+    Remove unnecessary command
+    :param tokens: List of tokens
+    :param forbidden command to be removed
+    :return: Fixed sequence
+    """
     merged = "".join(tokens)
     for cmd in forbidden:
         merged = re.sub(cmd.replace("\\", "\\\\"), "", merged)
@@ -201,6 +244,11 @@ def strip(tokens, forbidden=[]):
 
 
 def replace_empty_bracket(tokens):
+    """
+    Remove empty bracket
+    :param tokens: List of tokens
+    :return: Fixed sequence
+    """
     merged = "".join(tokens)
     find = re.search(r"\{\}", merged)
     while find:
@@ -210,6 +258,11 @@ def replace_empty_bracket(tokens):
 
 
 def postprocess(raw_latex):
+    """
+    Wrapper function for performing different postprocess operations
+    :param raw_latex: latex code
+    :return: processed latex code
+    """
     tokens = raw_latex.split()
     recorded_command = list(filter(lambda x: "\\" in x, tokens))
     tokens = strip(tokens, ["\\mathrm", "\\Big", "\\cal"])
@@ -230,6 +283,11 @@ def postprocess(raw_latex):
 
 
 def get_im2latex_model(weight_dir):
+    """
+    Load up model from the given weight location
+    :param weight_dir: weight location
+    :return: trained model
+    """
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
     tf.logging.set_verbosity(tf.logging.ERROR)
     config_vocab = Config(weight_dir + "vocab.json")
@@ -243,6 +301,16 @@ def get_im2latex_model(weight_dir):
 
 
 def img2latex_api(model, img, downsample_image_ratio, cropping, padding, gray_scale):
+    """
+       Predict a latex code for an input equation image.
+       :param model: model to be used
+       :param img: input equation image
+       :param downsample_image_ratio: down sampling ratio
+       :param cropping: whether to crop
+       :param padding: whether to pad
+       :param gray_scale:whether to gray scale
+       :return: latex prediction, processed img, processed img location
+   """
     seq = iaa.Sequential([iaa.GammaContrast(2)])
     latex, _, _ = img2latex(
         model,
