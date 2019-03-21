@@ -64,7 +64,7 @@ def var_in_text(db):
             if sents.count() == 0:
                 count = MAX_RANGE
                 break
-            if sents[0].name == 'Body Text':
+            if sents[0].name == 'Body Text' or sents[0].name == 'Abstract':
                 for sent in sents:
                     for idx, word in enumerate(sent.text.split()):
                         tmp = re.sub('['+string.punctuation+']', '', word)
@@ -103,7 +103,7 @@ def var_in_text(db):
             if sents.count() == 0:
                 count = MAX_RANGE
                 break
-            if sents[0].name == 'Body Text':
+            if sents[0].name == 'Body Text' or sents[0].name == 'Abstract':
                 for sent in sents:
                     for idx, word in enumerate(sent.text.split()):
                         tmp = re.sub('['+string.punctuation+']', '', word)
