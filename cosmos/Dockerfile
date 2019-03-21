@@ -90,6 +90,8 @@ COPY ./requirements.txt ./requirements.txt
 USER user
 
 RUN pip install -r requirements.txt --user
+RUN pip uninstall -y spacy
+RUN pip install spacy==2.0.18
 
 USER root
 

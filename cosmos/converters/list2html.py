@@ -92,6 +92,7 @@ def unicode_representation(unicode_df, page, root, base, t):
         coord = get_coordinate(word.get('title'))
         coordinate = coordinate_convert(coord['xmin']+base[0],coord['ymin']+base[1],coord['xmax']+base[0],coord['ymax']+base[1],MAX_OF_X,MAX_OF_Y)
         paddy = (coordinate[3]-coordinate[1])*0.3
+        #print('converted coord: '+str(coordinate[0])+' '+str(coordinate[1])+' '+str(coordinate[2])+' '+str(coordinate[3]))
         index = ~( (df_page['x1'] >= coordinate[2]) | (df_page['x2'] <= coordinate[0]) | \
                 (df_page['y1'] >= coordinate[3]-paddy) | (df_page['y2'] <= coordinate[1]+paddy) )
         df_within = df_page[index]
@@ -102,6 +103,7 @@ def unicode_representation(unicode_df, page, root, base, t):
                 fisrt = False
             text += invalid_filter(row['text'])
             text += ' '
+            #print('coord within: '+str(row['x1'])+' '+str(row['y1'])+' '+str(row['x2'])+' '+str(row['y2']))
         word.text = text
     if t == 'Equation':
         coordinate = coordinate_convert(base[0],base[1],base[2],base[3],MAX_OF_X,MAX_OF_Y)

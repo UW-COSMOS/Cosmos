@@ -161,8 +161,8 @@ def link(words_location, db_connect_str, ignored_files=[]):
                     word_bag_count += 1
                 else:
                     str_buffer += word
-                    print('*********'+str_buffer)
-                    print(word_bag[word_bag_count]['text'].replace(' ',''))
+                    #print('*********'+str_buffer)
+                    #print(word_bag[word_bag_count]['text'].replace(' ',''))
                     if same(str_buffer, word_bag[word_bag_count]['text'].replace(' ','')):
                         # loguru.logger.debug("%s : %s" % (str_buffer, word_bag[word_bag_count]['text']))
                         str_buffer = ''
