@@ -4,7 +4,7 @@ imgaug
 dominate
 pytesseract
 pandas
-fonduer
+fonduer==0.5.0
 lxml
 loguru
 pytest

@@ -36,7 +36,6 @@ def pagemerger(rawfolder, outputfolder):
             tree = load_file_to_tree(path.join(rawfolder, file))
             elem_dict = {}
             for element in tree[1]:
-                #print(element.get('class'))
                 children = element.xpath(".//*[@class='text_unicode']")
                 if len(children) >= 1:
                     child = children[0]
@@ -53,7 +52,6 @@ def pagemerger(rawfolder, outputfolder):
                         elem_dict[idx] = element
 
             for elem_key in sorted(elem_dict.keys()):
-                print(elem_key)
                 page.append(elem_dict[elem_key])
 
         with open(path.join(outputfolder, key.replace(' ', '_')) + '.html', 'wb') as f:

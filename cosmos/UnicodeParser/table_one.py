@@ -8,6 +8,10 @@ import re
 import string
 
 db_connect_str = "postgres://postgres:vangle@localhost:5432/cosmos5"
+stop_words = ['a', 'all', 'am', 'an', 'and', 'any', 'are', 'as', 'at', 'be', 'but', 'by', 'can', 'did', 'do', 'few', \
+'for', 'get', 'had', 'has', 'he', 'her', 'him', 'his', 'how', 'if', 'in', 'is', 'it', 'its', 'me', \
+'my', 'nor', 'of', 'on', 'or', 'our', 'out', 'own', 'set', 'she', 'so', 'the', 'to', 'too', 'use', 'up', \
+'was', 'we', 'who', 'why', 'you']
 
 def similarity(token1, token2):
     total = len(token1)
@@ -19,9 +23,8 @@ def similarity(token1, token2):
 
 def match(word, equation):
     word = re.sub('['+string.punctuation+']', '', word)
-    word = re.sub('cid[0-9]*', '', word)
     equation = re.sub('['+string.punctuation+']', '', equation)
-    equation = re.sub('cid[0-9]*', '', equation)
+
     if len(word) > len(equation) or len(word) == 0 or word.isdigit():
         return -1, -1
     if word == '∗':
@@ -50,9 +53,9 @@ def var_in_text(db):
 
     for eqt in get_all_equations():
         sentences = get_sentences_in_doc(eqt.document_id)
-        #print(sentences.count())
+       
         paragraph_id = eqt.paragraph_id
-        #print('*******************************************************')
+       
         count = 0
         id_temp = paragraph_id
         while count < MAX_RANGE:
@@ -61,15 +64,17 @@ def var_in_text(db):
             if sents.count() == 0:
                 count = MAX_RANGE
                 break
-            if sents[0].name == 'Body Text':
+            if sents[0].name == 'Body Text' or sents[0].name == 'Abstract':
                 for sent in sents:
                     for idx, word in enumerate(sent.text.split()):
                         tmp = re.sub('['+string.punctuation+']', '', word)
+                        if tmp in stop_words:
+                            continue
                         tmp = tmp.lower()
-                        if tmp not in valid_words:
+                        if tmp not in valid_words or len(tmp) <= 2:
                             offset, score = match(word, eqt.text)
                             if offset >= 0:
-                                #print(str(offset)+' '+str(score)+' '+word)
+                               
                                 v = Variable(
                                     text = word,
                                     document_id = eqt.document_id,
@@ -79,16 +84,17 @@ def var_in_text(db):
                                     sentence_id = sent.id,
                                     sentence_offset = idx,
                                     sentence_text = sent.text,
-                                    score = score
+                                    score = score,
+                                    var_top = sent.top[idx],
+                                    var_bottom = sent.bottom[idx],
+                                    var_left = sent.left[idx],
+                                    var_right = sent.right[idx],
+                                    var_page = sent.page[idx]
                                 )
                                 session.add(v)
-                    #print(sent.paragraph_id)
-                    #print(sent.text)
                 count += 1
 
-        #print('-------------------------------------------------------')
-        #print(eqt.text)
-        #print('-------------------------------------------------------')
+     
         count = 0
         id_temp = paragraph_id
         while count < MAX_RANGE:
@@ -97,15 +103,17 @@ def var_in_text(db):
             if sents.count() == 0:
                 count = MAX_RANGE
                 break
-            if sents[0].name == 'Body Text':
+            if sents[0].name == 'Body Text' or sents[0].name == 'Abstract':
                 for sent in sents:
                     for idx, word in enumerate(sent.text.split()):
                         tmp = re.sub('['+string.punctuation+']', '', word)
+                        if tmp in stop_words:
+                            continue
                         tmp = tmp.lower()
-                        if tmp not in valid_words:
+                        if tmp not in valid_words or len(tmp) <= 2:
                             offset, score = match(word, eqt.text)
                             if offset >= 0:
-                                #print(str(offset)+' '+str(score)+' '+word)
+                    
                                 v = Variable(
                                     text = word,
                                     document_id = eqt.document_id,
@@ -115,13 +123,16 @@ def var_in_text(db):
                                     sentence_id = sent.id,
                                     sentence_offset = idx,
                                     sentence_text = sent.text,
-                                    score = score
+                                    score = score,
+                                    var_top = sent.top[idx],
+                                    var_bottom = sent.bottom[idx],
+                                    var_left = sent.left[idx],
+                                    var_right = sent.right[idx],
+                                    var_page = sent.page[idx]
                                 )
                                 session.add(v)
-                    #print(sent.paragraph_id)
-                    #print(sent.text)
+                  
                 count += 1
-        #print('*******************************************************')
         session.commit()
 
 if __name__ == '__main__':
