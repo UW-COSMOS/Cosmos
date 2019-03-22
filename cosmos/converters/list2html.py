@@ -118,7 +118,7 @@ def unicode_representation(unicode_df, page, root, base, t):
             #print('coord within: '+str(row['x1'])+' '+str(row['y1'])+' '+str(row['x2'])+' '+str(row['y2']))
         word.text = text
 
-    print('Number of skip: '+str(num_skip))
+    #print('Number of skip: '+str(num_skip))
 
     if t == 'Equation':
         coordinate = coordinate_convert(base[0],base[1],base[2],base[3],MAX_OF_X,MAX_OF_Y)
