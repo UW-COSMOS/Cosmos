@@ -23,7 +23,7 @@ def update_xmls(hpath, output_dir):
 @click.argument('img_dir')
 @click.argument('output_dir')
 def run_xml_postprocessing(xml_dir, img_dir, output_dir):
-    pool = mp.Pool(processes=160)
+    pool = mp.Pool(processes=140)
     results = [pool.apply_async(convert_to_html, args=(os.path.join(xml_dir, x), img_dir)) for x in os.listdir(xml_dir)]
     [r.get() for r in results]
     post.postprocess('html2', 'html3')

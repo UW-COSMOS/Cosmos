@@ -93,24 +93,25 @@ def group_cls_columnwise(obj_list, g_cls):
     '''
     nbhds = []
     for obj in obj_list:
-        cls, coords, _ = obj
+        cls, coords, scr = obj
         if cls == g_cls:
             if len(nbhds) == 0:
-                nbhds.append(coords)
+                nbhds.append((coords, scr))
                 continue
             new_nbhd_list = []
             added = False
             for nbhd_bb in nbhds:
+                nbhd_bb, scr2 = nbhd_bb
                 # construct a bounding box over this table and the neighborhood
                 new_box = [min(nbhd_bb[0], coords[0]), min(nbhd_bb[1], coords[1]), max(nbhd_bb[2], coords[2]), max(nbhd_bb[3], coords[3])]
                 if check_overlap(obj_list, new_box, check_above_below=True):
-                    new_nbhd_list.append(new_box)
+                    new_nbhd_list.append((new_box, scr if scr >= scr2 else scr2))
                     added = True
                 else:
-                    new_nbhd_list.append(nbhd_bb)
+                    new_nbhd_list.append((nbhd_bb, scr2))
             # If we didn't merge with an existing neighborhood, create a new neighborhood
             if not added:
-                new_nbhd_list.append(coords)
+                new_nbhd_list.append((coords, scr))
             nbhds = new_nbhd_list
     new_obj_list = []
     for obj in obj_list:
@@ -128,27 +129,28 @@ def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
     '''
     nbhds = []
     for obj in obj_list:
-        cls, coords, _ = obj
+        cls, coords, scr = obj
         if cls == g_cls:
             if len(nbhds) == 0:
-                nbhds.append(coords)
+                nbhds.append((coords, scr))
                 continue
             new_nbhd_list = []
             added = False
             for nbhd_bb in nbhds:
                 # construct a bounding box over this table and the neighborhood
+                nbhd_bb, scr2 = nbhd_bb
                 new_box = [min(nbhd_bb[0], coords[0]), min(nbhd_bb[1], coords[1]), max(nbhd_bb[2], coords[2]), max(nbhd_bb[3], coords[3])]
                 ccls = [g_cls]
                 if merge_over_classes is not None:
                     ccls.extend(merge_over_classes)
                 if check_overlap(obj_list, new_box, check_cls=ccls):
-                    new_nbhd_list.append(new_box)
+                    new_nbhd_list.append((new_box, scr if scr >= scr2 else scr2))
                     added = True
                 else:
-                    new_nbhd_list.append(nbhd_bb)
+                    new_nbhd_list.append((nbhd_bb, scr2))
             # If we didn't merge with an existing neighborhood, create a new neighborhood
             if not added:
-                new_nbhd_list.append(coords)
+                new_nbhd_list.append((coords, scr))
             nbhds = new_nbhd_list
     if do_table_merge:
         while True:
@@ -156,7 +158,9 @@ def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
             merged_nbhds = []
             # Now we check for intersecting table neighborhoods
             for nbhd in nbhds:
+                nbhd, scr = nbhd
                 for nbhd2 in nbhds:
+                    nbhd2, scr2 = nbhd2
                     if nbhd2 == nbhd:
                         continue
                     iou = calculate_iou(nbhd, nbhd2) 
@@ -167,10 +171,11 @@ def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
                             continue
                         merged_nbhds.append(nbhd)
                         merged_nbhds.append(nbhd2)
-                        new_nbhds.append(new_box)
+                        new_nbhds.append((new_box, scr if scr >= scr2 else scr2))
             for nbhd in nbhds:
+                nbhd, scr = nbhd
                 if nbhd not in merged_nbhds:
-                    new_nbhds.append(nbhd)
+                    new_nbhds.append((nbhd, scr))
             if new_nbhds == nbhds:
                 break
             nbhds = new_nbhds
@@ -178,6 +183,7 @@ def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
     filter_objs = []
     # now we need to check for other overlaps
     for nbhd in nbhds:
+        nbhd, scr = nbhd
         for obj in obj_list:
             cls, coords, _ = obj
             obj_iou = calculate_iou(coords, nbhd)
@@ -190,7 +196,8 @@ def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
         if cls != g_cls:
             new_obj_list.append(obj)
     for nbhd in nbhds:
-        new_obj_list.append((g_cls, nbhd, 1))
+        nbhd, scr = nbhd
+        new_obj_list.append((g_cls, nbhd, scr))
     return new_obj_list
 
 
