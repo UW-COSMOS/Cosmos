@@ -205,7 +205,7 @@ def remove_symbol(phrases, indices_banned, text_banned):
     for phrase in phrases:
         for key in phrase.keys():
             token = phrase[key]
-            if key not in indices_banned and alpha_ratio(token) > 0.5 and token not in text_banned and token.lower() not in stop_words:
+            if key not in indices_banned and alpha_ratio(token) > 0.5 and alpha_ratio(token)*len(token) > 3.5 and token not in text_banned and token.lower() not in stop_words:
                 res.append(phrase)
                 break
     return res
