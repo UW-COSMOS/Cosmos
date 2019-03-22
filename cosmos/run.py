@@ -162,7 +162,6 @@ post.postprocess(html, tmp_html)
 # replace old html with corrected stuff.
 if not args.debug:
     shutil.move(os.path.join(html, 'img'), tmp_html)
-    shutil.move('tmp',tmp_html)
     shutil.rmtree(html)
     shutil.move(tmp_html, html)
 
@@ -194,5 +193,7 @@ corenlp_fd = '/app/stanford-corenlp-full-2018-10-05'
 if not args.noingest:
     parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, output_csv, corenlp_fd)
 
-#if not args.debug:
-    #shutil.rmtree(f'{tmp}')
+shutil.copytree('tmp/images/',os.path.join(args.output, "images")) 
+
+if not args.debug:
+    shutil.rmtree(f'{tmp}')
