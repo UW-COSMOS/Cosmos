@@ -56,7 +56,7 @@ def run_eval(pred_dir, gt_dir, eval_func, classes):
         pred_bbox = pred_df[["x0", "y0", "x1", "y1"]].values
         npred = pred_df.shape[0]
         pred_label = map_to_integers(pred_df["label"], classes).values
-        score = np.ones(npred)
+        score = pred_df['score'].values
         gt_bbox  = gt_df[["x0", "y0", "x1", "y1"]].values
         gt_label = map_to_integers(gt_df["label"], classes).values
         pred_labels.append(pred_label)
@@ -64,9 +64,8 @@ def run_eval(pred_dir, gt_dir, eval_func, classes):
         gt_labels.append(gt_label)
         gt_bboxes.append(gt_bbox)
         scores.append(score)
-    eval_result = eval_func(pred_bboxes, pred_labels, scores, gt_bboxes, gt_labels, iou_thresh=0.1)
+    eval_result = eval_func(pred_bboxes, pred_labels, scores, gt_bboxes, gt_labels)
     return format_result(eval_result, classes) 
-
 
 
 def run_voc(pred_dir, gt_dir, classes):
