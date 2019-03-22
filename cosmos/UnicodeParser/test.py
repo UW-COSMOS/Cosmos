@@ -7,7 +7,7 @@ ingestion_settings = {
     'output_html'            : '/home/vangle/UnicodeParser/output/html/',
     'output_words'           : '/home/vangle/UnicodeParser/output/words/',
     'output_equations'       : '/home/vangle/UnicodeParser/output/equations/',
-    'db_connect_str'         : 'postgres://postgres:vangle@localhost:5432/cosmos20',
+    'db_connect_str'         : 'postgres://postgres:vangle@localhost:5432/cosmos21',
     'strip_tags'             : ['strong', 'em'],
     'ignored_file_when_link' : [],
 }
