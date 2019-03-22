@@ -18,11 +18,12 @@ def iterate_and_update_writer(soup, writer):
         if hocr is None:
             print(seg_type)
             raise Exception('Invalid div found. Please account for said div')
+        score = hocr['data-score']
         coordinates = hocr['data-coordinates']
         coordinates = coordinates.split(' ')
         coordinates = [int(x) for x in coordinates]
         coordinates = tuple(coordinates)
-        writer.addObject(seg_class, *coordinates)
+        writer.addObject(seg_class, *coordinates, difficult=float(score))
     return writer
 
 

@@ -156,7 +156,7 @@ def list2html(input_list, image_name, image_dir, output_dir, unicode_df=None,tes
                     dominate.tags.img(src=crop_img_path)
                 if b_text and tesseract_hocr:
                     # We do a quick loading and deloading to properly convert encodings
-                    div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                    div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}', data_score=f'{score}')
                     loaded = html.fromstring(b_text)                    
                     tree = etree.fromstring(etree.tostring(loaded))
                     latex_tree = variable_ocr(im2latex_model, tree, cropped, [])
