@@ -121,4 +121,4 @@ RUN rm stanford-corenlp-full-2018-10-05.zip
 
 USER root 
 
-CMD ["python", "run.py", "/input", "-w", "torch_model/model_95.pth", "-t", "4", "-o", "/output/"]
+CMD ["python", "run.py", "/input", "-w", "torch_model/model_weights.pth", "-t", "4", "-o", "/output/"]
