@@ -38,8 +38,12 @@ class TrainerHelper:
         self.train_set, self.val_set = train_set, val_set
         self.params = params
         self.cls = dict([(val, idx) for (idx, val) in enumerate(model.cls_names)])
-        self.weight_vec = train_set.get_weight_vec(model.cls_names)
+        #self.weight_vec = train_set.get_weight_vec(model.cls_names)
         self.device = device
+        weights = self.detect_weights(params["SAVE_DIR"])
+        #if weights is not None:
+          #  self.model.load_state_dict(torch.load(weights))
+
         if params["USE_TENSORBOARD"]:
             self.writer = SummaryWriter()
         self.head_target_layer = HeadTargetLayer(
