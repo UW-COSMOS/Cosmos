@@ -83,27 +83,44 @@ def unicode_representation(unicode_df, page, root, base, t):
     limit = unicode_df[1]
     #The file doesn't have unicode
     if df is None:
-        return root, 'Have no Unicide', -1
+        return root, 'Have no Unicode', -1
     MAX_OF_X = limit[2]
     MAX_OF_Y = limit[3]
     df_page = df[df['page'] == page-1]
     first_id = -1
-    first = True 
+    first = True
+    num_skip = 0 
     for word in root.xpath(".//*[@class='ocrx_word']"):
         coord = get_coordinate(word.get('title'))
         coordinate = coordinate_convert(coord['xmin']+base[0],coord['ymin']+base[1],coord['xmax']+base[0],coord['ymax']+base[1],MAX_OF_X,MAX_OF_Y)
         paddy = (coordinate[3]-coordinate[1])*0.3
+        #print('converted coord: '+str(coordinate[0])+' '+str(coordinate[1])+' '+str(coordinate[2])+' '+str(coordinate[3]))
         index = ~( (df_page['x1'] >= coordinate[2]) | (df_page['x2'] <= coordinate[0]) | \
                 (df_page['y1'] >= coordinate[3]-paddy) | (df_page['y2'] <= coordinate[1]+paddy) )
         df_within = df_page[index]
         text = ''
-        for idx, row in df_within.iterrows():
+        idx_prev = -1
+        for idx, row in df_within.iterrows():            
             if first:
                 first_id = idx
-                fisrt = False
-            text += invalid_filter(row['text'])
-            text += ' '
+                first = False
+            if idx_prev == -1:
+                text += invalid_filter(row['text'])
+                text += ' '
+                idx_prev = idx
+            else:
+                if idx == idx_prev+1:
+                    text += invalid_filter(row['text'])
+                    text += ' '
+                    idx_prev = idx
+                else:
+                    num_skip += 1
+
+            #print('coord within: '+str(row['x1'])+' '+str(row['y1'])+' '+str(row['x2'])+' '+str(row['y2']))
         word.text = text
+
+    #print('Number of skip: '+str(num_skip))
+
     if t == 'Equation':
         coordinate = coordinate_convert(base[0],base[1],base[2],base[3],MAX_OF_X,MAX_OF_Y)
         paddy = (coordinate[3]-coordinate[1])*0.0
