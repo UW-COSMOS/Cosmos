@@ -3,7 +3,7 @@
 Script to run an end to end pipeline
 """
 
-from torch_model.infer import run_inference
+from infer import run_inference
 from UnicodeParser.parse_html_to_postgres import parse_html_to_postgres
 from construct_caption_tables.construct import construct
 import multiprocessing as mp
@@ -34,7 +34,7 @@ from config import ingestion_settings
 
 parser = ArgumentParser(description="Run the classifier")
 parser.add_argument("pdfdir", type=str, help="Path to directory of PDFs")
-parser.add_argument('-d', "--weightsdir", default='weights', type=str, help="Path to weights dir")
+parser.add_argument('-d', "--device", default='cpu', type=str, help="Path to weights dir")
 parser.add_argument('-w', "--weights", type=str, help='Path to weights file', required=True)
 parser.add_argument('-t', "--threads", default=160, type=int, help="Number of threads to use")
 parser.add_argument('-n', "--noingest", help="Ingest html documents and create postgres database", action='store_true')
@@ -47,6 +47,7 @@ args = parser.parse_args()
 # Path variables
 model_config = "model_config.yaml"
 weights = args.weights
+device = args.device
 tmp = args.tmp_path
 xml = os.path.join(args.output, "xml")
 html = os.path.join(args.output, "html")
@@ -89,7 +90,7 @@ def convert_to_html(xml_f):
     xpath = os.path.join(xml, xml_f)
     l = xml2list(xpath)
     pdf_name = FILE_NAME.search(f'{xml_f[:-4]}.png').group(1)
-    list2html(l, f'{xml_f[:-4]}.png', img_d, html, os.path.join(f'{tmp}', 'images'), unicodes[pdf_name])
+    list2html(l, f'{xml_f[:-4]}.png', os.path.join(f'{tmp}', 'images'), html, unicodes[pdf_name])
 
 def match_proposal(proposal_f):
     proposal_f_full = os.path.join(f'{tmp}', proposal_f)
@@ -123,26 +124,7 @@ with open('test.txt', 'w') as wf:
 
 shutil.move('test.txt', f'{tmp}/test.txt')
 
-run_inference(f'{tmp}/images', f'{tmp}/cc_proposals', model_config, weights, xml)
-#model_config = ConfigManager(model_config)
-#model = MMFasterRCNN(model_config)
-#model.load_state_dict(torch.load(weights, map_location={"cuda:0": "cpu"}))
-#loader = InferenceLoader(f"{tmp}/images", f"{tmp}/cc_proposals", "png", model_config.WARPED_SIZE)
-#runner = InferenceHelper(model, loader, torch.device("cpu"))
-#
-#runner.run(xml)
-# for idx, image_id in enumerate(tqdm(image_ids)):
-    # # Load image and ground truth data
-    # image, image_meta, gt_class_id, gt_bbox, gt_mask = \
-        # modellib.load_image_gt(data_test, inference_config,image_id, use_mini_mask=False)
-    # results = model.detect([image], verbose=0)
-    # r = results[0]
-    # info = data_test.image_info[image_id]
-    # zipped = zip(r["class_ids"], r["rois"])
-    # model2xml(info["str_id"], xml, [1920, 1920], zipped, data_test.class_names, r['scores'])
-
-# results = [pool.apply_async(match_proposal, args=(x,)) for x in os.listdir(f'{tmp}') if x[-4:] == '.csv']
-# [r.get() for r in results]
+run_inference(f'{tmp}/images', f'{tmp}/cc_proposals', model_config, weights, xml, device)
 
 if not os.path.exists(html):
     os.makedirs(html)
