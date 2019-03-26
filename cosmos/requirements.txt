@@ -10,6 +10,7 @@ lxml
 loguru
 pytest
 click
+dataclasses
 
 # {{ for im2latex
 
@@ -37,4 +38,4 @@ tensorboardX
 redis
 pdfminer.six
 stanfordnlp
-psycopg2
+psycopg2-binary
