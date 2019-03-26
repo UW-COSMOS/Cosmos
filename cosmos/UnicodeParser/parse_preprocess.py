@@ -16,6 +16,14 @@ with open('words_alpha.txt') as word_file:
 
 
 def coordinate(title, org_x=0, org_y=0, page_num=0):
+    """
+    Extract coordinates from ocrx coordinates string
+    :param title: ocrx coordinate string
+    :param org_x: origin x coordinate
+    :param org_y: origin y coordinate
+    :param page_num: page number
+    :return: dictionary contains ``xmin``, ``ymin``, ``xmax``, ``ymax``, and ``page_number``
+    """
     match = BBOX_COORDINATES_PATTERN.search(title)
     # loguru.logger.debug(title)
     return {
@@ -28,11 +36,21 @@ def coordinate(title, org_x=0, org_y=0, page_num=0):
 
 
 def get_data_coordinate_pattern(data_coordinate_str):
+    """
+    Extract coordinates from data coordinate string
+    :param data_coordinate_str:
+    :return: x coordinate, y coordinate
+    """
     match = DATA_COORDINATES_PATTERN.search(data_coordinate_str)
     return int(match.group(1)), int(match.group(2))
 
 
 def load_file_to_tree(path):
+    """
+    Load file into an etree.
+    :param path: Path of file
+    :return: Constructed etree
+    """
     with open(path, 'r', encoding='utf-8') as in_f:
         doc_str = in_f.read()
         try:
@@ -45,12 +63,23 @@ def load_file_to_tree(path):
 
 
 def get_ocr_segments(root):
+    """
+    Retrieve ocr segment from page tree.
+    :param root: Subtree rooted at a single page document tree.
+    :return: Generator that outputs ocr segment.
+    """
     if 'page' not in root.attrib:
         print('structure broken')
     assert 'page' in root.attrib
     yield from root
 
 def get_all_words_with_coordinates(root):
+    """
+    Get all words in OCRX and their corresponding coordinates.
+    :param root: Tree rooted at a single page.
+    :param target: Tag name of the target component.
+    :return: Generator outputs coordinate for each word.
+    """
     for child in get_ocr_segments(root):
         type = child.attrib['class']
         try:
@@ -80,6 +109,10 @@ def get_all_words_with_coordinates(root):
 
 
 def add_name(root):
+    """
+    Add classification result as a value for name attribute.
+    :param root: Subtree rooted at a single section.
+    """
     for area in get_ocr_segments(root):
         if 'class' in area.attrib:
             class_name = area.attrib['class']
@@ -87,6 +120,11 @@ def add_name(root):
                 para.attrib['name'] = class_name
 
 def all_valid_word(token):
+    """
+    Check if the words in a token are all in the English dictionary.
+    :param token: Input token to be checked.
+    :return: True or False.
+    """
     token = re.sub('['+string.punctuation+']', '', token)
     words = token.split()
     for word in words:
@@ -95,6 +133,10 @@ def all_valid_word(token):
     return True
 
 def generate_rawtext_from_ocrx(root):
+    """
+    Generate content for ``rawtext`` from the ocrx segment.
+    :param root: Tree rooted at a single page.
+    """
     paths = []
     for ocr_segment in get_ocr_segments(root):
         text_tmp = ''
@@ -174,6 +216,10 @@ def generate_rawtext_from_ocrx(root):
     return paths
 
 def remove_ocr_img_for_non_img(root):
+    """
+    Remove ``img`` for non-figure class.
+    :param root: Tree rooted at a single page.
+    """
     for ocr_segment in get_ocr_segments(root):
         is_figure = ocr_segment.attrib['class'] == 'Figure' if 'class' in ocr_segment.attrib else False
         for img_elem in ocr_segment.xpath('.//img'):
@@ -182,6 +228,10 @@ def remove_ocr_img_for_non_img(root):
 
 
 def img_segment_clean_up(root):
+    """
+    Remove OCR segment for ``Figure`` class.
+    :param root: Tree rooted at a single page.
+    """
     for child in root.xpath(".//*[@class='Figure']//*"):
         if child.tag == 'img' or ('class' in child.attrib and child.attrib['class'] == 'hocr') or \
             'class' in child.attrib and child.attrib['class'] == 'hocr_img2latex':
@@ -190,11 +240,19 @@ def img_segment_clean_up(root):
 
 
 def remove_ocr_elements(root):
+    """
+    Remove the OCR component.
+    :param root: Tree rooted at a single page.
+    """
     for child in root.xpath(".//*[@class='ocr_page']"):
         child.getparent().remove(child)
 
 
 def split_paragraph(root):
+    """
+    Split paragraph into ``<p>`` tags delimited by double space.
+    :param root: Tree rooted at a single page.
+    """
     for area in get_ocr_segments(root):
         for child in area:
             if child.text:
@@ -204,6 +262,11 @@ def split_paragraph(root):
                     child.text = ''
 
 def get_equation(root):
+    """
+    Get all equations coordinate from subtree of a single page.
+    :param root: Tree rooted at a single page.
+    :return: Generator that outputs equation coordinates
+    """
     for area in get_ocr_segments(root):
         # loguru.logger.debug(area.attrib['id'])
         if area.attrib['class'] == 'Equation':
@@ -232,6 +295,15 @@ def get_equation(root):
 
 
 def preprocess(input_file, output_word, output_html, output_equation, output_path, strip_tags):
+    """
+    Wrapper function that help apply the parser to different pages.
+    :param input_file: Location of the folder containing the merged HTML files.
+    :param output_word: Location of the folder containing word coordinate json files.
+    :param output_html: Intermediate HTML files which will be consumed by the Fonduer parser.
+    :param output_equation: Location of the folder containing equation coordinate json files.
+    :param output_path: Location of the folder containing source image path json files.
+    :param strip_tags: Tags name to be flatten.
+    """
     tree = load_file_to_tree(input_file)
     etree.strip_tags(tree, *strip_tags)
     all_words = []
