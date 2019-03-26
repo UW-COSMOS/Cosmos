@@ -27,6 +27,11 @@ stop_words = ['all', 'am', 'an', 'and', 'any', 'are', 'as', 'at', 'be', 'but', '
 'was', 'we', 'who', 'why', 'you']
 
 def get_coordinate(title):
+    """
+    Extract coordinates from ocrx coordinates string
+    :param title: ocrx coordinate string
+    :return: dictionary contains ``xmin``, ``ymin``, ``xmax``, ``ymax``
+    """
     match = BBOX_COORDINATES_PATTERN.search(title)
     return {
         'xmin': int(match.group(1)),
@@ -36,6 +41,14 @@ def get_coordinate(title):
     }
 
 def variable_ocr(im2latex_model, root, sub_img, strip_tags):
+    """
+    Get the latex representation for each variable candidate.
+    :param im2latex_model: Location of the im2latex model.
+    :param root: Root of the etree.
+    :param sub_img: Image of the section.
+    :param strip_tags: Tags to be Tags to be flatten.
+    :return: New tree.
+    """
     #etree.strip_tags(root, *strip_tags)
     for word in root.xpath(".//*[@class='ocrx_word']"):
         if not word.text:
@@ -54,6 +67,16 @@ def variable_ocr(im2latex_model, root, sub_img, strip_tags):
     return root
 
 def coordinate_convert(x1,y1,x2,y2,max_of_x,max_of_y):
+    """
+    Convert the coordinate in the 1920 representation to the pdfminer representation.
+    :param x1: Xmin of the 1920 representation.
+    :param y1: Ymin of the 1920 representation.
+    :param x2: Xmax of the 1920 representation.
+    :param y2: Ymax of the 1920 representation.
+    :param max_of_x: Maximum value of X in the pdfminer representation.
+    :param max_of_y: Maximum value of Y in the pdfminer representation.
+    :return: (Xmin,Ymin,Xmax,Ymax) in the pdfminer representation.
+    """
     x_range = 1920*max_of_x/max_of_y
     xmin = x1/x_range*max_of_x
     xmax = x2/x_range*max_of_x
@@ -62,6 +85,11 @@ def coordinate_convert(x1,y1,x2,y2,max_of_x,max_of_y):
     return (xmin,ymin,xmax,ymax)
 
 def valid_xml_char_ordinal(c):
+    """
+    Check if a character is valid in xml.
+    :param c: Input character.
+    :return: True or False.
+    """
     codepoint = ord(c)
     # conditions ordered by presumed frequency
     return (
@@ -70,7 +98,13 @@ def valid_xml_char_ordinal(c):
         0xE000 <= codepoint <= 0xFFFD or
         0x10000 <= codepoint <= 0x10FFFF
         )
+
 def invalid_filter(s):
+    """
+    Remove invalid characters from a string.
+    :param s: Input string.
+    :return: String after filter.
+    """
     out = ''
     for c in s:
         if valid_xml_char_ordinal(c):
@@ -78,6 +112,15 @@ def invalid_filter(s):
     return out
 
 def unicode_representation(unicode_df, page, root, base, t):
+    """
+    Get the unicode representation for each section.
+    :param unicode_df: Dataframe containing unicode for each token.
+    :param page: Page of the section.
+    :param root: Root of the section tree.
+    :param base: Base of the coordinate.
+    :param t: Type of the section.
+    :return: New tree containing the unicode representation. 
+    """
     df = unicode_df[0]
     limit = unicode_df[1]
     #The file doesn't have unicode

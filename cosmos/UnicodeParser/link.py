@@ -21,6 +21,7 @@ STR_ARRAY_TYPE = postgresql.ARRAY(String)
 _meta = Mt.init()
 
 class Latex(_meta.Base):
+    """Latex representation of sentences"""
     __tablename__ = "latexsentence"
 
     id = Column(Integer, primary_key=True)
@@ -44,12 +45,19 @@ class Latex(_meta.Base):
     tokens = Column(STR_ARRAY_TYPE)
 
 class Image(_meta.Base):
+    """Path to the image of the original pdf for each section"""
     __tablename__ = "image"
     id = Column(Integer, primary_key=True)
     img_path = Column(Text, nullable=False)
 
 
-def link(words_location, db_connect_str, ignored_files=[]):
+def link(words_location, db_connect_str, ignored_files=[]): 
+    """
+    Put the coordinate information for each token into the db and get the path to the original pdf image for each section.
+    :param words_location: Directory storing the json files which contain the word coordinate information.
+    :param db_connect_str: db connection string.
+    :param ignored_files: Files to be ignored.
+    """
     XPATH_PATTERN = re.compile("/html/body/div\[([0-9]+)\]/div\[([0-9]+)\]/div\[.*\]/p.*")
     session = Meta.init(db_connect_str).Session()
 
