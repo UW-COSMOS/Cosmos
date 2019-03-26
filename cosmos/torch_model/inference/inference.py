@@ -1,5 +1,6 @@
 from torch.utils.data import DataLoader
 import torch
+from torch_model.train.data_layer.xml_loader import get_colorfulness, get_radii, get_angles
 from pascal_voc_writer import Writer
 from os.path import join, isdir
 from os import mkdir
@@ -33,24 +34,29 @@ class InferenceHelper:
             page_id = db_ex.page_id
             windows = batch.neighbor_windows.to(self.device)
             ex = batch.center_windows.to(self.device)
+            ex_color = get_colorfulness(ex).to(self.device).reshape(-1,1)
+            radii = get_radii(batch.center_bbs[0],batch.neighbor_boxes[0]).to(self.device).reshape(-1,1)
+            angles = get_angles(batch.center_bbs[0], batch.neighbor_boxes[0]).to(self.device).reshape(-1,1)
             windows_sub = windows[0]
             ex_sub = ex[0].unsqueeze(0)
-            rois, cls_scores = self.model(ex_sub, windows_sub, batch.center_bbs, self.device)
+            rois, cls_scores = self.model(ex_sub, windows_sub,radii, angles, ex_color, batch.center_bbs, self.device)
+            #probabilities = torch.nn.functional.softmax(cls_scores).squeeze()
             probs, pred_idxs = torch.max(cls_scores, dim=1)
+            probabilities = cls_scores.squeeze()
             bb = batch.center_bbs[0]
             pred = self.cls[pred_idxs[0]]
             if page_id in xml_dict:
-                xml_dict[page_id].append((bb, pred))
+                xml_dict[page_id].append((bb, pred, float(probabilities[pred_idxs[0]].item())))
             else:
-                xml_dict[page_id]= [(bb, pred)]
+                xml_dict[page_id]= [(bb, pred, float(probabilities[pred_idxs[0]].item()))]
 
 
         for pid in xml_dict:
             writer = Writer("", 1000,1000)
             for obj in xml_dict[pid]:
-                bb, pred = obj
+                bb, pred, probs = obj
                 x0, y0, x1, y1 = bb.long().tolist()
-                writer.addObject(pred, x0, y0, x1, y1)
+                writer.addObject(pred, x0, y0, x1, y1,difficult=float(probs))
             writer.save(join(out, f"{pid}.xml"))
 
     def _get_predictions(self, windows, proposals):

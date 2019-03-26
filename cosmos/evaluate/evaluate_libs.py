@@ -77,8 +77,8 @@ def run_coco(pred_dir, gt_dir, classes):
 
 @click.command()
 @click.argument('pred_dir')
-@click.argument('output_dir')
-def run_evaluate_voc(pred_dir, output_dir):
+@click.argument('annotation_dir')
+def run_evaluate_voc(pred_dir, annotation_dir):
     classes = [ 'Figure Caption',
                 'Figure',
                 'Table Caption',
@@ -91,7 +91,7 @@ def run_evaluate_voc(pred_dir, output_dir):
                 'Reference text',
                 'Other'
               ]
-    run_voc(pred_dir, output_dir, classes)
+    df = run_voc(pred_dir, output_dir, classes)
 
 
 if __name__ == '__main__':

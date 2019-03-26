@@ -204,7 +204,7 @@ def get_blank_rows(inp_np, blank_row_h):
         curr_bot = curr_top + blank_row_h
     return white_rows
 
-def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=15, filter_thres=5):
+def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=10, filter_thres=5):
     img = Image.open(img_p)
     fn = lambda x : 0 if x > white_thresh else 255
     img_np = np.array(img.convert('RGB'))

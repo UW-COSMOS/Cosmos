@@ -19,11 +19,14 @@ from torch_model.train.data_layer.sql_types import Example as Ex
 from torch_model.train.data_layer.sql_types import Neighbor, Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
+import yaml
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
+
 normalizer = NormalizeWrapper()
 tens = ToTensor()
-
+with open("classes.yaml") as stream:
+    classes = yaml.load(stream)["classes"]
+    print(f"classes are {classes}")
 
 def mapper(obj, preprocessor=None):
     """
@@ -109,14 +112,19 @@ def unpack_page(page, warped_size):
         gt_boxes, gt_cls = gt
         matches = match(proposals,gt_boxes)
         labels = [gt_cls[match] for match in matches]
+        # new_labels = []
+        # for idx, label in enumerate(labels):
+            # if matches[idx] != -1:
+                # new_labels.append(label)
+        # labels = new_labels
         gt_box_lst = gt_boxes.tolist()
         #filter 0 overlap examples
         mask = matches != -1
         idxs = mask.nonzero()
         idxs = idxs.squeeze()
         proposals.change_format("xyxy")
-        proposals = proposals[idxs, :].reshape(-1,4)
-        matches = list(filter(lambda x: x != -1, matches))
+        # proposals = proposals[idxs, :].reshape(-1,4)
+        #matches = list(filter(lambda x: x != -1, matches))
     windows = []
     proposals_lst = proposals.tolist()
     for idx, proposal in enumerate(proposals_lst):
@@ -132,11 +140,12 @@ def unpack_page(page, warped_size):
     if gt is not None:
         match_box_lst = []
         for idx in range(len(proposals_lst)):
-            match_box_lst.append(torch.tensor(gt_box_lst[matches[idx]]))
+            match_box_lst.append(torch.tensor(gt_box_lst[matches[idx]] if matches[idx] != -1 else 0))
     else:
         labels = [None for n in proposals_lst]
         match_box_lst = [None for n in proposals_lst]
     collected = list(zip(windows,proposals_lst,labels,match_box_lst))
+    assert len(labels) == len(proposals_lst)
     ret = [Example(*pt) for pt in collected]
     ExampleData = namedtuple('ExampleData', 'examples proposals_len gt_box_len')
     return ExampleData(examples=ret, proposals_len=len(proposals_lst), gt_box_len=(len(gt_box_lst) if gt_box_lst is not None else 0))
@@ -197,14 +206,23 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
             gt = load_gt(xml_dir, name)
         if proposal_dir is not None:
             proposals = load_proposal(proposal_dir, name)
+            if proposals.shape[0] == 0:
+                print("no proposals for ", name)
+                continue
         ret = [image, gt, proposals, name]
         pts, proposals_len, gt_box_len = unpack_page(ret, warped_size)
         nproposals += proposals_len
         ngt_boxes += gt_box_len
         for pt in pts:
             uuid = str(uuid4())
-            uuids.append(uuid)
             label = pt.gt_cls
+            if label == 0 or label == "0":
+                print("found 0")
+                continue
+            if label is not None and xml_dir is not None:
+                uuids.append(uuid)
+            elif xml_dir is None:
+                uuids.append(uuid)
             if label in class_stats:
                 class_stats[label] += 1
             else:
