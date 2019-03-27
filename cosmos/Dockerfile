@@ -15,8 +15,6 @@ RUN mkdir /app
 
 WORKDIR /app
 
-COPY . .
-
 # Create a non-root user and switch to it
 RUN adduser --disabled-password --gecos '' --shell /bin/bash user \
  && chown -R user:user /app
@@ -85,14 +83,6 @@ RUN apt-get update && apt-get -y install gcc g++ vim imagemagick tesseract-ocr l
 RUN apt install -y libsm6 libxext6
 RUN apt-get install -y nodejs-legacy
 
-COPY ./requirements.txt ./requirements.txt
-
-USER user
-
-RUN pip install -r requirements.txt --user
-RUN pip uninstall -y spacy
-RUN pip install spacy==2.0.18
-
 USER root
 
 # Install OpenJDK-8
@@ -120,6 +110,16 @@ USER user
 RUN wget http://nlp.stanford.edu/software/stanford-corenlp-full-2018-10-05.zip
 RUN unzip stanford-corenlp-full-2018-10-05.zip
 RUN rm stanford-corenlp-full-2018-10-05.zip
+
+COPY ./requirements.txt ./requirements.txt
+
+USER user
+
+RUN pip install -r requirements.txt --user
+RUN pip uninstall -y spacy
+RUN pip install spacy==2.0.18
+
+COPY . .
 
 USER root 
 
