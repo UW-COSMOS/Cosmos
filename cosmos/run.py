@@ -11,10 +11,11 @@ from argparse import ArgumentParser
 import torch
 from torch_model.model.model import MMFasterRCNN
 from torch_model.model.utils.config_manager import ConfigManager
-from torch_model.inference.inference import InferenceHelper 
+from torch_model.inference.inference import InferenceHelper
 from torch_model.inference.data_layer.inference_loader import InferenceLoader
 import os
 import subprocess
+import glob
 import re
 from converters.model2xml import model2xml
 from converters.xml2list import xml2list
@@ -38,6 +39,7 @@ parser.add_argument('-d', "--device", default='cpu', type=str, help="Path to wei
 parser.add_argument('-w', "--weights", type=str, help='Path to weights file', required=True)
 parser.add_argument('-t', "--threads", default=160, type=int, help="Number of threads to use")
 parser.add_argument('-n', "--noingest", help="Ingest html documents and create postgres database", action='store_true')
+parser.add_argument('-k', "--keep_pages", help="Keep the page-level PNGs", action='store_true')
 parser.add_argument('-o', "--output", default='./', help="Output directory")
 parser.add_argument('-p', "--tmp_path", default='tmp', help="Path to directory for temporary files")
 parser.add_argument('--debug', help="Ingest html documents and create postgres database", action='store_true')
@@ -63,8 +65,7 @@ for path in req_paths:
 unicodes = {}
 for pdf_name in os.listdir(args.pdfdir):
     print(os.path.join(args.pdfdir,pdf_name))
-    df, limit = parse_pdf(os.path.join(args.pdfdir,pdf_name))
-    unicodes[pdf_name] = (df, limit) 
+    unicodes[pdf_name] = (df, limit)
 
 # Convert a pdf into a set of images
 def preprocess_pdfs(pdf_path):
@@ -177,7 +178,11 @@ corenlp_fd = '/app/stanford-corenlp-full-2018-10-05'
 if not args.noingest:
     parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, output_csv, corenlp_fd)
 
-shutil.copytree('tmp/images/',os.path.join(args.output, "images")) 
+if args.keep_pages:
+    if not os.path.exists(args.output + "/images/"):
+        os.makedirs(args.output + "/images/")
+    for page in glob.glob(f"{tmp}/images/*.png"):
+        shutil.move(page, args.output + "/images/")
 
 if not args.debug:
     shutil.rmtree(f'{tmp}')
