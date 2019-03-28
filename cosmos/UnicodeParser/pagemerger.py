@@ -10,6 +10,11 @@ from parse_preprocess import load_file_to_tree
 
 
 def pagemerger(rawfolder, outputfolder):
+    """
+    Group files by filename.
+    :param rawfolder: Folder containing HTML files where each HTML file only represents a single HTML page.
+    :param outputfolder: Folder to store the merged HTML files.
+    """
     PAGENAME_NUMBER_PATTERN = re.compile("(.*)_([0-9]+).html")
     def get_filename(filename):
         page_match = PAGENAME_NUMBER_PATTERN.search(filename)
