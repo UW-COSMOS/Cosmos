@@ -1133,12 +1133,12 @@ Author: Josh McGrath</p>
 
 
 <span class="k">def</span> <span class="nf">resize_png</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">1920</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Resize the PNG, but do not pad</span>
 <span class="sd">    :param path: Path to png</span>
 <span class="sd">    :param size: size to check to</span>
 <span class="sd">    :return: path to image, Pil.Image</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">&#39;RGB&#39;</span><span class="p">)</span>
     <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">im</span><span class="o">.</span><span class="n">size</span>
     <span class="k">if</span> <span class="n">w</span> <span class="o">&gt;=</span> <span class="n">size</span> <span class="ow">or</span> <span class="n">h</span> <span class="o">&gt;=</span> <span class="n">size</span><span class="p">:</span>
@@ -1149,13 +1149,13 @@ Author: Josh McGrath</p>
     <span class="k">return</span> <span class="n">path</span><span class="p">,</span><span class="n">im</span>
 
 <span class="k">def</span> <span class="nf">pad_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">1920</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Pad the image to the desired size</span>
 <span class="sd">    :param path: path to image</span>
 <span class="sd">    :param image: optional PIL image object that will be padded instead of opening image at path</span>
 <span class="sd">    :param size: size to pad to</span>
 <span class="sd">    :return: path to image, padded PIL image</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">&#39;RGB&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">image</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">image</span>
     <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">im</span><span class="o">.</span><span class="n">size</span>
     <span class="n">d_w</span> <span class="o">=</span> <span class="n">size</span> <span class="o">-</span> <span class="n">w</span>
@@ -1234,13 +1234,13 @@ Author: Josh McGrath</p>
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.preprocess.preprocess.pad_image', this);">Show source &equiv;</a></p>
   <div id="source-cosmos.preprocess.preprocess.pad_image" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">pad_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">1920</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Pad the image to the desired size</span>
 <span class="sd">    :param path: path to image</span>
 <span class="sd">    :param image: optional PIL image object that will be padded instead of opening image at path</span>
 <span class="sd">    :param size: size to pad to</span>
 <span class="sd">    :return: path to image, padded PIL image</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">&#39;RGB&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">image</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">image</span>
     <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">im</span><span class="o">.</span><span class="n">size</span>
     <span class="n">d_w</span> <span class="o">=</span> <span class="n">size</span> <span class="o">-</span> <span class="n">w</span>
@@ -1423,12 +1423,12 @@ Author: Josh McGrath</p>
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.preprocess.preprocess.resize_png', this);">Show source &equiv;</a></p>
   <div id="source-cosmos.preprocess.preprocess.resize_png" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">resize_png</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">1920</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Resize the PNG, but do not pad</span>
 <span class="sd">    :param path: Path to png</span>
 <span class="sd">    :param size: size to check to</span>
 <span class="sd">    :return: path to image, Pil.Image</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">&#39;RGB&#39;</span><span class="p">)</span>
     <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">im</span><span class="o">.</span><span class="n">size</span>
     <span class="k">if</span> <span class="n">w</span> <span class="o">&gt;=</span> <span class="n">size</span> <span class="ow">or</span> <span class="n">h</span> <span class="o">&gt;=</span> <span class="n">size</span><span class="p">:</span>

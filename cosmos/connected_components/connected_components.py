@@ -19,12 +19,12 @@ import os
 
 
 def get_components(bmap, numpy=False):
-    '''
+    """
     Given a binary map, output an 8-connected components region
     :param bmap: Input binary map
     :param numpy: By default we accept pytorch maps, but change this to True to pass in numpy array
     :return: List of coordinates (tl_x, tl_y, br_x, br_y) corresponding to connected components 
-    '''
+    """
     if numpy:
         bmap = torch.from_numpy(bmap)
     label_map = np.zeros(bmap.shape)
@@ -141,12 +141,12 @@ def get_components(bmap, numpy=False):
 
 
 def balance_margins(bmap, img):
-    '''
+    """
     Given an input binary map, balance possibly unequal margins. The motivation is to better determine the column number
     :param bmap: Binary input map (numpy nd array)
     :param img: Map of original image (np nd array)
     :return: Adjusted bmap, Adjusted img, left margin difference (must adjust downstream)
-    '''
+    """
     img_height = bmap.shape[0]
     zero_col = np.zeros(img_height)
     left_w, right_w = 0, 0
@@ -179,12 +179,12 @@ def balance_margins(bmap, img):
 
 
 def get_blank_rows(inp_np, blank_row_h):
-    '''
+    """
     Helper function to get blank rows in input nd array
     :param inp_np: Input nd_array
     :param blank_row_h: Blank row height
     :return: [integer denoting separation locations via y axis]
-    '''
+    """
     blank_row = np.zeros((blank_row_h, inp_np.shape[1]))
     curr_top = 0
     curr_bot = blank_row_h
@@ -211,14 +211,14 @@ def get_blank_rows(inp_np, blank_row_h):
     return white_rows
 
 def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=10, filter_thres=5):
-    '''
+    """
      Function that handles writing of object proposals
     :param img_p: Path to image
     :param output_dir: Path to output directory
     :param white_thres: Threshold to filter non white pixels
     :param blank_row_height: row height parameter
     :param filter_thres: Filter object size threshold parameter
-    '''
+    """
     img = Image.open(img_p)
     fn = lambda x : 0 if x > white_thresh else 255
     img_np = np.array(img.convert('RGB'))
@@ -305,12 +305,12 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
 
 
 def draw_cc(img_np, cc_list, write_img_p=None):
-    '''
+    """
     convenience function to visualize output proposals
     :param img_np: Input np ndarray to write onto. Shape should by N x M x K, where N and M are less than max coords passed in and K is arbitrary
     :param cc_list: list of coordinates to draw boxes
     :param write_img_p: file path to save to
-    '''
+    """
     for coords in cc_list:
         img_np[coords[1]:coords[3], coords[0]-2:coords[0]+2, :] = 50
         img_np[coords[1]:coords[3], coords[2]-2:coords[2]+2, :] = 50
@@ -321,11 +321,11 @@ def draw_cc(img_np, cc_list, write_img_p=None):
 
 
 def get_columns_for_row(row):
-    '''
+    """
     Detect number of columns in a row
     :param row: nd array denoting row
     :return: number of columns
-    '''
+    """
     # 3/100 width = test width. We need half that for later
     test_width = int(math.ceil(row.shape[1] / 200))
     half_test_width = int(math.ceil(test_width / 2))
@@ -348,12 +348,12 @@ def get_columns_for_row(row):
 
 
 def divide_row_into_columns(row, n_columns):
-    '''
+    """
     Divide a row into columns
     :param row: nd_array representing the row
     :param n_columns: number of columns to split into
     :return: [nd_arrays of splits], [coords of splits], [column indices of splits]
-    '''
+    """
     splits = []
     coords = []
     col_idx = []
@@ -372,12 +372,12 @@ def divide_row_into_columns(row, n_columns):
 
 
 def run_write_proposals(img_dir, output_dir, procs):
-    '''
+    """
     Helper function to run write proposals separately from run.py
     :param img_dir: path to image directory
     :param output_dir: Folder to put output proposals
     :param procs: number of parallel processes to spawn
-    '''
+    """
     pool = mp.Pool(processes=procs)
     results = [pool.apply_async(write_proposals, (os.path.join(img_dir,x),), dict(output_dir=output_dir)) for x in os.listdir(img_dir)]
     [r.get() for r in results]
