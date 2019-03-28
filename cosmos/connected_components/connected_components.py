@@ -184,8 +184,8 @@ def get_blank_rows(inp_np, blank_row_h):
     :param inp_np: Input nd_array
     :param blank_row_h: Blank row height
     :return: [integer denoting separation locations via y axis]
-    blank_row = np.zeros((blank_row_h, inp_np.shape[1]))
     '''
+    blank_row = np.zeros((blank_row_h, inp_np.shape[1]))
     curr_top = 0
     curr_bot = blank_row_h
     white_rows = []
