@@ -75,12 +75,25 @@ def get_target_map(html_f, target_cls, target_cls_association):
     return target_map
 
 def collect_words(xml_string, target):
+    """
+    Collect the words in an xml
+    :param xml_string: xml string input
+    :param target: Target class
+    :return: String of word list
+    """
     root = etree.fromstring(xml_string)
     word_list = [x['text'] for x in get_words(root, target)]
     return ' '.join(word_list)
 
 
 def construct_single_df(html_f, target_cls, target_cls_association):
+    """
+    Construct a single df of target class and target_class association
+    :param html_f: Path to html_file
+    :param target_cls: Target class file
+    :param target_cls_association: Association object
+    :return: Df
+    """
     target_map = get_target_map(html_f, target_cls, target_cls_association)
     if target_map is None:
         return None
