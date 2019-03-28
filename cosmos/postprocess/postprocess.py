@@ -18,6 +18,11 @@ def not_ocr(text):
     return 'ocr' not in text and 'rawtext' not in text and 'unicode' not in text
 
 def construct_hocr_list(soup):
+    """
+    Construct a list from the hocr input
+    :param soup: BeautifulSoup input
+    :return: [(class, coords)]
+    """
     hocr_list = []
     for seg_type in soup.find_all('div', not_ocr):
         hocr = seg_type.find_next('div', 'hocr')
@@ -86,11 +91,11 @@ def check_overlap(obj_list, box, check_above_below=False, check_cls=None):
  
 
 def group_cls_columnwise(obj_list, g_cls):
-    '''
+    """
     Given a list output from xml2list, group the class via columns
     :param obj_list: [(cls, coords, score)] list
     :return: Updated [(cls, coords, score)] list
-    '''
+    """
     nbhds = []
     for obj in obj_list:
         cls, coords, scr = obj
@@ -123,10 +128,10 @@ def group_cls_columnwise(obj_list, g_cls):
     return new_obj_list
 
 def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
-    '''
+    """
     Given a list output from xml2list, group the class in that list
     :param obj_list: [(cls, coords, score)] list
-    '''
+    """
     nbhds = []
     for obj in obj_list:
         cls, coords, scr = obj
@@ -202,6 +207,11 @@ def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
 
 
 def postprocess(html_path, output_path):
+    """
+    Postprocess entry point
+    :param html_path: Path to html files
+    :param output_path: Output path for postprocessing
+    """
     for f in glob.glob(os.path.join(html_path, "*.html")):
         with codecs.open(os.path.join(output_path, os.path.basename(f)), "w", "utf-8") as fout:
             with codecs.open(f, "r", "utf-8") as fin:

@@ -7,6 +7,7 @@ from torch import nn
 from ..connected_components.cc_layer import CCLayer
 from ..backbone.backbone import get_backbone
 class Featurizer(nn.Module):
+    """ Featurizer class """
 
     def __init__(self, cfg):
         """

@@ -13,6 +13,7 @@ X2 = 2
 Y2 = 3
 
 class MultiModalClassifier(nn.Module):
+    """ Head classifier """
     def __init__(self, pool_height, pool_width, pool_depth, intermediate,nheads,  ncls):
         """
         Initialize a Head object

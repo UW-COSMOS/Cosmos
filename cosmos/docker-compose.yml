@@ -5,7 +5,7 @@ services:
         runtime: nvidia
         ipc: host
         volumes:
-            - .:/vol/
+            - .:/cosmos/
             - ${INPUT_DIR}:/input/
             - ./output/:/output/ 
         command: "python run.py /input  -w torch_model/model_weights.pth -t 4 -o /output/ -d ${DEVICE}"
