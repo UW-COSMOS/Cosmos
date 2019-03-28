@@ -17,8 +17,17 @@ tens = ToTensor()
 Document = namedtuple("Document", ["windows", "proposals", "identifier"])
 
 class InferenceLoader(XMLLoader):
+    """
+    Inference dataset object, based on XMLLoader
+    """
 
     def __init__(self, session, ingest_objs, classes):
+        """
+        Init function
+        :param session: DB Session
+        :param ingest_objs: Database statistics object
+        :param classes: List of classes
+        """
         super().__init__(session, ingest_objs, classes)
 
     @staticmethod
@@ -34,24 +43,15 @@ class InferenceLoader(XMLLoader):
         collated = XMLLoader.collate(example)
         return collated, batch[0][1]
 
-#    def __len__(self):
-#        return self.ndocs
-#
     def __getitem__(self, item):
+        """
+        Get an item
+        :param item: UUID index
+        :return: XMLLoader exmaple, as well as InferenceLoader example
+        """
         example = super(InferenceLoader, self).__getitem__(item)
         uuid = self.uuids[item]
         ex_db = get_example_for_uuid(uuid, self.session)
         return example, ex_db
 
 #
-#
-#    def _slices(self, img, proposals):
-#        proposals_lst = proposals.tolist()
-#        windows = []
-#        for proposal in proposals_lst:
-#            img_sub = img.crop(proposal)
-#            img_sub = img_sub.resize((self.warped_size, self.warped_size))
-#            img_data = tens(img_sub)
-#            img_data = normalizer(img_data)
-#            windows.append(img_data)
-#        return torch.stack(windows)
