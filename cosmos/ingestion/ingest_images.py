@@ -96,7 +96,9 @@ def load_image(base_path, identifier, img_type):
 def load_proposal(base_path, identifier):
     """
     Load a set of proposals into memory
-
+    :param base_path: path to proposals dir
+    :param identifier: name of proposals file to open
+    :return: BBoxes object denoted proposal
     """
     path = os.path.join(base_path, f"{identifier}.csv")
     np_arr = genfromtxt(path, delimiter=",")
@@ -104,6 +106,12 @@ def load_proposal(base_path, identifier):
     return BBoxes(bbox_absolute, "xyxy")
 
 def unpack_page(page, warped_size):
+    """
+    Unpack the objects in a page object
+    :param page: Page object to unpack
+    :param warped_size: Warped size of image
+    :return: unpacked ExampleData object
+    """
     img, gt, proposals, identifier = page
     labels = None
     gt_box_lst = None
@@ -150,48 +158,18 @@ def unpack_page(page, warped_size):
     ExampleData = namedtuple('ExampleData', 'examples proposals_len gt_box_len')
     return ExampleData(examples=ret, proposals_len=len(proposals_lst), gt_box_len=(len(gt_box_lst) if gt_box_lst is not None else 0))
 
-def redis_get(uuid, pool):
-    conn = redis.Redis(connection_pool=pool)
-    bytes_rep = conn.get(uuid)
-    lst = pickle.loads(bytes_rep)
-    return lst
-
-
-def redis_ingest(img_dir, proposal_dir, xml_dir, warped_size, pool):
-    img_names = os.listdir(img_dir)
-    conn = redis.Redis(connection_pool=pool)
-    class_stats = {}
-    uuids = []
-    nproposals = 0
-    ngt_boxes = 0
-    for img_name in tqdm(img_names):
-        name, ext = os.path.splitext(img_name)
-        image = load_image(img_dir, name, ext)
-        gt = None
-        proposals = None
-        if xml_dir is not None:
-            gt = load_gt(xml_dir, name)
-        if proposal_dir is not None:
-            proposals = load_proposal(proposal_dir, name)
-        ret = [image, gt, proposals, name]
-        pts, proposals_len, gt_box_len = unpack_page(ret, warped_size)
-        nproposals += proposals_len
-        ngt_boxes += gt_box_len
-        for pt in pts:
-            uuid = str(uuid4())
-            uuids.append(uuid)
-            label = pt.gt_cls
-            if label in class_stats:
-                class_stats[label] += 1
-            else:
-                class_stats[label] = 1
-            obj = pickle.dumps(pt)
-            conn.set(uuid, obj)
-    IngestObjs = namedtuple('IngestObjs', 'uuids class_stats nproposals ngt_boxes')
-    return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
-
 
 def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
+    """
+    ingest the db
+    :param img_dir: Image directory
+    :param proposal_dir: Proposal directory
+    :param xml_dir: Path to annotations for train mode, None otherwise
+    :param warped_size: Size of warped image
+    :param partition: For train mode this corresponds to train/val/test
+    :param session: DB Session to work on
+    :return: IngestObjs containing statistics about the DB
+    """
     class_stats = {}
     uuids = []
     nproposals = 0
@@ -235,11 +213,24 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
 
 
 def get_example_for_uuid(uuid, session):
+    """
+    Helper function to fetch an example for a uuid
+    :param uuid: input uuid
+    :param session: DB Session
+    :return: DB Example object
+    """
     ex = session.query(Ex).filter_by(object_id=uuid).one()
     return ex
 
 
 def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
+    """
+    Compute the neighborhoods for a target image and input to DB
+    :param session: DB Session
+    :param partition: train/val/test partition
+    :param expansion_delta: Neighborhood expansion parameter
+    :param orig_size: original size of the image
+    """
     print('Computing neighborhoods')
     avg_nbhd_size = 0.0
     nbhds = 0.0
@@ -261,6 +252,12 @@ def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
     print(f"Average of {avg_nbhd_size/nbhds} neighbors")
 
 def get_neighbors_for_uuid(uuid, session):
+    """
+    Helper function to get neighbors for a uuid
+    :param uuid: Input uuid
+    :param session: Input DB Session
+    :return: neighbors
+    """
     ex = get_example_for_uuid(uuid)
     return ex.neighbors
 
@@ -272,6 +269,11 @@ class ImageDB:
     """
     @staticmethod
     def build(verbose=False):
+        """
+        Initlaize the db in memory and return the session
+        :param verbose: Verbose logging
+        :return: DB Session
+        """
         engine = create_engine('sqlite:///:memory:', echo=verbose)  
         Base.metadata.create_all(engine)
         Session = sessionmaker()
@@ -280,6 +282,16 @@ class ImageDB:
 
     @staticmethod
     def initialize_and_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, expansion_delta):
+        """
+        Initialize and ingest the db from the inputs
+        :param img_dir: Image directory
+        :param proposal_dir: Proposal directory
+        :param xml_dir: if in train mode, this is the path to annotations
+        :param warped_size: Size to warp to
+        :param partition: Partition if training
+        :param expansion_delta: Neighborhood expansion parameter
+        :return: DB Session, database statistics (IngestObjs object)
+        """
         session = ImageDB.build()
         ingest_objs = db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session)
         compute_neighborhoods(session, partition, expansion_delta)
