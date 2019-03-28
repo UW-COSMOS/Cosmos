@@ -13,7 +13,7 @@ X2 = 2
 Y2 = 3
 
 class MultiModalClassifier(nn.Module):
-    def __init__(self, pool_height, pool_width, pool_depth, intermediate, ncls):
+    def __init__(self, pool_height, pool_width, pool_depth, intermediate,nheads,  ncls):
         """
         Initialize a Head object
         :param pool_height: The height of the output ROI pool
@@ -23,17 +23,20 @@ class MultiModalClassifier(nn.Module):
         :param ncls: the number of classes
         """
         super(MultiModalClassifier, self).__init__()
+        self.nheads = nheads
         self.height = pool_height
         self.width = pool_width
         self.depth = pool_depth
-        self.dropout = nn.Dropout(p=0.4)
-        intermediate = int(intermediate)
-        self.FC = nn.Linear(self.height*self.width*self.depth,intermediate)
-        self.FC_2 = nn.Linear(intermediate, intermediate)
-        self.cls_branch = nn.Linear(intermediate, ncls)
+        self.dropout = nn.Dropout(p=0.5)
+        self.intermediate = int(intermediate)
+        self.FC = nn.Linear(self.height*self.width*self.depth,self.intermediate)
+        self.attn_FC = nn.Linear(self.height*self.width*self.depth, self.intermediate)
+        #one extra for colorfulness
+        self.FC_2 = nn.Linear(1+self.intermediate*(nheads+1), self.intermediate)
+        self.cls_branch = nn.Linear(self.intermediate, ncls)
 
 
-    def forward(self, roi_maps, proposals=None):
+    def forward(self, roi_maps,attn_maps, colors,proposals=None):
         """
 
         :param roi_maps: [NxLxDHxW]
@@ -41,7 +44,18 @@ class MultiModalClassifier(nn.Module):
         """
         N, D, H, W = roi_maps.shape
         x = roi_maps.view(N, self.depth * self.width * self.height)
+        attn_maps = attn_maps.view(N, self.nheads, self.depth * self.width *self.height)
+        attn_processed = []
+        for i in range(self.nheads):
+            sub_maps = attn_maps[0,i]
+            processed = self.attn_FC(sub_maps)
+            processed.reshape(-1)
+            attn_processed.append(processed)
+        attn_processed = torch.stack(attn_processed)
         x = self.FC(x)
+        x = torch.cat((x, attn_processed))
+        x = x.view(1,(self.nheads+1)*self.intermediate)
+        x = torch.cat((x, colors), dim=1)
         x = self.dropout(x)
         x = relu(x)
         x = self.FC_2(x)

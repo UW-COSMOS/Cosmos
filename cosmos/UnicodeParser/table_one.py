@@ -14,6 +14,12 @@ stop_words = ['a', 'all', 'am', 'an', 'and', 'any', 'are', 'as', 'at', 'be', 'bu
 'was', 'we', 'who', 'why', 'you']
 
 def similarity(token1, token2):
+    """
+    Calculate the similarity of two tokens.
+    :param token1: First token.
+    :param token2: Second token.
+    :return: similarity of the two inputs
+    """ 
     total = len(token1)
     same = 0
     for i in range(len(token1)):
@@ -22,6 +28,12 @@ def similarity(token1, token2):
     return float(same)/float(total)
 
 def match(word, equation):
+    """
+    Match a word to an equation in a sliding-window way.
+    :param word: Input word.
+    :param equation: Input equation.
+    :return: Offset of the word in the equation, confidence.
+    """
     word = re.sub('['+string.punctuation+']', '', word)
     equation = re.sub('['+string.punctuation+']', '', equation)
 
@@ -41,6 +53,10 @@ def match(word, equation):
     return -1, high
 
 def var_in_text(db):
+    """
+    Extract variables from sentences for each equation.
+    :param db: db connection string.
+    """
     with open('words_alpha.txt') as word_file:
         valid_words = set(word_file.read().split())
 

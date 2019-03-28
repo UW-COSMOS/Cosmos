@@ -9,6 +9,7 @@ _meta = Meta.init()
 
 
 class Equation(_meta.Base):
+    """Equation class that represents an equation"""
     __tablename__ = "equation"
     id = Column(Integer, primary_key=True)
     
@@ -25,6 +26,7 @@ class Equation(_meta.Base):
     page = Column(Integer)
 
 class Variable(_meta.Base):
+    """Variable class that represents a variable object"""
     __tablename__ = "variable"
     id = Column(Integer, primary_key=True)
     text = Column(Text, nullable=False)
@@ -43,6 +45,7 @@ class Variable(_meta.Base):
     var_page = Column(Integer)
 
 class TableX(_meta.Base):
+    """Variables and Noun phrases extracted from sentences for each equation"""
     __tablename__ = "table_x"
     id = Column(Integer, primary_key=True)
     equation_id = Column(Integer, ForeignKey("equation.id"))

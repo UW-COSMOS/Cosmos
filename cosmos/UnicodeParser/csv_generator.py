@@ -8,6 +8,12 @@ import psycopg2
 
 
 def generate_csv(db,outputfile):
+    """
+    Export the db as a csv file.
+    :param db: db connection string.
+    :param outputfile: Name of the output csv.
+    """
+
     variable_lj_document = """
         SELECT document.name AS document_name,
         variable.*
