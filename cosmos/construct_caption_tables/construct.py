@@ -17,23 +17,23 @@ import click
 
 
 def get_cls_list(html_f):
-    '''
+    """
     Given an html file, get a list of objects that's easier to reason about
     :param html_f: The input html file
     :return: [(cls, bb, score)]
-    '''
+    """
     htmlfile2xml(html_f, '/tmp')
     return xml2list(f'{os.path.join("/tmp", os.path.basename(html_f)[:-5])}.xml')
 
 
 def get_target_map(html_f, target_cls, target_cls_association):
-    '''
+    """
     Get a map with targets and target associations
     :param html_f: html file to ingest
     :param target_cls: the target class
     :param target_cls_association: the target class association
     :return: dictionary mapping targets to target associations
-    '''
+    """
     cls_list = get_cls_list(html_f)
     cls_list = [(x[0], tuple(x[1]), x[2]) for x in cls_list]
     targets = [x for x in cls_list if x[0] == target_cls]
@@ -184,6 +184,14 @@ def construct_single_df(html_f, target_cls, target_cls_association):
 
 
 def construct(html_dir, target_cls, assoc_cls, output_file, processes=160):
+    """
+    Construct the target <=> target association dataframe
+    :param html_dir: Input html
+    :param target_cls: Target class
+    :param assoc_cls: Target association class
+    :param output_file: Output path
+    :param processes: Number of processes
+    """
     pool = mp.Pool(processes=processes)
     ret = [pool.apply_async(construct_single_df, args=(f, target_cls, assoc_cls,)) for f in glob.glob(os.path.join(html_dir, '*.html'))]
     results = [r.get() for r in ret]
