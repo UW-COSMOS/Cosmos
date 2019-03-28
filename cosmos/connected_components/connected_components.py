@@ -185,6 +185,7 @@ def get_blank_rows(inp_np, blank_row_h):
     :param blank_row_h: Blank row height
     :return: [integer denoting separation locations via y axis]
     blank_row = np.zeros((blank_row_h, inp_np.shape[1]))
+    '''
     curr_top = 0
     curr_bot = blank_row_h
     white_rows = []
@@ -211,7 +212,7 @@ def get_blank_rows(inp_np, blank_row_h):
 
 def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=10, filter_thres=5):
     '''
-    Function that handles writing of object proposals
+     Function that handles writing of object proposals
     :param img_p: Path to image
     :param output_dir: Path to output directory
     :param white_thres: Threshold to filter non white pixels
@@ -352,6 +353,7 @@ def divide_row_into_columns(row, n_columns):
     :param row: nd_array representing the row
     :param n_columns: number of columns to split into
     :return: [nd_arrays of splits], [coords of splits], [column indices of splits]
+    '''
     splits = []
     coords = []
     col_idx = []
