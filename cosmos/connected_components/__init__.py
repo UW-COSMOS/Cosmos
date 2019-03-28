@@ -1,0 +1,3 @@
+"""
+Grid proposal algorithm module
+"""

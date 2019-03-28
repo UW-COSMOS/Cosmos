@@ -11,93 +11,69 @@ from torchvision.transforms import ToTensor
 from numpy import genfromtxt
 import redis
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from xml.etree import ElementTree as ET
 from .transforms import NormalizeWrapper
 import pickle
 from torch_model.utils.matcher import match
 from collections import namedtuple
+#from dataclasses import dataclass
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
+from ingestion.ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods, ImageDB
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from dataclasses import dataclass
+
 normalizer = NormalizeWrapper()
 
 tens = ToTensor()
-Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
+@dataclass
+class Example:
+  center_bb: torch.Tensor
+  label: torch.Tensor
+  center_window: torch.Tensor
+  neighbor_boxes: torch.Tensor
+  neighbor_windows: torch.Tensor
+  neighbor_radii: torch.Tensor
+  neighbor_angles: torch.Tensor
+  colorfulness: torch.Tensor
 
-def mapper(obj, preprocessor=None):
-    """
-    map a single object to the list structure
-    :param obj: an Etree node
-    :return: (type, (x1, y1, x2, y2))
-    """
-    bnd = obj.find("bndbox")
-    coords = ["xmin", "ymin", "xmax", "ymax"]
-    pts = [int(float(bnd.find(coord).text)) for coord in coords]
-    x1, y1, x2, y2 = pts
-    w = x2 - x1
-    h = y2 - y1
-    # get centers
-    x = x1 + w/2
-    y = y1 + h/2
-    cls = obj.find("name").text
-    if preprocessor is not None:
-        cls = preprocessor[cls]
-    return cls, (x, y, h,w)
+Batch = namedtuple('Batch', ['center_bbs', 'labels', 'center_windows', 'neighbor_boxes', 'neighbor_windows', 'neighbor_radii', 'neighbor_angles', 'colorfulness'])
 
+def containsNone(lst):
+    flag = False
+    for o in lst:
+        if o is None:
+            flag = True
+    return flag
 
-def xml2list(fp):
-    """
-    convert VOC XML to a list
-    :param fp: file path to VOC XML file
-    :return: [(type,(x1, y1, x2, y2))]
-    """
-    tree = ET.parse(fp)
-    root = tree.getroot()
-    objects = root.findall("object")
-    lst = [mapper(obj) for obj in objects]
-    lst.sort(key=lambda x: x[1])
-    return lst
+def get_colorfulness(window):
+    diffs = window.max(dim=0)[0] - window.min(dim=0)[0]
+    return torch.mean(diffs.topk(25)[0])
 
+def get_radii(center_bbox, neighbor_bboxes):
+    center_bbox = center_bbox.reshape(1,4)
+    assert center_bbox.shape[0] == 1
+    assert center_bbox.shape[1] == 4
+    assert neighbor_bboxes.shape[1] == 4
+    diffs = center_bbox - neighbor_bboxes
+    return torch.norm(diffs, p=2, dim=1)
 
-def load_image(base_path, identifier, img_type):
-    """
-    load an image into memory
-    :param base_path: base path to image
-    :param identifier:
-    :param img_type:
-    :return: [3 x SIZE x SIZE] tensor
-    """
-    path = os.path.join(base_path, f"{identifier}.{img_type}")
-    pil = Image.open(path)
-    return pil
-
-def load_proposal(base_path, identifier):
-    """
-    Load a set of proposals into memory
-
-    """
-    path = os.path.join(base_path, f"{identifier}.csv")
-    np_arr = genfromtxt(path, delimiter=",")
-    bbox_absolute = torch.from_numpy(np_arr).reshape(-1,4)
-    return BBoxes(bbox_absolute, "xyxy")
-
-def load_gt(xml_dir, identifier):
-    """
-    Load an XML ground truth document
-    :param xml_dir: base path to xml
-    :param identifier: xml document identifier
-    :return: [K x 4] Tensor, [cls_names]
-    """
-    path = os.path.join(xml_dir, f"{identifier}.xml")
-    as_lst = xml2list(path)
-    if len(as_lst) == 0:
-        cls_list = [0]
-        tensor_list = [[0,0,0,0]]
-    else:
-        cls_list, tensor_list = zip(*as_lst)
-    # convert to tensors
-    gt_boxes = BBoxes(torch.tensor(tensor_list),"xyhw")
-    return gt_boxes, cls_list
+def get_angles(center_bbox, neighbor_boxes):
+    radii = get_radii(center_bbox, neighbor_boxes)
+    # get center coords of center box
+    center_bbox = center_bbox.reshape(1,4)
+    center_center = torch.stack([center_bbox[:,0] -center_bbox[:,2], center_bbox[:,1] - center_bbox[:,3]])
+    neighbor_center = torch.stack([neighbor_boxes[:,0] -neighbor_boxes[:,2], neighbor_boxes[:,1] - neighbor_boxes[:,3]])
+    # clamp required to not produce nan at asin
+    delta_y = torch.abs(center_center[1] - neighbor_center[1])
+    ratios = delta_y/radii
+    out = torch.asin(ratios.clamp(-1 + 1e-4, 1- 1e-4))
+    mask = out != out
+    out[mask] = 0.4
+    return out
 
 class XMLLoader(Dataset):
     """
@@ -106,120 +82,80 @@ class XMLLoader(Dataset):
     other than annotations
     """
 
-
-    def __init__(self, img_dir,xml_dir=None, proposal_dir=None,warped_size=300, img_type="jpg", host="redis",debug=True):
+    def __init__(self, session, ingest_objs, classes):
         """
         Initialize a XML loader object
         :param xml_dir: directory to get XML from
         :param img_dir: directory to load PNGs from
         :param img_type: the image format to load in
         """
-        self.debug = debug
-        self.xml_dir = xml_dir
-        self.img_dir = img_dir
-        self.proposal_dir = proposal_dir
-        self.img_type = img_type
-        self.warped_size = warped_size
-        self.imgs = os.listdir(img_dir)
-        self.identifiers = [splitext(img)[0] for img in self.imgs]
-        self.uuids = []
-        self.num_images = len(self.imgs)
-        self.pool = redis.ConnectionPool(host=host)
-        self.no_overlaps = []
-        self.ngt_boxes = 0
-        self.nproposals = 0
-        print(f"Constructed a {self.num_images} image dataset, ingesting to redis server")
-        self.class_stats = {}
-        self._ingest()
-        print("ingested to redis, printing class stats")
+        self.session = session
+        self.uuids = ingest_objs.uuids
+        self.ngt_boxes = ingest_objs.ngt_boxes
+        self.nproposals = ingest_objs.nproposals
+        self.class_stats = ingest_objs.class_stats
+        self.classes = classes
+        print("printing class stats")
         self.print_stats()
         print(f"# of gt boxes:{self.ngt_boxes}")
         print(f"# of proposals:{self.nproposals}")
-        with open("no_overlaps.txt","w") as fh:
-            for identifier in self.no_overlaps:
-                fh.write(f"{identifier}\n")
-        
 
 
     def __len__(self):
         return len(self.uuids)
 
     def __getitem__(self, item):
-        conn = redis.Redis(connection_pool=self.pool)
-        bytes_rep = conn.get(self.uuids[item])
-        lst = pickle.loads(bytes_rep)
-        return lst
+        uuid = self.uuids[item]
+        ex = get_example_for_uuid(uuid, self.session)
+        neighbors = ex.neighbors(True, self.uuids, self.session)
+        colorfulness = get_colorfulness(ex.window)
+        #print(len(neighbors), " neighbors")
+        if len(neighbors) == 0:
+           neighbor_boxes = [torch.zeros(4), torch.zeros(4)]
+           neighbor_windows = [torch.zeros(ex.window.shape), torch.zeros(ex.window.shape)]
+           neighbor_radii = torch.tensor([-1*torch.ones(1)] *2)
+           neighbor_angles = neighbor_radii
+        else:
+           neighbor_boxes = [n.bbox for n in neighbors]
+           neighbor_windows = [n.window for n in neighbors]
+           neighbor_radii = get_radii(ex.bbox, torch.stack(neighbor_boxes))
+           neighbor_angles = get_angles(ex.bbox, torch.stack(neighbor_boxes))
+        label = torch.Tensor([self.classes.index(ex.label)]) if ex.label is not None else None
+        return Example(ex.bbox, label, ex.window, neighbor_boxes, neighbor_windows, neighbor_radii, neighbor_angles,colorfulness)
 
+    @staticmethod
+    def collate(batch):
+        center_bbs = torch.stack([ex.center_bb for ex in batch])
+        ex_labels = [ex.label for ex in batch]
+        labels = None
+        if containsNone(ex_labels):
+            labels = None
+        else:
+            labels = torch.stack([ex.label for ex in batch])
+        center_windows = torch.stack([ex.center_window for ex in batch])
+        colorfulness = torch.stack([ex.colorfulness for ex in batch])
+        # padding will put number of neighbors before the batch size
+        neighbor_boxes = pad_sequence([torch.stack(ex.neighbor_boxes) for ex in batch]).permute(1,0,2)
+        neighbor_windows = [torch.stack(ex.neighbor_windows) for ex in batch]
+        neighbor_windows = pad_sequence(neighbor_windows).permute(1,0,2,3,4)
+        neighbor_radii =  pad_sequence([ex.neighbor_radii for ex in batch], padding_value=-1).permute(1,0)
+        neighbor_angles = pad_sequence([ex.neighbor_angles for ex in batch], padding_value=-1).permute(1,0)
+        return Batch(center_bbs=center_bbs, labels=labels, center_windows=center_windows, neighbor_boxes=neighbor_boxes, neighbor_windows=neighbor_windows,neighbor_radii=neighbor_radii, neighbor_angles=neighbor_angles, colorfulness=colorfulness)
 
     def get_weight_vec(self, classes):
         weight_per_class = {}                                    
         N = len(self.uuids)
-        for name in classes:                                                   
-            weight_per_class[name] = N/float(self.class_stats[name])                                 
+        for name in classes:
+            if name not in self.class_stats:
+                weight_per_class[name] = 0
+            else:
+                weight_per_class[name] = N/float(self.class_stats[name])                                 
         weight = [0] * N                                              
-        for idx, uuid in tqdm(enumerate(self.uuids)):                                          
-            conn = redis.Redis(connection_pool=self.pool)
-            bytes_rep = conn.get(uuid)
-            lst = pickle.loads(bytes_rep)
-            weight[idx] = weight_per_class[lst.gt_cls]
+        for idx, uuid in tqdm(enumerate(self.uuids)):
+            lst = get_example_for_uuid(uuid, self.session)
+            weight[idx] = weight_per_class[lst.label]
         return weight
 
-    def _ingest(self):
-        conn = redis.Redis(connection_pool=self.pool)
-        for identifier in tqdm(self.identifiers):
-            img = load_image(self.img_dir, identifier, self.img_type)
-            gt = None
-            proposals = None
-            if self.xml_dir is not None:
-                gt = load_gt(self.xml_dir, identifier)
-            if self.proposal_dir is not None:
-                proposals = load_proposal(self.proposal_dir, identifier)
-            ret = [img, gt, proposals, identifier]
-            pts = self._unpack_page(ret)
-            for pt in pts:
-                uuid = str(uuid4())
-                self.uuids.append(uuid)
-                label = pt.gt_cls
-                if label in self.class_stats:
-                    self.class_stats[label] +=1
-                else:
-                    self.class_stats[label] = 1
-                obj = pickle.dumps(pt)
-                conn.set(uuid, obj)
-
-    def _unpack_page(self, page):
-
-        img, gt, proposals, identifier = page
-        gt_boxes, gt_cls = gt
-        matches = match(proposals,gt_boxes)
-        #filter 0 overlap examples
-        mask = matches != -1
-        idxs = mask.nonzero()
-        idxs = idxs.squeeze()
-        proposals.change_format("xyxy")
-        proposals = proposals[idxs, :].reshape(-1,4)
-        matches = list(filter(lambda x: x != -1, matches))
-        labels = [gt_cls[match] for match in matches]
-        windows = []
-        proposals_lst = proposals.tolist()
-        self.nproposals += len(proposals_lst)
-        gt_box_lst = gt_boxes.tolist()
-        self.ngt_boxes += len(gt_box_lst)
-        for idx, proposal in enumerate(proposals_lst):
-            proposal = [int(c) for c in proposal]
-            img_sub = img.crop(proposal)
-            img_sub = img_sub.resize((self.warped_size, self.warped_size))
-            img_data = tens(img_sub)
-            img_data = normalizer(img_data)
-            windows.append(img_data)
-        # switch to list of tensors
-        proposals_lst = [torch.tensor(prop) for prop in proposals_lst]
-        match_box_lst = []
-        for idx in range(len(proposals_lst)):
-            match_box_lst.append(torch.tensor(gt_box_lst[matches[idx]]))
-        collected = list(zip(windows,proposals_lst,labels,match_box_lst))
-        ret = [Example(*pt) for pt in collected]
-        return ret
 
     def print_stats(self):
         tot = len(self.uuids)

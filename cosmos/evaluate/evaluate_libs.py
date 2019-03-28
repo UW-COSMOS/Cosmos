@@ -10,6 +10,7 @@ import numpy as np
 from tqdm import tqdm
 import yaml
 import pandas as pd
+import click
 
 def get_identifiers(dir):
     files = os.listdir(dir)
@@ -55,7 +56,7 @@ def run_eval(pred_dir, gt_dir, eval_func, classes):
         pred_bbox = pred_df[["x0", "y0", "x1", "y1"]].values
         npred = pred_df.shape[0]
         pred_label = map_to_integers(pred_df["label"], classes).values
-        score = np.ones(npred)
+        score = pred_df['score'].values
         gt_bbox  = gt_df[["x0", "y0", "x1", "y1"]].values
         gt_label = map_to_integers(gt_df["label"], classes).values
         pred_labels.append(pred_label)
@@ -67,9 +68,32 @@ def run_eval(pred_dir, gt_dir, eval_func, classes):
     return format_result(eval_result, classes) 
 
 
-
 def run_voc(pred_dir, gt_dir, classes):
     return run_eval(pred_dir, gt_dir,eval_detection_voc, classes) 
 
 def run_coco(pred_dir, gt_dir, classes):
     return run_eval(pred_dir, gt_dir, eval_detection_coco, classes)
+
+
+@click.command()
+@click.argument('pred_dir')
+@click.argument('annotation_dir')
+def run_evaluate_voc(pred_dir, annotation_dir):
+    classes = [ 'Figure Caption',
+                'Figure',
+                'Table Caption',
+                'Table',
+                'Body Text',
+                'Page Footer',
+                'Page Header',
+                'Equation',
+                'Section Header',
+                'Reference text',
+                'Other'
+              ]
+    df = run_voc(pred_dir, output_dir, classes)
+
+
+if __name__ == '__main__':
+    run_evaluate_voc()
+

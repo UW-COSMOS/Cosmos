@@ -15,8 +15,6 @@ RUN mkdir /app
 
 WORKDIR /app
 
-COPY . .
-
 # Create a non-root user and switch to it
 RUN adduser --disabled-password --gecos '' --shell /bin/bash user \
  && chown -R user:user /app
@@ -37,7 +35,7 @@ ENV CONDA_AUTO_UPDATE_CONDA=false
 
 # Create a Python 3.6 environment
 RUN /home/user/miniconda/bin/conda install conda-build \
- && /home/user/miniconda/bin/conda create -y --name py36 python=3.6.5 \
+ && /home/user/miniconda/bin/conda create -y --name py36 python=3.7 \
  && /home/user/miniconda/bin/conda clean -ya
 ENV CONDA_DEFAULT_ENV=py36
 ENV CONDA_PREFIX=/home/user/miniconda/envs/$CONDA_DEFAULT_ENV
@@ -85,14 +83,6 @@ RUN apt-get update && apt-get -y install gcc g++ vim imagemagick tesseract-ocr l
 RUN apt install -y libsm6 libxext6
 RUN apt-get install -y nodejs-legacy
 
-COPY ./requirements.txt ./requirements.txt
-
-USER user
-
-RUN pip install -r requirements.txt --user
-RUN pip uninstall -y spacy
-RUN pip install spacy==2.0.18
-
 USER root
 
 # Install OpenJDK-8
@@ -121,6 +111,16 @@ RUN wget http://nlp.stanford.edu/software/stanford-corenlp-full-2018-10-05.zip
 RUN unzip stanford-corenlp-full-2018-10-05.zip
 RUN rm stanford-corenlp-full-2018-10-05.zip
 
+COPY ./requirements.txt ./requirements.txt
+
+USER user
+
+RUN pip install -r requirements.txt --user
+RUN pip uninstall -y spacy
+RUN pip install spacy==2.0.18
+
+COPY . .
+
 USER root 
 
-CMD ["python", "run.py", "/input", "-w", "torch_model/model_95.pth", "-t", "4", "-o", "/output/"]
+CMD ["python", "run.py", "/input", "-w", "torch_model/model_weights.pth", "-t", "4", "-o", "/output/"]

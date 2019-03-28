@@ -17,6 +17,11 @@ db_connect_str = "postgres://postgres:password@localhost:5432/cosmos8"
 
 
 def insert_equation_tuple(db, resource_loc):
+    """
+    Insert equations information into the equation table by migrating tuples from the Sentence table.
+    :param db: db connection string.
+    :param resource_loc: Directory storing the json files which contain the equation coordinate information. 
+    """
     session = Meta.init(db).Session()
     for doc in session.query(Document):
         locs = json.load(open(join(resource_loc, '%s.html.json' % doc.name)))

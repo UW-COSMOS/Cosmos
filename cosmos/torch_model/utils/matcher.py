@@ -25,7 +25,7 @@ def match(regions, gt_boxes, device=torch.device("cpu")):
     # get back a vector indexed by gt_boxes which we need to
     # index back to targets
     best_score_pred, match_idxs_pred = torch.max(overlaps, dim=1)
-    mask = best_score_pred == 0
+    mask = best_score_pred <= 0.6
     match_idxs_pred[mask] = -1
     assert match_idxs_pred.shape[0] == regions.shape[0]
 

@@ -15,7 +15,7 @@ db_connect_str = "postgres://postgres:password@localhost:5432/cosmos_unicode_1"
 stop_words = [ "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "could", "did", "do", "does", "doing", "down", "during", "each", "eq", "eqs", "equation", "equations", "few", "for", "from", "further", "had", "has", "have", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "it", "it's", "its", "itself", "let's", "me", "more", "most", "my", "myself", "nor", "of", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "she", "she'd", "she'll", "she's", "should", "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until", "up", "us", "very", "was", "we", "we'd", "we'll", "we're", "we've", "were", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "would", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"]
 
 class parseTree(object):
-    "Parse tree node."
+    """Parse tree class to represent the parse tree of each sentence"""
     def __init__(self, dep='root', pos='NULL', begin_char=-1, value = '', isUsed = False, children=None):
         self.dep = dep
         self.pos = pos
@@ -40,12 +40,22 @@ class parseTree(object):
         return info
 
 def contain_alpha(word):
+    """
+    Check if a word contains at least one alphabet.
+    :param word: Input word.
+    :return: True or False
+    """
     for char in word:
         if char.isalpha():
             return True
     return False
 
 def alpha_ratio(word):
+    """
+    Calculate the alphabet ratio of a word.
+    :param word: Input word.
+    :return: Alphabet ratio of a word. 
+    """
     num = 0
     for char in word:
         if char >= 'a' and char <= 'z':
@@ -53,6 +63,12 @@ def alpha_ratio(word):
     return float(num)/len(word)
 
 def get_edges_by_source_id(edges, source_id):
+    """
+    Get the edges from the specified source.
+    :param edges: Input edges.
+    :param source_id: Id of the source.
+    :return: List of edges
+    """
     res = []
     for edge in edges:
         if edge.source == source_id:
@@ -60,6 +76,17 @@ def get_edges_by_source_id(edges, source_id):
     return res
 
 def subTreeConstruct(edges, root_id, dep_type, index_base, token_value, token_pos, token_begin_char):
+    """
+    Construct a subtree recursively
+    :param edges: Edges of the subtree.
+    :param root_id: Id of the root.
+    :param dep_type: Dependency type.
+    :param index_base: Base of the index.
+    :param token_value: Text of the root.
+    :param token_pos: Part of Speech tag of the root.
+    :param token_begin_char: Position of the begin char of the root in the sentence.
+    :return: Root node of the subtree.
+    """
     node = parseTree(
                     dep=dep_type, 
                     pos=token_pos[index_base+root_id-1], 
@@ -72,6 +99,12 @@ def subTreeConstruct(edges, root_id, dep_type, index_base, token_value, token_po
     return node
 
 def token_begin_char_calibrate(token_value, text):
+    """
+    Calibrate the begin char position of each token in the sentence.
+    :param token_value: text of the token
+    :param text: Sentence text
+    :return: Calibrated positions
+    """
     res = {}
     ptr = 0
  
@@ -94,6 +127,12 @@ def token_begin_char_calibrate(token_value, text):
     return res
 
 def parseTreeConstruct(sentences, text):
+    """
+    Construct the parse tree.
+    :param sentences: Sentence objects from the CoreNLP.
+    :param text: Text of the sentence.
+    :return: A list of tree roots.
+    """
     trees = []
     index_base = 0
     for sent in sentences:
@@ -124,6 +163,12 @@ def parseTreeConstruct(sentences, text):
     return trees
 
 def get_token_index(char_positions, text):
+    """
+    Get the index of a token in the text.
+    :param char_positions: Position of the begin character.
+    :param text: Text of the sentence.
+    :return: A list of indices.
+    """
     space = [' ','\n','\t']
     res = []
     index = 0
@@ -142,11 +187,25 @@ def get_token_index(char_positions, text):
     return res
 
 def isBetween(x, a, b):
+    """
+    Check if x is between a and b.
+    :param x: x.
+    :param a: a.
+    :param b: b.
+    :return: True or False.
+    """
     if x > min(a,b) and x < max(a,b):
         return True
     return False
 
 def get_phrase_based_on_NN(node, text, parent_id):
+    """
+    Get a phrase based on the input noun node.
+    :param node: Root of the tree (should be a noun).
+    :param text: Text of the sentence.
+    :parent_id: Id of the parent node.
+    :return: Phrase extracted (a dictionary of tokens).
+    """
     MODS = ['amod','nummod','compound','cc']
     AUX = ['det','case']
     tokens = {}
@@ -175,6 +234,11 @@ def get_phrase_based_on_NN(node, text, parent_id):
     return tokens
 
 def cc_strip(tokens):
+    """
+    Strip unnecessary conjunction words.
+    :param tokens: Input tokens.
+    :return: Stripped tokens.
+    """
     cc = ['and', 'but', 'for', 'nor', 'or', 'so', 'and', 'yet']
     sortedKey = sorted(tokens.keys())
     if tokens[sortedKey[0]].lower() in cc:
@@ -184,6 +248,13 @@ def cc_strip(tokens):
     return tokens
 
 def get_phrases(tree, text, indices_banned):
+    """
+    Extracted phrases from a tree.
+    :param tree: Root of the tree.
+    :param text: Text of the sentence.
+    :param indices_banned: Indices of the tokens not to be considered.
+    :return: A list of extracted sentences.
+    """
     phrases = []
     if len(get_token_index([tree.begin_char],text)) != 1:
         print(tree)
@@ -201,6 +272,13 @@ def get_phrases(tree, text, indices_banned):
 
 
 def remove_symbol(phrases, indices_banned, text_banned):
+    """
+    Remove symbols from the extraced sentences.
+    :param phrases: Input phrases.
+    :param indices_banned: Indices of the tokens to be removed.
+    :param text_banned: Text to be removed.
+    :return: Phrases after removing.
+    """
     res = []
     for phrase in phrases:
         for key in phrase.keys():
@@ -211,6 +289,11 @@ def remove_symbol(phrases, indices_banned, text_banned):
     return res
 
 def build_table_X(db, corenlp):
+    """
+    Build the table containing the symbols and phrases for each equation.
+    :param db: db connection string.
+    :param corenlp: Location of the CoreNLP java file.
+    """
     os.environ["CORENLP_HOME"] = corenlp
 
     session = Meta.init(db).Session()

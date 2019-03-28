@@ -15,6 +15,20 @@ from table_one import var_in_text
 
 def parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str,
                            strip_tags, ignored_file_when_link, csv_file, corenlp_fd, store_into_postgres=True):
+    """
+    Helper function for database ingestion.
+    :param input_folder: Location of input folder containing source HTML files.
+    :param output_html: Intermediate HTML files which will be consumed by the Fonduer parser.
+    :param merge_folder: Location of folder containing the merged HTML files.
+    :param output_words: Location of folder containing word coordinate json files.
+    :param output_equations: Location of folder containing equation coordinate json files.
+    :param db_connect_str: Database connection string.
+    :param strip_tags: Tags to be flatten.
+    :param ignored_file_when_link: Files to be ignored when linking.
+    :param csv_file: Location of the output csv file
+    :param corenlp_fd: Location of the CoreNLP java file.
+    :param store_into_postgres: Flag for whether to ingest data into Postgres.
+    """
     assert os.path.isabs(input_folder)
     assert os.path.isabs(output_html)
     assert os.path.isabs(merge_folder)

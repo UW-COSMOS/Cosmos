@@ -1,0 +1,3 @@
+"""
+Unicode Parser module
+"""

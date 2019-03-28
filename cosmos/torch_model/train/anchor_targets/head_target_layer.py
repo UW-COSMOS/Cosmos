@@ -6,9 +6,8 @@ Author: Josh McGrath
 import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss
-from utils.generate_anchors import generate_anchors
-from utils.matcher import match
-
+from torch_model.utils.generate_anchors import generate_anchors
+from torch_model.utils.matcher import match
 
 
 class HeadTargetLayer(nn.Module):

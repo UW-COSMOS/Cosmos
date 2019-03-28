@@ -6,13 +6,14 @@ import dominate
 from dominate.tags import *
 import os
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 import re
 import string
 from lxml import html, etree
 from dominate.util import raw
 from latex_ocr.img2latex import img2latex_api, get_im2latex_model
-from postprocess.postprocess import group_cls
+from postprocess.postprocess import group_cls, group_cls_columnwise
 from config import IM2LATEX_WEIGHT
 from .pdf_extractor import parse_pdf
 
@@ -27,6 +28,11 @@ stop_words = ['all', 'am', 'an', 'and', 'any', 'are', 'as', 'at', 'be', 'but', '
 'was', 'we', 'who', 'why', 'you']
 
 def get_coordinate(title):
+    """
+    Extract coordinates from ocrx coordinates string
+    :param title: ocrx coordinate string
+    :return: dictionary contains ``xmin``, ``ymin``, ``xmax``, ``ymax``
+    """
     match = BBOX_COORDINATES_PATTERN.search(title)
     return {
         'xmin': int(match.group(1)),
@@ -36,6 +42,14 @@ def get_coordinate(title):
     }
 
 def variable_ocr(im2latex_model, root, sub_img, strip_tags):
+    """
+    Get the latex representation for each variable candidate.
+    :param im2latex_model: Location of the im2latex model.
+    :param root: Root of the etree.
+    :param sub_img: Image of the section.
+    :param strip_tags: Tags to be Tags to be flatten.
+    :return: New tree.
+    """
     #etree.strip_tags(root, *strip_tags)
     for word in root.xpath(".//*[@class='ocrx_word']"):
         if not word.text:
@@ -54,6 +68,16 @@ def variable_ocr(im2latex_model, root, sub_img, strip_tags):
     return root
 
 def coordinate_convert(x1,y1,x2,y2,max_of_x,max_of_y):
+    """
+    Convert the coordinate in the 1920 representation to the pdfminer representation.
+    :param x1: Xmin of the 1920 representation.
+    :param y1: Ymin of the 1920 representation.
+    :param x2: Xmax of the 1920 representation.
+    :param y2: Ymax of the 1920 representation.
+    :param max_of_x: Maximum value of X in the pdfminer representation.
+    :param max_of_y: Maximum value of Y in the pdfminer representation.
+    :return: (Xmin,Ymin,Xmax,Ymax) in the pdfminer representation.
+    """
     x_range = 1920*max_of_x/max_of_y
     xmin = x1/x_range*max_of_x
     xmax = x2/x_range*max_of_x
@@ -62,6 +86,11 @@ def coordinate_convert(x1,y1,x2,y2,max_of_x,max_of_y):
     return (xmin,ymin,xmax,ymax)
 
 def valid_xml_char_ordinal(c):
+    """
+    Check if a character is valid in xml.
+    :param c: Input character.
+    :return: True or False.
+    """
     codepoint = ord(c)
     # conditions ordered by presumed frequency
     return (
@@ -70,7 +99,13 @@ def valid_xml_char_ordinal(c):
         0xE000 <= codepoint <= 0xFFFD or
         0x10000 <= codepoint <= 0x10FFFF
         )
+
 def invalid_filter(s):
+    """
+    Remove invalid characters from a string.
+    :param s: Input string.
+    :return: String after filter.
+    """
     out = ''
     for c in s:
         if valid_xml_char_ordinal(c):
@@ -78,6 +113,15 @@ def invalid_filter(s):
     return out
 
 def unicode_representation(unicode_df, page, root, base, t):
+    """
+    Get the unicode representation for each section.
+    :param unicode_df: Dataframe containing unicode for each token.
+    :param page: Page of the section.
+    :param root: Root of the section tree.
+    :param base: Base of the coordinate.
+    :param t: Type of the section.
+    :return: New tree containing the unicode representation. 
+    """
     df = unicode_df[0]
     limit = unicode_df[1]
     #The file doesn't have unicode
@@ -135,13 +179,24 @@ def unicode_representation(unicode_df, page, root, base, t):
     return root,text,first_id
         
 
-def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, unicode_df,tesseract_hocr=True, tesseract_text=True, include_image=True, feather_x=2, feather_y=2):
-    input_list = group_cls(input_list, 'Table')
+def list2html(input_list, image_name, image_dir, output_dir, unicode_df=None,tesseract_hocr=True, tesseract_text=True, include_image=True, feather_x=2, feather_y=2):
+    '''
+    Given an input list, write a corresponding html file. All extractions and postprocessing occur in this function.
+    :param input_list: List output from xml2list
+    :param image_name: Name of image corresponding to page in pdf
+    :param image_dir: image directory
+    :param output_dir: output directory to write html
+    :param unicode_df: Optional dataframe containing unicode information
+    :param tesseract_hocr: flag to include tesseract hocr
+    :param tesseract_text: flag to include tesseract text
+    :param include_image: flag to include cropped images for each hocr
+    :param feather_x: x feathering parameter to increase accuracy of ocr
+    :param feather_y: x feathering parameter to increase accuracy of ocr
+    '''
+    input_list = group_cls(input_list, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
     input_list = group_cls(input_list, 'Figure')
+    #input_list = group_cls_columnwise(input_list, 'Body Text')
     doc = dominate.document(title=image_name[:-4])
-    match = FILE_NAME_PATTERN.search(image_name)
-    pdf_name = '/input/'+match.group(1)
-    page_num = int(match.group(2))
     
     
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
@@ -150,12 +205,11 @@ def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, u
         img = Image.open(os.path.join(image_dir, image_name))
         for ind, inp in enumerate(input_list):
             t, coords, score = inp
-            orig_image = Image.open(os.path.join(original_img_dir, image_name))
-            width, height = orig_image.size
+            width, height = img.size
             # Feather the coords here a bit so we can get better OCR
-            coords = [max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
+            ccoords = [max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
                           min(coords[2]+feather_x, width), min(coords[3]+feather_y, height)]
-            cropped = img.crop(coords)
+            cropped = img.crop(ccoords)
             input_id = str(t) + str(ind)
             hocr = pytesseract.image_to_pdf_or_hocr(cropped, extension='hocr').decode('utf-8')
             # Going to run a quick regex to find the body tag
@@ -175,16 +229,20 @@ def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, u
                     dominate.tags.img(src=crop_img_path)
                 if b_text and tesseract_hocr:
                     # We do a quick loading and deloading to properly convert encodings
-                    div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                    div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}', data_score=f'{score}')
                     loaded = html.fromstring(b_text)                    
                     tree = etree.fromstring(etree.tostring(loaded))
                     latex_tree = variable_ocr(im2latex_model, tree, cropped, [])
                     div(raw(etree.tostring(latex_tree).decode("utf-8")), cls='hocr_img2latex', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
                     tree = etree.fromstring(etree.tostring(loaded))
-                    unicode_tree,text,first_id = unicode_representation(unicode_df, page_num, tree, coords, t)
-                    #occasionally the class here would be replaced by 'Page Header', cannot figure our why
-                    div(raw(etree.tostring(unicode_tree).decode("utf-8")), cls='text_unicode', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}', id=str(first_id))
-                    div(text, cls='equation_unicode')  
+                    if unicode_df is not None:
+                        match = FILE_NAME_PATTERN.search(image_name)
+                        pdf_name = '/input/'+match.group(1)
+                        page_num = int(match.group(2))
+                        unicode_tree,text,first_id = unicode_representation(unicode_df, page_num, tree, coords, t)
+                        #occasionally the class here would be replaced by 'Page Header', cannot figure our why
+                        div(raw(etree.tostring(unicode_tree).decode("utf-8")), cls='text_unicode', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}', id=str(first_id))
+                        div(text, cls='equation_unicode')  
 
                 if tesseract_text:
                     if t == 'Equation':
