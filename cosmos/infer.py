@@ -9,6 +9,15 @@ from ingestion.ingest_images import ImageDB
 
 
 def run_inference(img_dir, proposal_dir, model_config, weights, out_dir, device_str):
+    '''
+    Main function to run inference. Writes a bunch of XMLs to out_dir
+    :param img_dir: Input image directory
+    :param proposal: Corresponding proposals directory
+    :param model_config: Path to model config
+    :param weights: path to weights file
+    :param out_dir: Path to output directory
+    :param device_str: Device config
+    '''
     cfg = ConfigManager(model_config)
     model = MMFasterRCNN(cfg)
     model.load_state_dict(torch.load(weights, map_location={"cuda:0": device_str}))

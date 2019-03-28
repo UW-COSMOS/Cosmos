@@ -42,6 +42,14 @@ class MMFasterRCNN(nn.Module):
     def forward(self, input_windows,neighbor_windows, radii, angles, colors,proposals, device):
         """
         Process an Image through the network
+        :param input_windows: Tensor representing target window pixels
+        :param neighbor_windows: Tensor representing neighbor window pixels
+        :param radii: neighborhood embedding radii
+        :param angles: neighborhood angle input
+        :param colors: Color input
+        :param proposals: proposals list
+        :param device: Device config
+        :return: proposals, associated class scores
         """
         maps = self.featurizer(input_windows, device)
         V = self.featurizer(neighbor_windows, device)
@@ -49,10 +57,15 @@ class MMFasterRCNN(nn.Module):
         K = self.embedder(V, radii, angles)
         attn_maps = self.attention(Q,K,V)
         cls_scores = self.head(maps, attn_maps,colors, proposals)
-        return proposals,  cls_scores
+        return proposals, cls_scores
 
-
+ 
     def set_weights(self,mean, std):
+        '''
+        Set weights
+        :param mean: weight mean
+        :param std: weight standard deviation
+        '''
         for child in self.children():
             if child == self.featurizer:
                 continue

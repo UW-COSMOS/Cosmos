@@ -94,11 +94,6 @@ def convert_to_html(xml_f):
     pdf_name = FILE_NAME.search(f'{xml_f[:-4]}.png').group(1)
     list2html(l, f'{xml_f[:-4]}.png', os.path.join(f'{tmp}', 'images'), html, unicodes[pdf_name])
 
-def match_proposal(proposal_f):
-    proposal_f_full = os.path.join(f'{tmp}', proposal_f)
-    xml_f = f'{xml}/{proposal_f[:-4]}' + '.xml'
-    process_doc(xml_f, proposal_f_full, xml_f)
-
 def update_xmls(html_f):
     hpath = os.path.join(html, html_f)
     htmlfile2xml(hpath, xml)
