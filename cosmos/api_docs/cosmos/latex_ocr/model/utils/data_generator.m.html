@@ -3,7 +3,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
-    <title>vol.latex_ocr.model.utils.data_generator API documentation</title>
+    <title>cosmos.latex_ocr.model.utils.data_generator API documentation</title>
     <meta name="description" content="" />
 
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300' rel='stylesheet' type='text/css'>
@@ -1045,22 +1045,22 @@ table {
     <li class="set"><h3><a href="#header-classes">Classes</a></h3>
       <ul>
         <li class="mono">
-        <span class="class_name"><a href="#vol.latex_ocr.model.utils.data_generator.DataGenerator">DataGenerator</a></span>
+        <span class="class_name"><a href="#cosmos.latex_ocr.model.utils.data_generator.DataGenerator">DataGenerator</a></span>
         
           
   <ul>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.data_generator.DataGenerator.__init__">__init__</a></li>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.data_generator.DataGenerator.bucket">bucket</a></li>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.data_generator.DataGenerator.build">build</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.data_generator.DataGenerator.__init__">__init__</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.data_generator.DataGenerator.bucket">bucket</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.data_generator.DataGenerator.build">build</a></li>
   </ul>
 
         </li>
         <li class="mono">
-        <span class="class_name"><a href="#vol.latex_ocr.model.utils.data_generator.DataGeneratorFile">DataGeneratorFile</a></span>
+        <span class="class_name"><a href="#cosmos.latex_ocr.model.utils.data_generator.DataGeneratorFile">DataGeneratorFile</a></span>
         
           
   <ul>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.data_generator.DataGeneratorFile.__init__">__init__</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.data_generator.DataGeneratorFile.__init__">__init__</a></li>
   </ul>
 
         </li>
@@ -1078,11 +1078,11 @@ table {
 
 
   <header id="section-intro">
-  <h1 class="title"><span class="name">vol.latex_ocr.model.utils.data_generator</span> module</h1>
+  <h1 class="title"><span class="name">cosmos.latex_ocr.model.utils.data_generator</span> module</h1>
   
   
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.data_generator', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.data_generator" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.data_generator', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.data_generator" class="source">
     <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
@@ -1337,13 +1337,13 @@ table {
     <h2 class="section-title" id="header-classes">Classes</h2>
       
       <div class="item">
-      <p id="vol.latex_ocr.model.utils.data_generator.DataGenerator" class="name">class <span class="ident">DataGenerator</span></p>
+      <p id="cosmos.latex_ocr.model.utils.data_generator.DataGenerator" class="name">class <span class="ident">DataGenerator</span></p>
       
   
     <div class="desc"><p>Data Generator of tuple (image, formula)</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.data_generator.DataGenerator', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.data_generator.DataGenerator" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.data_generator.DataGenerator', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.data_generator.DataGenerator" class="source">
     <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">DataGenerator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Data Generator of tuple (image, formula)&quot;&quot;&quot;</span>
 
@@ -1560,14 +1560,14 @@ table {
       <div class="class">
           <h3>Ancestors (in MRO)</h3>
           <ul class="class_list">
-          <li><a href="#vol.latex_ocr.model.utils.data_generator.DataGenerator">DataGenerator</a></li>
+          <li><a href="#cosmos.latex_ocr.model.utils.data_generator.DataGenerator">DataGenerator</a></li>
           <li>builtins.object</li>
           </ul>
           <h3>Static methods</h3>
             
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.data_generator.DataGenerator.__init__">
-    <p>def <span class="ident">__init__</span>(</p><p>self, path_formulas, dir_images, path_matching, bucket=False, form_prepro=&lt;function DataGenerator.&lt;lambda&gt; at 0x7f66faf74ea0&gt;, iter_mode=&#39;data&#39;, img_prepro=&lt;function DataGenerator.&lt;lambda&gt; at 0x7f66faf74f28&gt;, max_iter=None, max_len=None, bucket_size=20)</p>
+    <div class="name def" id="cosmos.latex_ocr.model.utils.data_generator.DataGenerator.__init__">
+    <p>def <span class="ident">__init__</span>(</p><p>self, path_formulas, dir_images, path_matching, bucket=False, form_prepro=&lt;function DataGenerator.&lt;lambda&gt; at 0x7f61f390ac80&gt;, iter_mode=&#39;data&#39;, img_prepro=&lt;function DataGenerator.&lt;lambda&gt; at 0x7f61f390ad08&gt;, max_iter=None, max_len=None, bucket_size=20)</p>
     </div>
     
 
@@ -1590,8 +1590,8 @@ table {
     bucket: (bool) decides if bucket the data by size of image
     bucket_size: (int)</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.data_generator.DataGenerator.__init__', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.data_generator.DataGenerator.__init__" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.data_generator.DataGenerator.__init__', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.data_generator.DataGenerator.__init__" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_formulas</span><span class="p">,</span> <span class="n">dir_images</span><span class="p">,</span> <span class="n">path_matching</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
             <span class="n">form_prepro</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">),</span> <span class="n">iter_mode</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
             <span class="n">img_prepro</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
@@ -1635,7 +1635,7 @@ table {
   
             
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.data_generator.DataGenerator.bucket">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.data_generator.DataGenerator.bucket">
     <p>def <span class="ident">bucket</span>(</p><p>self, bucket_size)</p>
     </div>
     
@@ -1648,8 +1648,8 @@ table {
 <p>Returns:
     bucketed_dataset: [(img_path1, id1), ...]</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.data_generator.DataGenerator.bucket', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.data_generator.DataGenerator.bucket" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.data_generator.DataGenerator.bucket', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.data_generator.DataGenerator.bucket" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">bucket</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket_size</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Iterates over the listing and creates buckets of same shape images.</span>
 <span class="sd">    Args:</span>
@@ -1690,7 +1690,7 @@ table {
   
             
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.data_generator.DataGenerator.build">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.data_generator.DataGenerator.build">
     <p>def <span class="ident">build</span>(</p><p>self, quality=100, density=200, down_ratio=2, buckets=None, n_threads=4)</p>
     </div>
     
@@ -1706,8 +1706,8 @@ in the matching file.</p>
     buckets: list of tuples (list of sizes) to produce similar
         shape images</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.data_generator.DataGenerator.build', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.data_generator.DataGenerator.build" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.data_generator.DataGenerator.build', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.data_generator.DataGenerator.build" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">down_ratio</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">buckets</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
             <span class="n">n_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Generates images from the formulas and writes the correspondance</span>
@@ -1739,13 +1739,13 @@ in the matching file.</p>
       </div>
       
       <div class="item">
-      <p id="vol.latex_ocr.model.utils.data_generator.DataGeneratorFile" class="name">class <span class="ident">DataGeneratorFile</span></p>
+      <p id="cosmos.latex_ocr.model.utils.data_generator.DataGeneratorFile" class="name">class <span class="ident">DataGeneratorFile</span></p>
       
   
     <div class="desc"><p>Simple Generator of tuples (img_path, formula_id)</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.data_generator.DataGeneratorFile', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.data_generator.DataGeneratorFile" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.data_generator.DataGeneratorFile', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.data_generator.DataGeneratorFile" class="source">
     <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">DataGeneratorFile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Simple Generator of tuples (img_path, formula_id)&quot;&quot;&quot;</span>
 
@@ -1776,13 +1776,13 @@ in the matching file.</p>
       <div class="class">
           <h3>Ancestors (in MRO)</h3>
           <ul class="class_list">
-          <li><a href="#vol.latex_ocr.model.utils.data_generator.DataGeneratorFile">DataGeneratorFile</a></li>
+          <li><a href="#cosmos.latex_ocr.model.utils.data_generator.DataGeneratorFile">DataGeneratorFile</a></li>
           <li>builtins.object</li>
           </ul>
           <h3>Static methods</h3>
             
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.data_generator.DataGeneratorFile.__init__">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.data_generator.DataGeneratorFile.__init__">
     <p>def <span class="ident">__init__</span>(</p><p>self, filename)</p>
     </div>
     
@@ -1795,8 +1795,8 @@ in the matching file.</p>
 <p>Args:
     filename: (string of path to file)</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.data_generator.DataGeneratorFile.__init__', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.data_generator.DataGeneratorFile.__init__" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.data_generator.DataGeneratorFile.__init__', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.data_generator.DataGeneratorFile.__init__" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Inits Data Generator File</span>
 <span class="sd">    Iterator that returns</span>

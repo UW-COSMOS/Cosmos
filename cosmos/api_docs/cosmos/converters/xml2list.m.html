@@ -3,7 +3,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
-    <title>vol.converters.xml2list API documentation</title>
+    <title>cosmos.converters.xml2list API documentation</title>
     <meta name="description" content="from ...converters.xml2list import xml2list
 convert VOC XML to a list" />
 
@@ -1045,10 +1045,10 @@ table {
     <li class="set"><h3><a href="#header-functions">Functions</a></h3>
       
   <ul>
-    <li class="mono"><a href="#vol.converters.xml2list.feather_list">feather_list</a></li>
-    <li class="mono"><a href="#vol.converters.xml2list.mapper">mapper</a></li>
-    <li class="mono"><a href="#vol.converters.xml2list.test_merge_below">test_merge_below</a></li>
-    <li class="mono"><a href="#vol.converters.xml2list.xml2list">xml2list</a></li>
+    <li class="mono"><a href="#cosmos.converters.xml2list.feather_list">feather_list</a></li>
+    <li class="mono"><a href="#cosmos.converters.xml2list.mapper">mapper</a></li>
+    <li class="mono"><a href="#cosmos.converters.xml2list.test_merge_below">test_merge_below</a></li>
+    <li class="mono"><a href="#cosmos.converters.xml2list.xml2list">xml2list</a></li>
   </ul>
 
     </li>
@@ -1065,12 +1065,12 @@ table {
 
 
   <header id="section-intro">
-  <h1 class="title"><span class="name">vol.converters.xml2list</span> module</h1>
+  <h1 class="title"><span class="name">cosmos.converters.xml2list</span> module</h1>
   <p>from ...converters.xml2list import xml2list
 convert VOC XML to a list</p>
   
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.converters.xml2list', this);">Show source &equiv;</a></p>
-  <div id="source-vol.converters.xml2list" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.converters.xml2list', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.converters.xml2list" class="source">
     <div class="codehilite"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">from ...converters.xml2list import xml2list</span>
 <span class="sd">convert VOC XML to a list</span>
@@ -1172,7 +1172,7 @@ convert VOC XML to a list</p>
     <h2 class="section-title" id="header-functions">Functions</h2>
       
   <div class="item">
-    <div class="name def" id="vol.converters.xml2list.feather_list">
+    <div class="name def" id="cosmos.converters.xml2list.feather_list">
     <p>def <span class="ident">feather_list</span>(</p><p>objs, feather_x=2, feather_y=2, max_x=1920, max_y=1920)</p>
     </div>
     
@@ -1187,8 +1187,8 @@ convert VOC XML to a list</p>
 :param max_y: Document Y
 :return: [(t, feathered_coords, score)]</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.converters.xml2list.feather_list', this);">Show source &equiv;</a></p>
-  <div id="source-vol.converters.xml2list.feather_list" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.converters.xml2list.feather_list', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.converters.xml2list.feather_list" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">feather_list</span><span class="p">(</span><span class="n">objs</span><span class="p">,</span> <span class="n">feather_x</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">feather_y</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">max_x</span><span class="o">=</span><span class="mi">1920</span><span class="p">,</span> <span class="n">max_y</span><span class="o">=</span><span class="mi">1920</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Feather the input coordinates by some amount</span>
@@ -1215,7 +1215,7 @@ convert VOC XML to a list</p>
   
       
   <div class="item">
-    <div class="name def" id="vol.converters.xml2list.mapper">
+    <div class="name def" id="cosmos.converters.xml2list.mapper">
     <p>def <span class="ident">mapper</span>(</p><p>obj)</p>
     </div>
     
@@ -1226,8 +1226,8 @@ convert VOC XML to a list</p>
 :param obj: an Etree node
 :return: (type, (x1, y1, x2, y2), score)</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.converters.xml2list.mapper', this);">Show source &equiv;</a></p>
-  <div id="source-vol.converters.xml2list.mapper" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.converters.xml2list.mapper', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.converters.xml2list.mapper" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">mapper</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    map a single object to the list structure</span>
@@ -1248,7 +1248,7 @@ convert VOC XML to a list</p>
   
       
   <div class="item">
-    <div class="name def" id="vol.converters.xml2list.test_merge_below">
+    <div class="name def" id="cosmos.converters.xml2list.test_merge_below">
     <p>def <span class="ident">test_merge_below</span>(</p><p>)</p>
     </div>
     
@@ -1256,8 +1256,8 @@ convert VOC XML to a list</p>
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.converters.xml2list.test_merge_below', this);">Show source &equiv;</a></p>
-  <div id="source-vol.converters.xml2list.test_merge_below" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.converters.xml2list.test_merge_below', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.converters.xml2list.test_merge_below" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">test_merge_below</span><span class="p">():</span>
     <span class="n">parameter</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">200</span><span class="p">)),</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">190</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="mi">220</span><span class="p">))]</span>
     <span class="n">expected</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="mi">220</span><span class="p">))]</span>
@@ -1291,7 +1291,7 @@ convert VOC XML to a list</p>
   
       
   <div class="item">
-    <div class="name def" id="vol.converters.xml2list.xml2list">
+    <div class="name def" id="cosmos.converters.xml2list.xml2list">
     <p>def <span class="ident">xml2list</span>(</p><p>fp, tres=0, feather=False)</p>
     </div>
     
@@ -1304,8 +1304,8 @@ convert VOC XML to a list</p>
 :param feather: add a bit of feathering (improves OCR quality downstream)
 :return: [(type,(x1, y1, x2, y2),score)]</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.converters.xml2list.xml2list', this);">Show source &equiv;</a></p>
-  <div id="source-vol.converters.xml2list.xml2list" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.converters.xml2list.xml2list', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.converters.xml2list.xml2list" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">xml2list</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">tres</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">feather</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    convert VOC XML to a list</span>

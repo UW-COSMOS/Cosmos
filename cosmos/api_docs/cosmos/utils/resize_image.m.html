@@ -3,7 +3,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
-    <title>vol.utils.resize_image API documentation</title>
+    <title>cosmos.utils.resize_image API documentation</title>
     <meta name="description" content="" />
 
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300' rel='stylesheet' type='text/css'>
@@ -1044,10 +1044,10 @@ table {
     <li class="set"><h3><a href="#header-functions">Functions</a></h3>
       
   <ul>
-    <li class="mono"><a href="#vol.utils.resize_image.get_image_ids">get_image_ids</a></li>
-    <li class="mono"><a href="#vol.utils.resize_image.main">main</a></li>
-    <li class="mono"><a href="#vol.utils.resize_image.resize_image">resize_image</a></li>
-    <li class="mono"><a href="#vol.utils.resize_image.rewrite_annotation">rewrite_annotation</a></li>
+    <li class="mono"><a href="#cosmos.utils.resize_image.get_image_ids">get_image_ids</a></li>
+    <li class="mono"><a href="#cosmos.utils.resize_image.main">main</a></li>
+    <li class="mono"><a href="#cosmos.utils.resize_image.resize_image">resize_image</a></li>
+    <li class="mono"><a href="#cosmos.utils.resize_image.rewrite_annotation">rewrite_annotation</a></li>
   </ul>
 
     </li>
@@ -1064,11 +1064,11 @@ table {
 
 
   <header id="section-intro">
-  <h1 class="title"><span class="name">vol.utils.resize_image</span> module</h1>
+  <h1 class="title"><span class="name">cosmos.utils.resize_image</span> module</h1>
   
   
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.utils.resize_image', this);">Show source &equiv;</a></p>
-  <div id="source-vol.utils.resize_image" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.utils.resize_image', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.utils.resize_image" class="source">
     <div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
 <span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
 <span class="kn">import</span> <span class="nn">os</span>
@@ -1126,7 +1126,7 @@ table {
     <h2 class="section-title" id="header-functions">Functions</h2>
       
   <div class="item">
-    <div class="name def" id="vol.utils.resize_image.get_image_ids">
+    <div class="name def" id="cosmos.utils.resize_image.get_image_ids">
     <p>def <span class="ident">get_image_ids</span>(</p><p>path)</p>
     </div>
     
@@ -1134,8 +1134,8 @@ table {
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.utils.resize_image.get_image_ids', this);">Show source &equiv;</a></p>
-  <div id="source-vol.utils.resize_image.get_image_ids" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.utils.resize_image.get_image_ids', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.utils.resize_image.get_image_ids" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">get_image_ids</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
 	<span class="n">file_names</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 	<span class="n">identifiers</span> <span class="o">=</span> 	<span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">name</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">file_names</span><span class="p">]</span>
@@ -1149,7 +1149,7 @@ table {
   
       
   <div class="item">
-    <div class="name def" id="vol.utils.resize_image.main">
+    <div class="name def" id="cosmos.utils.resize_image.main">
     <p>def <span class="ident">main</span>(</p><p>img_dir, anno_dir, height)</p>
     </div>
     
@@ -1157,8 +1157,8 @@ table {
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.utils.resize_image.main', this);">Show source &equiv;</a></p>
-  <div id="source-vol.utils.resize_image.main" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.utils.resize_image.main', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.utils.resize_image.main" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">img_dir</span><span class="p">,</span><span class="n">anno_dir</span><span class="p">,</span> <span class="n">height</span><span class="p">):</span>
 	<span class="n">image_ids</span> <span class="o">=</span> <span class="n">get_image_ids</span><span class="p">(</span><span class="n">img_dir</span><span class="p">)</span>
 	<span class="k">for</span> <span class="n">image_id</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">image_ids</span><span class="p">):</span>
@@ -1175,7 +1175,7 @@ table {
   
       
   <div class="item">
-    <div class="name def" id="vol.utils.resize_image.resize_image">
+    <div class="name def" id="cosmos.utils.resize_image.resize_image">
     <p>def <span class="ident">resize_image</span>(</p><p>path, new_h)</p>
     </div>
     
@@ -1183,8 +1183,8 @@ table {
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.utils.resize_image.resize_image', this);">Show source &equiv;</a></p>
-  <div id="source-vol.utils.resize_image.resize_image" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.utils.resize_image.resize_image', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.utils.resize_image.resize_image" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">resize_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">new_h</span><span class="p">):</span>
 	<span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 	<span class="n">w</span><span class="p">,</span><span class="n">h</span> <span class="o">=</span> <span class="n">im</span><span class="o">.</span><span class="n">size</span>
@@ -1202,7 +1202,7 @@ table {
   
       
   <div class="item">
-    <div class="name def" id="vol.utils.resize_image.rewrite_annotation">
+    <div class="name def" id="cosmos.utils.resize_image.rewrite_annotation">
     <p>def <span class="ident">rewrite_annotation</span>(</p><p>path, ratio)</p>
     </div>
     
@@ -1210,8 +1210,8 @@ table {
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.utils.resize_image.rewrite_annotation', this);">Show source &equiv;</a></p>
-  <div id="source-vol.utils.resize_image.rewrite_annotation" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.utils.resize_image.rewrite_annotation', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.utils.resize_image.rewrite_annotation" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">rewrite_annotation</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">ratio</span><span class="p">):</span>
 	<span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 	<span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>

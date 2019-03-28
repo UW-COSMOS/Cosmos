@@ -3,7 +3,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
-    <title>vol.torch_model.utils.preprocess API documentation</title>
+    <title>cosmos.torch_model.utils.preprocess API documentation</title>
     <meta name="description" content="Convert a directory of PDFs to a directory
 of XML annotations.
 Author: Josh McGrath" />
@@ -1046,12 +1046,12 @@ table {
     <li class="set"><h3><a href="#header-functions">Functions</a></h3>
       
   <ul>
-    <li class="mono"><a href="#vol.torch_model.utils.preprocess.pad_image">pad_image</a></li>
-    <li class="mono"><a href="#vol.torch_model.utils.preprocess.pad_pngs">pad_pngs</a></li>
-    <li class="mono"><a href="#vol.torch_model.utils.preprocess.pdf2png">pdf2png</a></li>
-    <li class="mono"><a href="#vol.torch_model.utils.preprocess.preprocess">preprocess</a></li>
-    <li class="mono"><a href="#vol.torch_model.utils.preprocess.resize_image">resize_image</a></li>
-    <li class="mono"><a href="#vol.torch_model.utils.preprocess.resize_png">resize_png</a></li>
+    <li class="mono"><a href="#cosmos.torch_model.utils.preprocess.pad_image">pad_image</a></li>
+    <li class="mono"><a href="#cosmos.torch_model.utils.preprocess.pad_pngs">pad_pngs</a></li>
+    <li class="mono"><a href="#cosmos.torch_model.utils.preprocess.pdf2png">pdf2png</a></li>
+    <li class="mono"><a href="#cosmos.torch_model.utils.preprocess.preprocess">preprocess</a></li>
+    <li class="mono"><a href="#cosmos.torch_model.utils.preprocess.resize_image">resize_image</a></li>
+    <li class="mono"><a href="#cosmos.torch_model.utils.preprocess.resize_png">resize_png</a></li>
   </ul>
 
     </li>
@@ -1068,13 +1068,13 @@ table {
 
 
   <header id="section-intro">
-  <h1 class="title"><span class="name">vol.torch_model.utils.preprocess</span> module</h1>
+  <h1 class="title"><span class="name">cosmos.torch_model.utils.preprocess</span> module</h1>
   <p>Convert a directory of PDFs to a directory
 of XML annotations.
 Author: Josh McGrath</p>
   
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.utils.preprocess', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.utils.preprocess" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.utils.preprocess', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.utils.preprocess" class="source">
     <div class="codehilite"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Convert a directory of PDFs to a directory</span>
 <span class="sd">of XML annotations.</span>
@@ -1205,7 +1205,7 @@ Author: Josh McGrath</p>
     <h2 class="section-title" id="header-functions">Functions</h2>
       
   <div class="item">
-    <div class="name def" id="vol.torch_model.utils.preprocess.pad_image">
+    <div class="name def" id="cosmos.torch_model.utils.preprocess.pad_image">
     <p>def <span class="ident">pad_image</span>(</p><p>path, image=None, size=1920)</p>
     </div>
     
@@ -1213,8 +1213,8 @@ Author: Josh McGrath</p>
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.utils.preprocess.pad_image', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.utils.preprocess.pad_image" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.utils.preprocess.pad_image', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.utils.preprocess.pad_image" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">pad_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">1920</span><span class="p">):</span>
     <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">&#39;RGB&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">image</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">image</span>
     <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">im</span><span class="o">.</span><span class="n">size</span>
@@ -1235,7 +1235,7 @@ Author: Josh McGrath</p>
   
       
   <div class="item">
-    <div class="name def" id="vol.torch_model.utils.preprocess.pad_pngs">
+    <div class="name def" id="cosmos.torch_model.utils.preprocess.pad_pngs">
     <p>def <span class="ident">pad_pngs</span>(</p><p>tmp_dir, padding)</p>
     </div>
     
@@ -1246,8 +1246,8 @@ Author: Josh McGrath</p>
 :param tmp_dir:
 :return:</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.utils.preprocess.pad_pngs', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.utils.preprocess.pad_pngs" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.utils.preprocess.pad_pngs', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.utils.preprocess.pad_pngs" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">pad_pngs</span><span class="p">(</span><span class="n">tmp_dir</span><span class="p">,</span> <span class="n">padding</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    pad a directory of images</span>
@@ -1272,7 +1272,7 @@ Author: Josh McGrath</p>
   
       
   <div class="item">
-    <div class="name def" id="vol.torch_model.utils.preprocess.pdf2png">
+    <div class="name def" id="cosmos.torch_model.utils.preprocess.pdf2png">
     <p>def <span class="ident">pdf2png</span>(</p><p>input_dir, tmp_dir)</p>
     </div>
     
@@ -1283,8 +1283,8 @@ Author: Josh McGrath</p>
 :param input_dir:
 :return:</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.utils.preprocess.pdf2png', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.utils.preprocess.pdf2png" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.utils.preprocess.pdf2png', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.utils.preprocess.pdf2png" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">pdf2png</span><span class="p">(</span><span class="n">input_dir</span><span class="p">,</span> <span class="n">tmp_dir</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert PDFs into a directory of PNGs</span>
@@ -1314,7 +1314,7 @@ Author: Josh McGrath</p>
   
       
   <div class="item">
-    <div class="name def" id="vol.torch_model.utils.preprocess.preprocess">
+    <div class="name def" id="cosmos.torch_model.utils.preprocess.preprocess">
     <p>def <span class="ident">preprocess</span>(</p><p>input_dir, output_dir, args)</p>
     </div>
     
@@ -1326,8 +1326,8 @@ Author: Josh McGrath</p>
 :param output_dir: Desired output directory for XML
 :return:</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.utils.preprocess.preprocess', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.utils.preprocess.preprocess" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.utils.preprocess.preprocess', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.utils.preprocess.preprocess" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">preprocess</span><span class="p">(</span><span class="n">input_dir</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    script entry point</span>
@@ -1353,7 +1353,7 @@ Author: Josh McGrath</p>
   
       
   <div class="item">
-    <div class="name def" id="vol.torch_model.utils.preprocess.resize_image">
+    <div class="name def" id="cosmos.torch_model.utils.preprocess.resize_image">
     <p>def <span class="ident">resize_image</span>(</p><p>im, new_h)</p>
     </div>
     
@@ -1361,8 +1361,8 @@ Author: Josh McGrath</p>
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.utils.preprocess.resize_image', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.utils.preprocess.resize_image" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.utils.preprocess.resize_image', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.utils.preprocess.resize_image" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">resize_image</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">new_h</span><span class="p">):</span>
     <span class="n">w</span><span class="p">,</span><span class="n">h</span> <span class="o">=</span> <span class="n">im</span><span class="o">.</span><span class="n">size</span>
     <span class="k">if</span> <span class="n">h</span> <span class="o">&gt;</span> <span class="n">w</span><span class="p">:</span>
@@ -1383,7 +1383,7 @@ Author: Josh McGrath</p>
   
       
   <div class="item">
-    <div class="name def" id="vol.torch_model.utils.preprocess.resize_png">
+    <div class="name def" id="cosmos.torch_model.utils.preprocess.resize_png">
     <p>def <span class="ident">resize_png</span>(</p><p>path, size=1920)</p>
     </div>
     
@@ -1391,8 +1391,8 @@ Author: Josh McGrath</p>
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.utils.preprocess.resize_png', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.utils.preprocess.resize_png" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.utils.preprocess.resize_png', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.utils.preprocess.resize_png" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">resize_png</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">1920</span><span class="p">):</span>
     <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s1">&#39;RGB&#39;</span><span class="p">)</span>
     <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">im</span><span class="o">.</span><span class="n">size</span>
