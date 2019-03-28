@@ -72,7 +72,10 @@ def get_target_map(html_f, target_cls, target_cls_association):
             ind = cls_ass_tr_dists.index(tr_min_dist)
             cls_assoc = cls_associations[ind]
         target_map[target] = cls_assoc
-    return target_map
+    leftover = target_map.values()
+    leftover_assocs = [assoc for assoc in cls_associations if assoc not in leftover]
+    print(leftover_assocs)
+    return target_map, leftover_assocs
 
 def collect_words(xml_string, target):
     """
@@ -94,7 +97,7 @@ def construct_single_df(html_f, target_cls, target_cls_association):
     :param target_cls_association: Association object
     :return: Df
     """
-    target_map = get_target_map(html_f, target_cls, target_cls_association)
+    target_map, leftover_assocs = get_target_map(html_f, target_cls, target_cls_association)
     if target_map is None:
         return None
     with codecs.open(html_f, 'r', 'utf-8') as f:
@@ -152,6 +155,29 @@ def construct_single_df(html_f, target_cls, target_cls_association):
             df_dict['assoc_unicode'].append(assoc_unic)
             df_dict['target_tesseract'].append(target_tess)
             df_dict['assoc_tesseract'].append(assoc_tess)
+        for assoc in leftover_assocs:
+            assoc_cls, assoc_bb, _ = assoc
+            for assoc_div in soup.find_all('div', assoc_cls):
+                hocr = assoc_div.find_next('div', 'hocr')
+                coordinates = hocr['data-coordinates']
+                spl = coordinates.split(' ')
+                spl = [int(x) for x in spl]
+                spl = tuple(spl)
+                if spl != assoc_bb:
+                    continue
+                img = assoc_div.find_next('img')
+                assoc_img_path = str(img['src'])
+                assoc_unic = str(assoc_div)#.find_next('div', 'text_unicode'))
+                assoc_unic = collect_words(assoc_unic, 'text_unicode')
+                assoc_tess = assoc_div.find_next('div', 'rawtext')
+                assoc_tess = assoc_tess.text.strip()
+                df_dict['target_img_path'].append(None)
+                df_dict['assoc_img_path'].append(assoc_img_path)
+                df_dict['target_unicode'].append(None)
+                df_dict['assoc_unicode'].append(assoc_unic)
+                df_dict['target_tesseract'].append(None)
+                df_dict['assoc_tesseract'].append(assoc_tess)
+                break
         df = pd.DataFrame(df_dict)
         df['html_file'] = os.path.basename(html_f)
         return df

@@ -3,7 +3,7 @@
 Script to run an end to end pipeline
 """
 
-from infer import run_inference
+from infer.infer import run_inference
 from UnicodeParser.parse_html_to_postgres import parse_html_to_postgres
 from construct_caption_tables.construct import construct
 import multiprocessing as mp
