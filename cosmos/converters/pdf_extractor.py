@@ -10,6 +10,12 @@ from pdfminer.converter import PDFPageAggregator
 import pandas as pd
 
 def update_pos(pos1,pos2):
+    """
+    Get the coordinate of the bounding box containing two parts
+    :param pos1: Coordinate of the first part.
+    :param pos2: Coordinate of the second part.
+    :return: Coordinate of the bounding box containing the two parts
+    """
     x1 = min(pos1[0],pos2[0])
     y1 = min(pos1[1],pos2[1])
     x2 = max(pos1[2],pos2[2])
@@ -17,6 +23,11 @@ def update_pos(pos1,pos2):
     return (x1,y1,x2,y2)
 
 def parse_pdf(fp):
+    """
+    Parse the pdf with pdfminer to get the unicode representation.
+    :param fp: Input file.
+    :return: Pandas frame containing the tokens and the range of the coordinates
+    """
     with open(fp, "rb") as fh:
         parser = PDFParser(fh)
         doc = PDFDocument(parser)
