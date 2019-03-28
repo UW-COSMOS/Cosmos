@@ -65,6 +65,7 @@ for path in req_paths:
 unicodes = {}
 for pdf_name in os.listdir(args.pdfdir):
     print(os.path.join(args.pdfdir,pdf_name))
+    df, limit = parse_pdf(os.path.join(args.pdfdir,pdf_name))
     unicodes[pdf_name] = (df, limit)
 
 # Convert a pdf into a set of images
