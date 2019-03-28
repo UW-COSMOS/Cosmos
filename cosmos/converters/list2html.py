@@ -137,6 +137,19 @@ def unicode_representation(unicode_df, page, root, base, t):
         
 
 def list2html(input_list, image_name, image_dir, output_dir, unicode_df=None,tesseract_hocr=True, tesseract_text=True, include_image=True, feather_x=2, feather_y=2):
+    '''
+    Given an input list, write a corresponding html file. All extractions and postprocessing occur in this function.
+    :param input_list: List output from xml2list
+    :param image_name: Name of image corresponding to page in pdf
+    :param image_dir: image directory
+    :param output_dir: output directory to write html
+    :param unicode_df: Optional dataframe containing unicode information
+    :param tesseract_hocr: flag to include tesseract hocr
+    :param tesseract_text: flag to include tesseract text
+    :param include_image: flag to include cropped images for each hocr
+    :param feather_x: x feathering parameter to increase accuracy of ocr
+    :param feather_y: x feathering parameter to increase accuracy of ocr
+    '''
     input_list = group_cls(input_list, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
     input_list = group_cls(input_list, 'Figure')
     #input_list = group_cls_columnwise(input_list, 'Body Text')
