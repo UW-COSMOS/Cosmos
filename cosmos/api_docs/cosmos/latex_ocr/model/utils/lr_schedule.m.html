@@ -3,7 +3,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
-    <title>vol.latex_ocr.model.utils.lr_schedule API documentation</title>
+    <title>cosmos.latex_ocr.model.utils.lr_schedule API documentation</title>
     <meta name="description" content="" />
 
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300' rel='stylesheet' type='text/css'>
@@ -1045,12 +1045,12 @@ table {
     <li class="set"><h3><a href="#header-classes">Classes</a></h3>
       <ul>
         <li class="mono">
-        <span class="class_name"><a href="#vol.latex_ocr.model.utils.lr_schedule.LRSchedule">LRSchedule</a></span>
+        <span class="class_name"><a href="#cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule">LRSchedule</a></span>
         
           
   <ul>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.lr_schedule.LRSchedule.__init__">__init__</a></li>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.lr_schedule.LRSchedule.update">update</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule.__init__">__init__</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule.update">update</a></li>
   </ul>
 
         </li>
@@ -1068,11 +1068,11 @@ table {
 
 
   <header id="section-intro">
-  <h1 class="title"><span class="name">vol.latex_ocr.model.utils.lr_schedule</span> module</h1>
+  <h1 class="title"><span class="name">cosmos.latex_ocr.model.utils.lr_schedule</span> module</h1>
   
   
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.lr_schedule', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.lr_schedule" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.lr_schedule', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.lr_schedule" class="source">
     <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 
 
@@ -1204,7 +1204,7 @@ table {
     <h2 class="section-title" id="header-classes">Classes</h2>
       
       <div class="item">
-      <p id="vol.latex_ocr.model.utils.lr_schedule.LRSchedule" class="name">class <span class="ident">LRSchedule</span></p>
+      <p id="cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule" class="name">class <span class="ident">LRSchedule</span></p>
       
   
     <div class="desc"><p>Class for Learning Rate schedules</p>
@@ -1225,8 +1225,8 @@ table {
 For usage, must call the update function at each batch.
 You can access the current learning rate with self.lr</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.lr_schedule.LRSchedule', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.lr_schedule.LRSchedule" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule" class="source">
     <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">LRSchedule</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Class for Learning Rate schedules</span>
 
@@ -1352,13 +1352,13 @@ You can access the current learning rate with self.lr</p></div>
       <div class="class">
           <h3>Ancestors (in MRO)</h3>
           <ul class="class_list">
-          <li><a href="#vol.latex_ocr.model.utils.lr_schedule.LRSchedule">LRSchedule</a></li>
+          <li><a href="#cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule">LRSchedule</a></li>
           <li>builtins.object</li>
           </ul>
           <h3>Static methods</h3>
             
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.lr_schedule.LRSchedule.__init__">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule.__init__">
     <p>def <span class="ident">__init__</span>(</p><p>self, lr_init=0.001, lr_min=0.0001, start_decay=0, decay_rate=None, end_decay=None, lr_warm=0.0001, end_warm=None, early_stopping=None)</p>
     </div>
     
@@ -1379,8 +1379,8 @@ You can access the current learning rate with self.lr</p></div>
         lr_init and start the regular schedule.
     early_stopping: (int) number of batches with no imprv</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.lr_schedule.LRSchedule.__init__', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.lr_schedule.LRSchedule.__init__" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule.__init__', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule.__init__" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lr_init</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">lr_min</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">start_decay</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">decay_rate</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">end_decay</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">lr_warm</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">end_warm</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
     <span class="n">early_stopping</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
@@ -1428,7 +1428,7 @@ You can access the current learning rate with self.lr</p></div>
   
             
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.lr_schedule.LRSchedule.update">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule.update">
     <p>def <span class="ident">update</span>(</p><p>self, batch_no=None, score=None)</p>
     </div>
     
@@ -1445,8 +1445,8 @@ Both updates can concurrently happen</p>
     batch_no: (int) id of the batch
     score: (float) score, higher is better</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.lr_schedule.LRSchedule.update', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.lr_schedule.LRSchedule.update" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule.update', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule.update" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_no</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">score</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Updates the learning rate</span>
 <span class="sd">    (score) decay by self.decay rate if score is higher than previous</span>
@@ -1486,7 +1486,7 @@ Both updates can concurrently happen</p>
   
           <h3>Instance variables</h3>
             <div class="item">
-            <p id="vol.latex_ocr.model.utils.lr_schedule.LRSchedule.stop_training" class="name">var <span class="ident">stop_training</span></p>
+            <p id="cosmos.latex_ocr.model.utils.lr_schedule.LRSchedule.stop_training" class="name">var <span class="ident">stop_training</span></p>
             
 
             

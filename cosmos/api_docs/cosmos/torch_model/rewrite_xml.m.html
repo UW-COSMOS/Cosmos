@@ -3,7 +3,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
-    <title>vol.torch_model.rewrite_xml API documentation</title>
+    <title>cosmos.torch_model.rewrite_xml API documentation</title>
     <meta name="description" content="" />
 
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300' rel='stylesheet' type='text/css'>
@@ -1043,7 +1043,7 @@ table {
     <li class="set"><h3><a href="#header-variables">Module variables</a></h3>
       
   <ul>
-    <li class="mono"><a href="#vol.torch_model.rewrite_xml.mapper">mapper</a></li>
+    <li class="mono"><a href="#cosmos.torch_model.rewrite_xml.mapper">mapper</a></li>
   </ul>
 
     </li>
@@ -1051,9 +1051,9 @@ table {
     <li class="set"><h3><a href="#header-functions">Functions</a></h3>
       
   <ul>
-    <li class="mono"><a href="#vol.torch_model.rewrite_xml.get_files">get_files</a></li>
-    <li class="mono"><a href="#vol.torch_model.rewrite_xml.main">main</a></li>
-    <li class="mono"><a href="#vol.torch_model.rewrite_xml.rewrite_file">rewrite_file</a></li>
+    <li class="mono"><a href="#cosmos.torch_model.rewrite_xml.get_files">get_files</a></li>
+    <li class="mono"><a href="#cosmos.torch_model.rewrite_xml.main">main</a></li>
+    <li class="mono"><a href="#cosmos.torch_model.rewrite_xml.rewrite_file">rewrite_file</a></li>
   </ul>
 
     </li>
@@ -1070,11 +1070,11 @@ table {
 
 
   <header id="section-intro">
-  <h1 class="title"><span class="name">vol.torch_model.rewrite_xml</span> module</h1>
+  <h1 class="title"><span class="name">cosmos.torch_model.rewrite_xml</span> module</h1>
   
   
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.rewrite_xml', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.rewrite_xml" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.rewrite_xml', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.rewrite_xml" class="source">
     <div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">glob</span>
@@ -1118,7 +1118,7 @@ table {
   <section id="section-items">
     <h2 class="section-title" id="header-variables">Module variables</h2>
       <div class="item">
-      <p id="vol.torch_model.rewrite_xml.mapper" class="name">var <span class="ident">mapper</span></p>
+      <p id="cosmos.torch_model.rewrite_xml.mapper" class="name">var <span class="ident">mapper</span></p>
       
   
   <div class="source_cont">
@@ -1129,7 +1129,7 @@ table {
     <h2 class="section-title" id="header-functions">Functions</h2>
       
   <div class="item">
-    <div class="name def" id="vol.torch_model.rewrite_xml.get_files">
+    <div class="name def" id="cosmos.torch_model.rewrite_xml.get_files">
     <p>def <span class="ident">get_files</span>(</p><p>dir, prefix)</p>
     </div>
     
@@ -1137,8 +1137,8 @@ table {
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.rewrite_xml.get_files', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.rewrite_xml.get_files" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.rewrite_xml.get_files', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.rewrite_xml.get_files" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">get_files</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>
     <span class="n">files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;{dir}/{prefix}*&quot;</span><span class="p">)</span>
     <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
@@ -1152,7 +1152,7 @@ table {
   
       
   <div class="item">
-    <div class="name def" id="vol.torch_model.rewrite_xml.main">
+    <div class="name def" id="cosmos.torch_model.rewrite_xml.main">
     <p>def <span class="ident">main</span>(</p><p>dir, prefix)</p>
     </div>
     
@@ -1160,8 +1160,8 @@ table {
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.rewrite_xml.main', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.rewrite_xml.main" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.rewrite_xml.main', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.rewrite_xml.main" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>
     <span class="n">files</span> <span class="o">=</span> <span class="n">get_files</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">prefix</span><span class="p">)</span>
 </pre></div>
@@ -1173,7 +1173,7 @@ table {
   
       
   <div class="item">
-    <div class="name def" id="vol.torch_model.rewrite_xml.rewrite_file">
+    <div class="name def" id="cosmos.torch_model.rewrite_xml.rewrite_file">
     <p>def <span class="ident">rewrite_file</span>(</p><p>path)</p>
     </div>
     
@@ -1181,8 +1181,8 @@ table {
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.torch_model.rewrite_xml.rewrite_file', this);">Show source &equiv;</a></p>
-  <div id="source-vol.torch_model.rewrite_xml.rewrite_file" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.torch_model.rewrite_xml.rewrite_file', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.torch_model.rewrite_xml.rewrite_file" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">rewrite_file</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>

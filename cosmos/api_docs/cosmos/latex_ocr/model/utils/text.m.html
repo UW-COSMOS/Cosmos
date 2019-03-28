@@ -3,7 +3,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
-    <title>vol.latex_ocr.model.utils.text API documentation</title>
+    <title>cosmos.latex_ocr.model.utils.text API documentation</title>
     <meta name="description" content="" />
 
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300' rel='stylesheet' type='text/css'>
@@ -1044,12 +1044,12 @@ table {
     <li class="set"><h3><a href="#header-functions">Functions</a></h3>
       
   <ul>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.text.build_vocab">build_vocab</a></li>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.text.get_form_prepro">get_form_prepro</a></li>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.text.load_formulas">load_formulas</a></li>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.text.load_tok_to_id">load_tok_to_id</a></li>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.text.pad_batch_formulas">pad_batch_formulas</a></li>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.text.write_vocab">write_vocab</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.text.build_vocab">build_vocab</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.text.get_form_prepro">get_form_prepro</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.text.load_formulas">load_formulas</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.text.load_tok_to_id">load_tok_to_id</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.text.pad_batch_formulas">pad_batch_formulas</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.text.write_vocab">write_vocab</a></li>
   </ul>
 
     </li>
@@ -1057,12 +1057,12 @@ table {
     <li class="set"><h3><a href="#header-classes">Classes</a></h3>
       <ul>
         <li class="mono">
-        <span class="class_name"><a href="#vol.latex_ocr.model.utils.text.Vocab">Vocab</a></span>
+        <span class="class_name"><a href="#cosmos.latex_ocr.model.utils.text.Vocab">Vocab</a></span>
         
           
   <ul>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.text.Vocab.__init__">__init__</a></li>
-    <li class="mono"><a href="#vol.latex_ocr.model.utils.text.Vocab.load_vocab">load_vocab</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.text.Vocab.__init__">__init__</a></li>
+    <li class="mono"><a href="#cosmos.latex_ocr.model.utils.text.Vocab.load_vocab">load_vocab</a></li>
   </ul>
 
         </li>
@@ -1080,11 +1080,11 @@ table {
 
 
   <header id="section-intro">
-  <h1 class="title"><span class="name">vol.latex_ocr.model.utils.text</span> module</h1>
+  <h1 class="title"><span class="name">cosmos.latex_ocr.model.utils.text</span> module</h1>
   
   
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.text', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.text" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.text', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.text" class="source">
     <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
 
@@ -1250,7 +1250,7 @@ table {
     <h2 class="section-title" id="header-functions">Functions</h2>
       
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.text.build_vocab">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.text.build_vocab">
     <p>def <span class="ident">build_vocab</span>(</p><p>datasets, min_count=10)</p>
     </div>
     
@@ -1264,8 +1264,8 @@ table {
 <p>Returns:
     a set of all the words in the dataset</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.text.build_vocab', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.text.build_vocab" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.text.build_vocab', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.text.build_vocab" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">build_vocab</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">min_count</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Build vocabulary from an iterable of datasets objects</span>
 
@@ -1298,7 +1298,7 @@ table {
   
       
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.text.get_form_prepro">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.text.get_form_prepro">
     <p>def <span class="ident">get_form_prepro</span>(</p><p>vocab, id_unk)</p>
     </div>
     
@@ -1311,8 +1311,8 @@ table {
 <p>Returns:
     lambda function(formula) -&gt; list of ids</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.text.get_form_prepro', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.text.get_form_prepro" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.text.get_form_prepro', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.text.get_form_prepro" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">get_form_prepro</span><span class="p">(</span><span class="n">vocab</span><span class="p">,</span> <span class="n">id_unk</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Given a vocab, returns a lambda function word -&gt; id</span>
 
@@ -1340,7 +1340,7 @@ table {
   
       
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.text.load_formulas">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.text.load_formulas">
     <p>def <span class="ident">load_formulas</span>(</p><p>filename)</p>
     </div>
     
@@ -1348,8 +1348,8 @@ table {
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.text.load_formulas', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.text.load_formulas" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.text.load_formulas', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.text.load_formulas" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">load_formulas</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
     <span class="n">formulas</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -1367,7 +1367,7 @@ table {
   
       
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.text.load_tok_to_id">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.text.load_tok_to_id">
     <p>def <span class="ident">load_tok_to_id</span>(</p><p>filename, tokens=[])</p>
     </div>
     
@@ -1380,8 +1380,8 @@ table {
 <p>Returns:
     dict: d[token] = id</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.text.load_tok_to_id', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.text.load_tok_to_id" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.text.load_tok_to_id', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.text.load_tok_to_id" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">load_tok_to_id</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">tokens</span><span class="o">=</span><span class="p">[]):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Args:</span>
@@ -1412,7 +1412,7 @@ table {
   
       
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.text.pad_batch_formulas">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.text.pad_batch_formulas">
     <p>def <span class="ident">pad_batch_formulas</span>(</p><p>formulas, id_pad, id_end, max_len=None)</p>
     </div>
     
@@ -1428,8 +1428,8 @@ at the end of each formula</p>
     array: of shape = (batch_size, max_len) of type np.int32
     array: of shape = (batch_size) of type np.int32</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.text.pad_batch_formulas', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.text.pad_batch_formulas" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.text.pad_batch_formulas', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.text.pad_batch_formulas" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">pad_batch_formulas</span><span class="p">(</span><span class="n">formulas</span><span class="p">,</span> <span class="n">id_pad</span><span class="p">,</span> <span class="n">id_end</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Pad formulas to the max length with id_pad and adds and id_end token</span>
 <span class="sd">    at the end of each formula</span>
@@ -1465,7 +1465,7 @@ at the end of each formula</p>
   
       
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.text.write_vocab">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.text.write_vocab">
     <p>def <span class="ident">write_vocab</span>(</p><p>vocab, filename)</p>
     </div>
     
@@ -1480,8 +1480,8 @@ at the end of each formula</p>
 <p>Returns:
     write a word per line</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.text.write_vocab', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.text.write_vocab" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.text.write_vocab', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.text.write_vocab" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">write_vocab</span><span class="p">(</span><span class="n">vocab</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Writes a vocab to a file</span>
 
@@ -1514,12 +1514,12 @@ at the end of each formula</p>
     <h2 class="section-title" id="header-classes">Classes</h2>
       
       <div class="item">
-      <p id="vol.latex_ocr.model.utils.text.Vocab" class="name">class <span class="ident">Vocab</span></p>
+      <p id="cosmos.latex_ocr.model.utils.text.Vocab" class="name">class <span class="ident">Vocab</span></p>
       
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.text.Vocab', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.text.Vocab" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.text.Vocab', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.text.Vocab" class="source">
     <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">Vocab</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
@@ -1550,13 +1550,13 @@ at the end of each formula</p>
       <div class="class">
           <h3>Ancestors (in MRO)</h3>
           <ul class="class_list">
-          <li><a href="#vol.latex_ocr.model.utils.text.Vocab">Vocab</a></li>
+          <li><a href="#cosmos.latex_ocr.model.utils.text.Vocab">Vocab</a></li>
           <li>builtins.object</li>
           </ul>
           <h3>Static methods</h3>
             
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.text.Vocab.__init__">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.text.Vocab.__init__">
     <p>def <span class="ident">__init__</span>(</p><p>self, config)</p>
     </div>
     
@@ -1565,8 +1565,8 @@ at the end of each formula</p>
   
     <div class="desc"><p>Initialize self.  See help(type(self)) for accurate signature.</p></div>
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.text.Vocab.__init__', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.text.Vocab.__init__" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.text.Vocab.__init__', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.text.Vocab.__init__" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">load_vocab</span><span class="p">()</span>
@@ -1579,7 +1579,7 @@ at the end of each formula</p>
   
             
   <div class="item">
-    <div class="name def" id="vol.latex_ocr.model.utils.text.Vocab.load_vocab">
+    <div class="name def" id="cosmos.latex_ocr.model.utils.text.Vocab.load_vocab">
     <p>def <span class="ident">load_vocab</span>(</p><p>self)</p>
     </div>
     
@@ -1587,8 +1587,8 @@ at the end of each formula</p>
     
   
   <div class="source_cont">
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-vol.latex_ocr.model.utils.text.Vocab.load_vocab', this);">Show source &equiv;</a></p>
-  <div id="source-vol.latex_ocr.model.utils.text.Vocab.load_vocab" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-cosmos.latex_ocr.model.utils.text.Vocab.load_vocab', this);">Show source &equiv;</a></p>
+  <div id="source-cosmos.latex_ocr.model.utils.text.Vocab.load_vocab" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">load_vocab</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="n">special_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">unk</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">pad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">end</span><span class="p">]</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">tok_to_id</span> <span class="o">=</span> <span class="n">load_tok_to_id</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">path_vocab</span><span class="p">,</span> <span class="n">special_tokens</span><span class="p">)</span>
@@ -1606,7 +1606,7 @@ at the end of each formula</p>
   
           <h3>Instance variables</h3>
             <div class="item">
-            <p id="vol.latex_ocr.model.utils.text.Vocab.config" class="name">var <span class="ident">config</span></p>
+            <p id="cosmos.latex_ocr.model.utils.text.Vocab.config" class="name">var <span class="ident">config</span></p>
             
 
             
@@ -1616,7 +1616,7 @@ at the end of each formula</p>
 
             </div>
             <div class="item">
-            <p id="vol.latex_ocr.model.utils.text.Vocab.form_prepro" class="name">var <span class="ident">form_prepro</span></p>
+            <p id="cosmos.latex_ocr.model.utils.text.Vocab.form_prepro" class="name">var <span class="ident">form_prepro</span></p>
             
 
             
