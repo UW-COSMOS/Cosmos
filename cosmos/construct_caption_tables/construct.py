@@ -38,7 +38,7 @@ def get_target_map(html_f, target_cls, target_cls_association):
     cls_list = [(x[0], tuple(x[1]), x[2]) for x in cls_list]
     targets = [x for x in cls_list if x[0] == target_cls]
     if len(targets) == 0:
-        return None
+        return None, None
     cls_associations = [x for x in cls_list if x[0] == target_cls_association]
     target_map = {}
     for target in targets:
@@ -194,6 +194,7 @@ def construct(html_dir, target_cls, assoc_cls, output_file, processes=160):
     """
     pool = mp.Pool(processes=processes)
     ret = [pool.apply_async(construct_single_df, args=(f, target_cls, assoc_cls,)) for f in glob.glob(os.path.join(html_dir, '*.html'))]
+    results = [r.get() for r in ret]
     results = [r for r in results if r is not None]
     final_df = None
     if len(results) > 0:
