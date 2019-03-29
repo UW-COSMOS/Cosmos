@@ -9,6 +9,7 @@ from torch import nn
 import torch.nn.functional as F
 
 class RPN(nn.Module):
+    """ RPN Class """
     def __init__(self,input_depth,output_depth,ratios, scales, size=3):
         """
         Initialize a region Proposal network

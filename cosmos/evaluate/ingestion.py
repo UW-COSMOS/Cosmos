@@ -15,6 +15,7 @@ def ingest_file(path):
     lst = xml2list(path)
     labels = [item[0] for item in lst]
     coords = [item[1] for item in lst]
+    scores = [float(item[2]) for item in lst]
     x0 = [coord[0] for coord in coords]
     y0 = [coord[1] for coord in coords]
     x1 = [coord[2] for coord in coords]
@@ -24,7 +25,8 @@ def ingest_file(path):
             "x0": x0,
             "x1": x1,
             "y0": y0,
-            "y1": y1
+            "y1": y1,
+            "score": scores
         })
 
 

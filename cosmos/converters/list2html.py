@@ -6,13 +6,14 @@ import dominate
 from dominate.tags import *
 import os
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 import re
 import string
 from lxml import html, etree
 from dominate.util import raw
 from latex_ocr.img2latex import img2latex_api, get_im2latex_model
-from postprocess.postprocess import group_cls
+from postprocess.postprocess import group_cls, group_cls_columnwise
 from config import IM2LATEX_WEIGHT
 from .pdf_extractor import parse_pdf
 
@@ -178,13 +179,24 @@ def unicode_representation(unicode_df, page, root, base, t):
     return root,text,first_id
         
 
-def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, unicode_df,tesseract_hocr=True, tesseract_text=True, include_image=True, feather_x=2, feather_y=2):
-    input_list = group_cls(input_list, 'Table')
+def list2html(input_list, image_name, image_dir, output_dir, unicode_df=None,tesseract_hocr=True, tesseract_text=True, include_image=True, feather_x=2, feather_y=2):
+    """
+    Given an input list, write a corresponding html file. All extractions and postprocessing occur in this function.
+    :param input_list: List output from xml2list
+    :param image_name: Name of image corresponding to page in pdf
+    :param image_dir: image directory
+    :param output_dir: output directory to write html
+    :param unicode_df: Optional dataframe containing unicode information
+    :param tesseract_hocr: flag to include tesseract hocr
+    :param tesseract_text: flag to include tesseract text
+    :param include_image: flag to include cropped images for each hocr
+    :param feather_x: x feathering parameter to increase accuracy of ocr
+    :param feather_y: x feathering parameter to increase accuracy of ocr
+    """
+    input_list = group_cls(input_list, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
     input_list = group_cls(input_list, 'Figure')
+    #input_list = group_cls_columnwise(input_list, 'Body Text')
     doc = dominate.document(title=image_name[:-4])
-    match = FILE_NAME_PATTERN.search(image_name)
-    pdf_name = '/input/'+match.group(1)
-    page_num = int(match.group(2))
     
     
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
@@ -193,12 +205,11 @@ def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, u
         img = Image.open(os.path.join(image_dir, image_name))
         for ind, inp in enumerate(input_list):
             t, coords, score = inp
-            orig_image = Image.open(os.path.join(original_img_dir, image_name))
-            width, height = orig_image.size
+            width, height = img.size
             # Feather the coords here a bit so we can get better OCR
-            coords = [max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
+            ccoords = [max(coords[0]-feather_x, 0), max(coords[1]-feather_y, 0),
                           min(coords[2]+feather_x, width), min(coords[3]+feather_y, height)]
-            cropped = img.crop(coords)
+            cropped = img.crop(ccoords)
             input_id = str(t) + str(ind)
             hocr = pytesseract.image_to_pdf_or_hocr(cropped, extension='hocr').decode('utf-8')
             # Going to run a quick regex to find the body tag
@@ -218,16 +229,20 @@ def list2html(input_list, image_name, image_dir, output_dir, original_img_dir, u
                     dominate.tags.img(src=crop_img_path)
                 if b_text and tesseract_hocr:
                     # We do a quick loading and deloading to properly convert encodings
-                    div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                    div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}', data_score=f'{score}')
                     loaded = html.fromstring(b_text)                    
                     tree = etree.fromstring(etree.tostring(loaded))
                     latex_tree = variable_ocr(im2latex_model, tree, cropped, [])
                     div(raw(etree.tostring(latex_tree).decode("utf-8")), cls='hocr_img2latex', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
                     tree = etree.fromstring(etree.tostring(loaded))
-                    unicode_tree,text,first_id = unicode_representation(unicode_df, page_num, tree, coords, t)
-                    #occasionally the class here would be replaced by 'Page Header', cannot figure our why
-                    div(raw(etree.tostring(unicode_tree).decode("utf-8")), cls='text_unicode', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}', id=str(first_id))
-                    div(text, cls='equation_unicode')  
+                    if unicode_df is not None:
+                        match = FILE_NAME_PATTERN.search(image_name)
+                        pdf_name = '/input/'+match.group(1)
+                        page_num = int(match.group(2))
+                        unicode_tree,text,first_id = unicode_representation(unicode_df, page_num, tree, coords, t)
+                        #occasionally the class here would be replaced by 'Page Header', cannot figure our why
+                        div(raw(etree.tostring(unicode_tree).decode("utf-8")), cls='text_unicode', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}', id=str(first_id))
+                        div(text, cls='equation_unicode')  
 
                 if tesseract_text:
                     if t == 'Equation':

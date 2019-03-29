@@ -4,4 +4,4 @@ related to
 """
 class EvaluationConfig:
     multiple_proposals = False
-    e2e = False
+    e2e = True

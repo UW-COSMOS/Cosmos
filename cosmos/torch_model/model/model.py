@@ -4,6 +4,8 @@ Author: Josh McGrath
 """
 import torch
 from torch import nn
+from .attention.embedder import ImageEmbedder
+from .attention.transformer import MultiHeadAttention
 from .layers.featurization import Featurizer
 from .head.object_classifier import MultiModalClassifier
 from .utils.config_manager import ConfigManager
@@ -16,26 +18,54 @@ class MMFasterRCNN(nn.Module):
         """
         super(MMFasterRCNN, self).__init__()
         cfg = ConfigManager(cfg)
+        print("===== BUILDING MODEL ======")
         self.featurizer = Featurizer(cfg)
-        N, H, W, D = get_shape_info(self.featurizer.backbone, (1, 3, cfg.WARPED_SIZE, cfg.WARPED_SIZE))
+        print(f"Built backbone {cfg.BACKBONE}")
+        print("Building downstream components via shape testing")
+        N, D, H,W  = get_shape_info(self.featurizer.backbone, (1, 3, cfg.WARPED_SIZE, cfg.WARPED_SIZE))
+        print("done shape testing, building, attention mechanisms")
+        self.attention = MultiHeadAttention(cfg.NHEADS, cfg.EMBEDDING_DIM)
+        print("built multi head attention")
+        print(f"{H}, {W}, {D}")
+        self.embedder = ImageEmbedder(H,D, cfg.EMBEDDING_INTERMEDIATE, cfg.EMBEDDING_DIM)
+        print("built embeddings")
         self.head = MultiModalClassifier(H,
                                          W,
                                          D,
                                          cfg.HEAD_DIM,
+                                         cfg.NHEADS,
                                          len(cfg.CLASSES))
+        print("done")
         self.cls_names = cfg.CLASSES
 
 
-    def forward(self, *inputs, **kwargs):
+    def forward(self, input_windows,neighbor_windows, radii, angles, colors,proposals, device):
         """
         Process an Image through the network
+        :param input_windows: Tensor representing target window pixels
+        :param neighbor_windows: Tensor representing neighbor window pixels
+        :param radii: neighborhood embedding radii
+        :param angles: neighborhood angle input
+        :param colors: Color input
+        :param proposals: proposals list
+        :param device: Device config
+        :return: proposals, associated class scores
         """
-        maps, proposals = self.featurizer(*inputs, **kwargs)
-        cls_scores = self.head(maps)
-        return proposals,  cls_scores
+        maps = self.featurizer(input_windows, device)
+        V = self.featurizer(neighbor_windows, device)
+        Q = self.embedder(maps, torch.tensor([[0.0]]).to(device),torch.tensor([[0.0]]).to(device))
+        K = self.embedder(V, radii, angles)
+        attn_maps = self.attention(Q,K,V)
+        cls_scores = self.head(maps, attn_maps,colors, proposals)
+        return proposals, cls_scores
 
-
+ 
     def set_weights(self,mean, std):
+        '''
+        Set weights
+        :param mean: weight mean
+        :param std: weight standard deviation
+        '''
         for child in self.children():
             if child == self.featurizer:
                 continue
