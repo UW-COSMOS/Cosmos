@@ -1,0 +1,3 @@
+"""
+Dummy visualization
+"""

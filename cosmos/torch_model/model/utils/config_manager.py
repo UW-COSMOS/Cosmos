@@ -9,6 +9,9 @@ class Struct:
 
 
 class ConfigManager:
+    """
+    Basic config singleton for easily accessing config parameters
+    """
     class __Singleton:
         def __init__(self, fp):
             """

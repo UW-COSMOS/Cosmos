@@ -19,12 +19,12 @@ import os
 
 
 def get_components(bmap, numpy=False):
-    '''
+    """
     Given a binary map, output an 8-connected components region
     :param bmap: Input binary map
     :param numpy: By default we accept pytorch maps, but change this to True to pass in numpy array
     :return: List of coordinates (tl_x, tl_y, br_x, br_y) corresponding to connected components 
-    '''
+    """
     if numpy:
         bmap = torch.from_numpy(bmap)
     label_map = np.zeros(bmap.shape)
@@ -141,12 +141,12 @@ def get_components(bmap, numpy=False):
 
 
 def balance_margins(bmap, img):
-    '''
+    """
     Given an input binary map, balance possibly unequal margins. The motivation is to better determine the column number
     :param bmap: Binary input map (numpy nd array)
     :param img: Map of original image (np nd array)
     :return: Adjusted bmap, Adjusted img, left margin difference (must adjust downstream)
-    '''
+    """
     img_height = bmap.shape[0]
     zero_col = np.zeros(img_height)
     left_w, right_w = 0, 0
@@ -179,6 +179,12 @@ def balance_margins(bmap, img):
 
 
 def get_blank_rows(inp_np, blank_row_h):
+    """
+    Helper function to get blank rows in input nd array
+    :param inp_np: Input nd_array
+    :param blank_row_h: Blank row height
+    :return: [integer denoting separation locations via y axis]
+    """
     blank_row = np.zeros((blank_row_h, inp_np.shape[1]))
     curr_top = 0
     curr_bot = blank_row_h
@@ -205,6 +211,14 @@ def get_blank_rows(inp_np, blank_row_h):
     return white_rows
 
 def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=10, filter_thres=5):
+    """
+     Function that handles writing of object proposals
+    :param img_p: Path to image
+    :param output_dir: Path to output directory
+    :param white_thres: Threshold to filter non white pixels
+    :param blank_row_height: row height parameter
+    :param filter_thres: Filter object size threshold parameter
+    """
     img = Image.open(img_p)
     fn = lambda x : 0 if x > white_thresh else 255
     img_np = np.array(img.convert('RGB'))
@@ -224,6 +238,8 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
     block_coords = set()
     block_coords2 = {}
     blocks_list = []
+    obj_count = 0
+    obj_heights = 0
     for row, top_coord, bottom_coord in rows:
         num_cols = get_columns_for_row(row)
         blocks, coords, col_idx = divide_row_into_columns(row, num_cols)
@@ -252,10 +268,19 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
 
                 key = (num_cols, column_index)
                 val = (top_coord + c2 + y1, c[0] + x1, top_coord + c2 + y2, c[0]+x2)
+                obj_count += 1
+                obj_heights += y2 - y1
+
                 if key in block_coords2:
                     block_coords2[key].append(val)
                 else:
                     block_coords2[key] = [val]
+    
+    if obj_count > 0:
+        avg_height = obj_heights / obj_count
+        if avg_height < 3 * blank_row_height:
+            write_proposals(img_p, output_dir, white_thresh=white_thresh, blank_row_height=2 * blank_row_height, filter_thres=filter_thres)
+            return
     for key in block_coords2:
         coords_list = block_coords2[key]
         for ind2, bc in enumerate(coords_list):
@@ -279,22 +304,13 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
     return
 
 
-def draw_grid(img_np, block_coords):
-    for coords in block_coords:
-        img_np[coords[0]:coords[2], coords[1]-1:coords[1]+1, :] = 50
-        img_np[coords[0]:coords[2], coords[3]-1:coords[3]+1, :] = 50
-        img_np[coords[0]-1:coords[0]+1, coords[1]:coords[3], :] = 50
-        img_np[coords[2]-1:coords[2]+1, coords[1]:coords[3], :] = 50
-    Image.fromarray(img_np).save('test.png')
-
-
 def draw_cc(img_np, cc_list, write_img_p=None):
-    '''
+    """
     convenience function to visualize output proposals
     :param img_np: Input np ndarray to write onto. Shape should by N x M x K, where N and M are less than max coords passed in and K is arbitrary
     :param cc_list: list of coordinates to draw boxes
     :param write_img_p: file path to save to
-    '''
+    """
     for coords in cc_list:
         img_np[coords[1]:coords[3], coords[0]-2:coords[0]+2, :] = 50
         img_np[coords[1]:coords[3], coords[2]-2:coords[2]+2, :] = 50
@@ -305,11 +321,16 @@ def draw_cc(img_np, cc_list, write_img_p=None):
 
 
 def get_columns_for_row(row):
+    """
+    Detect number of columns in a row
+    :param row: nd array denoting row
+    :return: number of columns
+    """
     # 3/100 width = test width. We need half that for later
     test_width = int(math.ceil(row.shape[1] / 200))
     half_test_width = int(math.ceil(test_width / 2))
     curr_c = 1
-    for c in range(2, 6):
+    for c in range(2, 4):
         # Attempt to divide rows into c columns
         row_w = row.shape[1]
         # Check the row at the middle positions for column
@@ -327,6 +348,12 @@ def get_columns_for_row(row):
 
 
 def divide_row_into_columns(row, n_columns):
+    """
+    Divide a row into columns
+    :param row: nd_array representing the row
+    :param n_columns: number of columns to split into
+    :return: [nd_arrays of splits], [coords of splits], [column indices of splits]
+    """
     splits = []
     coords = []
     col_idx = []
@@ -345,6 +372,12 @@ def divide_row_into_columns(row, n_columns):
 
 
 def run_write_proposals(img_dir, output_dir, procs):
+    """
+    Helper function to run write proposals separately from run.py
+    :param img_dir: path to image directory
+    :param output_dir: Folder to put output proposals
+    :param procs: number of parallel processes to spawn
+    """
     pool = mp.Pool(processes=procs)
     results = [pool.apply_async(write_proposals, (os.path.join(img_dir,x),), dict(output_dir=output_dir)) for x in os.listdir(img_dir)]
     [r.get() for r in results]
@@ -352,7 +385,7 @@ def run_write_proposals(img_dir, output_dir, procs):
 @click.command()
 @click.argument('img_dir')
 @click.argument('output_dir')
-@click.option("--n", help="number of pooled processes", default=240)
+@click.option("--procs", help="number of pooled processes", default=240)
 def run_write_proposals_cli(img_dir, output_dir, procs):
     run_write_proposals(img_dir, output_dir, procs)
 

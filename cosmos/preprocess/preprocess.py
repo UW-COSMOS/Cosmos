@@ -56,6 +56,12 @@ def pdf2png(input_dir, tmp_dir):
 
 
 def resize_png(path, size=1920):
+    """
+    Resize the PNG, but do not pad
+    :param path: Path to png
+    :param size: size to check to
+    :return: path to image, Pil.Image
+    """
     im = Image.open(path).convert('RGB')
     w, h = im.size
     if w >= size or h >= size:
@@ -66,6 +72,13 @@ def resize_png(path, size=1920):
     return path,im
 
 def pad_image(path, image=None, size=1920):
+    """
+    Pad the image to the desired size
+    :param path: path to image
+    :param image: optional PIL image object that will be padded instead of opening image at path
+    :param size: size to pad to
+    :return: path to image, padded PIL image
+    """
     im = Image.open(path).convert('RGB') if image is None else image
     w, h = im.size
     d_w = size - w
