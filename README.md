@@ -1,6 +1,8 @@
 # Cosmos
 Interface for applying Cosmos to document segmentation
 
+Current milestone (with demo links): https://github.com/UW-COSMOS/project-docs/tree/master/presentations_reports/milestone_3
+
 # Running the model
 
 1. Switch to the cosmos directory
