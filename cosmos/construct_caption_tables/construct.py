@@ -194,7 +194,6 @@ def construct(html_dir, target_cls, assoc_cls, output_file, processes=160):
     """
     pool = mp.Pool(processes=processes)
     ret = [pool.apply_async(construct_single_df, args=(f, target_cls, assoc_cls,)) for f in glob.glob(os.path.join(html_dir, '*.html'))]
-    results = [r.get() for r in ret]
     results = [r for r in results if r is not None]
     final_df = None
     if len(results) > 0:
