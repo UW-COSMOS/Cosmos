@@ -28,6 +28,8 @@ from utils.voc_utils import ICDAR_convert
 from connected_components.connected_components import write_proposals
 from proposal_matcher.process import process_doc
 from config import ingestion_settings
+import psycopg2
+
 
 # PDF directory path
 
@@ -50,6 +52,9 @@ tmp = args.tmp_path
 xml = os.path.join(args.output, "xml")
 html = os.path.join(args.output, "html")
 img_d = os.path.join(tmp, 'images2')
+
+#clear the output folder
+os.system('rm -rf '+os.path.join(args.output, "*"))
 
 # Define and create required paths
 req_paths = [tmp, f'{tmp}/images', f'{tmp}/images2', f'{tmp}/cc_proposals', xml]
@@ -184,6 +189,7 @@ output_words = ingestion_settings['output_words']
 output_equations = ingestion_settings['output_equations']
 
 db_connect_str = ingestion_settings['db_connect_str']
+db_template_str = ingestion_settings['db_template_str']
 
 strip_tags = ingestion_settings['strip_tags']
 ignored_file_when_link = ingestion_settings['ignored_file_when_link']
@@ -191,6 +197,18 @@ output_csv = os.path.join(args.output, "output.csv")
 corenlp_fd = '/app/stanford-corenlp-full-2018-10-05'
 
 if not args.noingest:
+    conn = psycopg2.connect(db_template_str)
+    conn.set_isolation_level(0)
+    cur = conn.cursor()
+    try:
+        cur.execute("""DROP DATABASE cosmos""")
+    except:
+        print("Cannot drop db cosmos")
+    try:
+        cur.execute("""CREATE DATABASE cosmos""")
+    except:
+        print("Cannot create db cosmos")
+    conn.close()
     parse_html_to_postgres(input_folder, output_html, merge_folder, output_words, output_equations, db_connect_str, strip_tags, ignored_file_when_link, output_csv, corenlp_fd)
 
 shutil.copytree('tmp/images/',os.path.join(args.output, "images")) 
