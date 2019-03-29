@@ -19,13 +19,20 @@ The entry points for the program is cosmos/run.py
 
 The procedure of the program is laid out generally as follows (docs correspond to to paths)
 
-1. Preprocessing -- cosmos/preprocessing
+1. Preprocessing -- cosmos/preprocessing 
+    - Turn PDFs into PNGs so that they can be fed to a computer vision pipeline.
 2. Create proposals -- cosmos/connected_components
+    - Generate region proposals within document pages, this segments each page.
 3. Ingesting data -- cosmos/ingestion
-4. Run model inference -- Inference runner: cosmos/infer ||  Model definition: cosmos/model
-5. Converters to convert to HTML/XML -- After inference, results are converted to HTML/XML: cosmos/converters
+   - Prepare region proposals to be classified by a Neural Network as Body Text, Equation, Figure, etc.
+4. Model inference -- Inference runner: cosmos/infer ||  Model definition: cosmos/model
+   - Run the Neural Network on each region proposal.
+5. Convert to HTML/XML --  cosmos/converters
+   -  Results are converted to HTML/XML and class specific information extraction modules are run.
 6. Postprocessing -- cosmos/postprocessing
+   - Update class labels in light of extracted information.
 7. Equation specific OCR -- cosmos/latex_ocr
+   - Custom extraction pipeline for equations.
 8. Create knowledge base of figures and tables -- cosmos/construct_caption_tables
 9. Create knowledge base of equations -- cosmos/UnicodeParser
 
