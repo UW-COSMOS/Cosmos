@@ -118,6 +118,8 @@ USER user
 RUN pip install -r requirements.txt --user
 RUN pip uninstall -y spacy
 RUN pip install spacy==2.0.18
+RUN python -m spacy download en_core_web_sm
+RUN python -m spacy download en
 
 COPY . .
 
