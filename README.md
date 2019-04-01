@@ -8,18 +8,20 @@ We provide a docker image that includes everything necessary to run the model.
 
 
 
-**NOTE**: 
+**NOTE**:
 For performance and stability, it is *highly* recommended to run on a GPU. CPU running is heavily architecture-dependent. A `DEVICE` environment variable dictates which hardware to use,
 either `DEVICE=cpu` or `DEVICE=cuda:0`
 
 ## Running on CPU:
+To bypass dependency on GPU drivers and run the pipeline on CPU (with a performance penalty):
 ```
-OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cpu docker-compose -f docker-compose-standalone.yml up
+OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cpu docker-compose -f docker-compose-standalone-CPU.yml up
 ```
 
 ## Running on a GPU:
+Running the pipeline on GPU requires GPU drivers:
 ```
-OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cuda:0 docker-compose -f docker-compose-standalone.yml up
+OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cuda:0 docker-compose -f docker-compose-standalone-GPU.yml up
 ```
 
 
@@ -44,7 +46,7 @@ The entry points for the program is cosmos/run.py
 
 The procedure of the program is laid out generally as follows (docs correspond to to paths)
 
-1. Preprocessing -- cosmos/preprocessing 
+1. Preprocessing -- cosmos/preprocessing
     - Turn PDFs into PNGs so that they can be fed to a computer vision pipeline.
 2. Create proposals -- cosmos/connected_components
     - Generate region proposals within document pages, this segments each page.
@@ -60,4 +62,3 @@ The procedure of the program is laid out generally as follows (docs correspond t
    - Custom extraction pipeline for equations.
 8. Create knowledge base of figures and tables -- cosmos/construct_caption_tables
 9. Create knowledge base of equations -- cosmos/UnicodeParser
-
