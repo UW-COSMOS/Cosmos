@@ -1043,29 +1043,19 @@ table {
 
 
 
-    <li class="set"><h3><a href="#header-submodules">Sub-modules</a></h3>
+    <li class="set"><h3><a href="#header-submodules">Pipeline modules</a></h3>
       <ul>
-        <li class="mono"><a href="Parser/index.html">cosmos.Parser</a></li>
-        <li class="mono"><a href="UnicodeParser/index.html">cosmos.UnicodeParser</a></li>
-        <li class="mono"><a href="apply_post_processing.m.html">cosmos.apply_post_processing</a></li>
-        <li class="mono"><a href="config.m.html">cosmos.config</a></li>
-        <li class="mono"><a href="connected_components/index.html">cosmos.connected_components</a></li>
-        <li class="mono"><a href="construct_caption_tables/index.html">cosmos.construct_caption_tables</a></li>
-        <li class="mono"><a href="converters/index.html">cosmos.converters</a></li>
-        <li class="mono"><a href="dataset/index.html">cosmos.dataset</a></li>
-        <li class="mono"><a href="eval.m.html">cosmos.eval</a></li>
-        <li class="mono"><a href="infer/index.html">cosmos.infer</a></li>
-        <li class="mono"><a href="ingestion/index.html">cosmos.ingestion</a></li>
-        <li class="mono"><a href="latex_ocr/index.html">cosmos.latex_ocr</a></li>
-        <li class="mono"><a href="postprocess/index.html">cosmos.postprocess</a></li>
-        <li class="mono"><a href="preprocess/index.html">cosmos.preprocess</a></li>
-        <li class="mono"><a href="propose.m.html">cosmos.propose</a></li>
-        <li class="mono"><a href="run.m.html">cosmos.run</a></li>
-        <li class="mono"><a href="tests/index.html">cosmos.tests</a></li>
-        <li class="mono"><a href="torch_model/index.html">cosmos.torch_model</a></li>
-        <li class="mono"><a href="train_net.m.html">cosmos.train_net</a></li>
-        <li class="mono"><a href="utils/index.html">cosmos.utils</a></li>
-        <li class="mono"><a href="visualize/index.html">cosmos.visualize</a></li>
+        <li class="mono"><a href="preprocess/index.html">Preprocessing</a></li>
+        <li class="mono"><a href="connected_components/index.html">Grid proposals</a></li>
+        <li class="mono"><a href="ingestion/index.html">Database Ingestion</a></li>
+        <li class="mono"><a href="torch_model/index.html">Attentive-RCNN Model</a></li>
+        <li class="mono"><a href="infer/index.html">Inference</a></li>
+        <li class="mono"><a href="converters/index.html">Converters</a></li>
+        <li class="mono"><a href="postprocess/index.html">Postprocessing</a></li>
+        <li class="mono"><a href="latex_ocr/index.html">LaTeX Specific OCR</a></li>
+        <li class="mono"><a href="construct_caption_tables/index.html">Table and Figure Knowledge Base Construction</a></li>
+        <li class="mono"><a href="UnicodeParser/index.html">Equation/Body Text Knowledge Base</a></li>
+        <li class="mono"><a href="misc.html">Miscellaneous modules</a></li>
       </ul>
     </li>
     </ul>
@@ -1106,153 +1096,84 @@ table {
 
 
 
-    <h2 class="section-title" id="header-submodules">Sub-modules</h2>
+    <h2 class="section-title" id="header-submodules">Pipeline Modules</h2>
+    <div class="item">
+      <p class="name"><a href="preprocess/index.html">Preprocessing</a></p>
+
+
+      <div class="desc"><p>Preprocessing module</p></div>
+
+    </div>
+    <div class="item">
+      <p class="name"><a href="connected_components/index.html">Grid proposals</a></p>
+
+
+      <div class="desc"><p>Grid proposal algorithm module</p></div>
+
+    </div>
+    <div class="item">
+      <p class="name"><a href="ingestion/index.html">Database Ingestion</a></p>
+
+
+      <div class="desc"><p>Ingestion module for ImageDB</p></div>
+
+    </div>
+    <div class="item">
+      <p class="name"><a href="torch_model/index.html">Attentive-RCNN Model</a></p>
+
+
+      <div class="desc"><p>Directory containing code specifying Attentive-RCNN</p></div>
+
+    </div>
+    <div class="item">
+      <p class="name"><a href="infer/index.html">Inference</a></p>
+
+
+      <div class="desc"><p>Inference module</p></div>
+
+    </div>
+    <div class="item">
+      <p class="name"><a href="converters/index.html">Converters</a></p>
+
+
+      <div class="desc"><p>Converters module</p></div>
+
+    </div>
+    <div class="item">
+      <p class="name"><a href="postprocess/index.html">Postprocessing</a></p>
+
+
+      <div class="desc"><p>Postprocessing module</p></div>
+
+    </div>
+    <div class="item">
+      <p class="name"><a href="latex_ocr/index.html">LaTeX Specific OCR</a></p>
+
+
+      <div class="desc"><p>Module for doing ocr for latex</p></div>
+
+    </div>
+    <div class="item">
+      <p class="name"><a href="construct_caption_tables/index.html">Table and Figure Knowledge Base Construction</a></p>
+
+
+      <div class="desc"><p>Module to construct tables and figures csvs</p></div>
+
+    </div>
       <div class="item">
-      <p class="name"><a href="Parser/index.html">cosmos.Parser</a></p>
-      
-  
-    <div class="desc"><p>Parser code for html ingestion</p></div>
+      <p class="name"><a href="UnicodeParser/index.html">Equation/Body Text Knowledge Base Construction</a></p>
+
+
+    <div class="desc"><p>Construct a knowledge base from equations and body text.</p></div>
 
       </div>
-      <div class="item">
-      <p class="name"><a href="UnicodeParser/index.html">cosmos.UnicodeParser</a></p>
-      
-  
-    <div class="desc"><p>Unicode Parser module
-Parses html results to postgres</p></div>
+    <div class="item">
+      <p class="name"><a href="misc.html">Miscellaneous Modules</a></p>
 
-      </div>
-      <div class="item">
-      <p class="name"><a href="apply_post_processing.m.html">cosmos.apply_post_processing</a></p>
-      
-  
-    <div class="desc"><p>Apply some postprocessing to an xml set</p></div>
 
-      </div>
-      <div class="item">
-      <p class="name"><a href="config.m.html">cosmos.config</a></p>
-      
-  
+      <div class="desc"><p>Miscellaneous code required for the model, but not directly in above modules.</p></div>
 
-      </div>
-      <div class="item">
-      <p class="name"><a href="connected_components/index.html">cosmos.connected_components</a></p>
-      
-  
-    <div class="desc"><p>Grid proposal algorithm module</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="construct_caption_tables/index.html">cosmos.construct_caption_tables</a></p>
-      
-  
-    <div class="desc"><p>Module to construct tables and figures csvs</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="converters/index.html">cosmos.converters</a></p>
-      
-  
-    <div class="desc"><p>Converters module</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="dataset/index.html">cosmos.dataset</a></p>
-      
-  
-    <div class="desc"><p>Some dataset classes</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="eval.m.html">cosmos.eval</a></p>
-      
-  
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="infer/index.html">cosmos.infer</a></p>
-      
-  
-    <div class="desc"><p>Inference module</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="ingestion/index.html">cosmos.ingestion</a></p>
-      
-  
-    <div class="desc"><p>Ingestion module for ImageDB</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="latex_ocr/index.html">cosmos.latex_ocr</a></p>
-      
-  
-    <div class="desc"><p>Module for doing ocr for latex</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="postprocess/index.html">cosmos.postprocess</a></p>
-      
-  
-    <div class="desc"><p>Postprocessing module</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="preprocess/index.html">cosmos.preprocess</a></p>
-      
-  
-    <div class="desc"><p>Preprocessing module</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="propose.m.html">cosmos.propose</a></p>
-      
-  
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="run.m.html">cosmos.run</a></p>
-      
-  
-    <div class="desc"><p>Script to run an end to end pipeline</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="tests/index.html">cosmos.tests</a></p>
-      
-  
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="torch_model/index.html">cosmos.torch_model</a></p>
-      
-  
-    <div class="desc"><p>Torch model directory</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="train_net.m.html">cosmos.train_net</a></p>
-      
-  
-    <div class="desc"><p>run the model training
-on already preprocessed data
-Author: Josh McGrath</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="utils/index.html">cosmos.utils</a></p>
-      
-  
-    <div class="desc"><p>General utils module</p></div>
-
-      </div>
-      <div class="item">
-      <p class="name"><a href="visualize/index.html">cosmos.visualize</a></p>
-      
-  
-    <div class="desc"><p>Dummy visualization</p></div>
-
-      </div>
+    </div>
   </section>
 
     </article>

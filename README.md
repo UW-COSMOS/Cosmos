@@ -4,29 +4,10 @@ Interface for applying Cosmos to document segmentation
 Current milestone (with demo links): https://github.com/UW-COSMOS/project-docs/tree/master/presentations_reports/milestone_3
 
 # Running the standalone images
-We provide a docker image that includes everything necessary to run the model.
+We provide a separate repo (https://github.com/UW-COSMOS/cosmos-demo) describing how to use our canonical docker images, which include everything necessary to run the model.
 
 
-
-**NOTE**: 
-For performance and stability, it is *highly* recommended to run on a GPU. CPU running is heavily architecture-dependent. A `DEVICE` environment variable dictates which hardware to use,
-either `DEVICE=cpu` or `DEVICE=cuda:0`
-
-## Running on CPU:
-```
-OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cpu docker-compose -f docker-compose-standalone.yml up
-```
-
-## Running on a GPU:
-```
-OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cuda:0 docker-compose -f docker-compose-standalone.yml up
-```
-
-
-
-
-
-# Building + running the model
+# Building + running the model from scratch
 It is also possible to build the model image yourself. To do so:
 
 1. Switch to the cosmos directory
@@ -38,13 +19,13 @@ OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cpu docker-compose up
 
 # Layout of the model
 
-Documentation can be found in cosmos/api_folder
+Documentation can be viewed at https://uw-cosmos.github.io/Cosmos/
 
 The entry points for the program is cosmos/run.py
 
-The procedure of the program is laid out generally as follows (docs correspond to to paths)
+The procedure of the program is laid out generally as follows (docs correspond to paths)
 
-1. Preprocessing -- cosmos/preprocessing 
+1. Preprocessing -- cosmos/preprocessing
     - Turn PDFs into PNGs so that they can be fed to a computer vision pipeline.
 2. Create proposals -- cosmos/connected_components
     - Generate region proposals within document pages, this segments each page.
@@ -60,4 +41,3 @@ The procedure of the program is laid out generally as follows (docs correspond t
    - Custom extraction pipeline for equations.
 8. Create knowledge base of figures and tables -- cosmos/construct_caption_tables
 9. Create knowledge base of equations -- cosmos/UnicodeParser
-
