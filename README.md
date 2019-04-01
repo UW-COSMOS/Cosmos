@@ -19,11 +19,11 @@ OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cpu docker-compose up
 
 # Layout of the model
 
-Documentation can be found in cosmos/api_folder
+Documentation can be viewed at https://uw-cosmos.github.io/Cosmos/
 
 The entry points for the program is cosmos/run.py
 
-The procedure of the program is laid out generally as follows (docs correspond to to paths)
+The procedure of the program is laid out generally as follows (docs correspond to paths)
 
 1. Preprocessing -- cosmos/preprocessing
     - Turn PDFs into PNGs so that they can be fed to a computer vision pipeline.
