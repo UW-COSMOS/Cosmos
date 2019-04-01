@@ -4,31 +4,10 @@ Interface for applying Cosmos to document segmentation
 Current milestone (with demo links): https://github.com/UW-COSMOS/project-docs/tree/master/presentations_reports/milestone_3
 
 # Running the standalone images
-We provide a docker image that includes everything necessary to run the model.
+We provide a separate repo (https://github.com/UW-COSMOS/cosmos-demo) describing how to use our canonical docker images, which include everything necessary to run the model.
 
 
-
-**NOTE**:
-For performance and stability, it is *highly* recommended to run on a GPU. CPU running is heavily architecture-dependent. A `DEVICE` environment variable dictates which hardware to use,
-either `DEVICE=cpu` or `DEVICE=cuda:0`
-
-## Running on CPU:
-To bypass dependency on GPU drivers and run the pipeline on CPU (with a performance penalty):
-```
-OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cpu docker-compose -f docker-compose-standalone-CPU.yml up
-```
-
-## Running on a GPU:
-Running the pipeline on GPU requires GPU drivers:
-```
-OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cuda:0 docker-compose -f docker-compose-standalone-GPU.yml up
-```
-
-
-
-
-
-# Building + running the model
+# Building + running the model from scratch
 It is also possible to build the model image yourself. To do so:
 
 1. Switch to the cosmos directory
