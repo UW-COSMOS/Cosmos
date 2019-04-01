@@ -76,7 +76,8 @@ def xml2list(fp, tres=0, feather=False):
     root = tree.getroot()
     objects = root.findall("object")
     lst = [mapper(obj) for obj in objects]
-    new_lst = [l for l in lst if l[2] >= tres]
+    print(lst)
+    new_lst = [l for l in lst]
     feathered_new_lst = None
     if feather:
         feathered_new_lst = feather_list(new_lst)
