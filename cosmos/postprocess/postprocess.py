@@ -45,7 +45,7 @@ def check_caption_body(soup):
 
     Returns: Corrected soup
     """
-    
+
     # Basic rule to set Page headers and footers
     hocr_list = construct_hocr_list(soup)
     hocr_list = sorted(hocr_list, key=lambda x: x[1][1])
@@ -64,15 +64,15 @@ def check_caption_body(soup):
         #        seg_type["class"] = "Page Header"
         lines = seg_type.find_all('span', 'ocr_line')
         if len(lines) > 0:
-            for line in lines:
-                clean_line = line.getText().strip().replace('\n', ' ').replace('  ', ' ').lower()
-                matches = re.findall('^(figure|fig)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', clean_line, flags=re.IGNORECASE|re.MULTILINE)
-                if len(matches) >0:
-                    seg_type["class"] = "Figure Caption"
-                matches = re.findall('^(table|tbl|tab)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', clean_line, flags=re.IGNORECASE|re.MULTILINE)
-                if len(matches) >0 and seg_class != 'Table':
-                    seg_type["class"] = "Table Caption"
-    
+            line = lines[0]
+            clean_line = line.getText().strip().replace('\n', ' ').replace('  ', ' ').lower()
+            matches = re.findall('^(figure|fig)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', clean_line, flags=re.IGNORECASE|re.MULTILINE)
+            if len(matches) >0:
+                seg_type["class"] = "Figure Caption"
+            matches = re.findall('^(table|tbl|tab)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', clean_line, flags=re.IGNORECASE|re.MULTILINE)
+            if len(matches) >0 and seg_class != 'Table':
+                seg_type["class"] = "Table Caption"
+
     return soup
 
 def check_overlap(obj_list, box, check_above_below=False, check_cls=None):
@@ -88,7 +88,7 @@ def check_overlap(obj_list, box, check_above_below=False, check_cls=None):
             continue
         return False
     return True
- 
+
 
 def group_cls_columnwise(obj_list, g_cls):
     """
@@ -168,7 +168,7 @@ def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
                     nbhd2, scr2 = nbhd2
                     if nbhd2 == nbhd:
                         continue
-                    iou = calculate_iou(nbhd, nbhd2) 
+                    iou = calculate_iou(nbhd, nbhd2)
                     if iou > 0:
                         # merge the neighborhoods
                         new_box = [min(nbhd[0], nbhd2[0]), min(nbhd[1], nbhd2[1]), max(nbhd[2], nbhd2[2]), max(nbhd[3], nbhd2[3])]
