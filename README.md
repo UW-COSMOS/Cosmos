@@ -42,7 +42,7 @@ The procedure of the program is laid out generally as follows (docs correspond t
 8. Create knowledge base of figures and tables -- cosmos/construct_caption_tables
 9. Create knowledge base of equations -- cosmos/UnicodeParser
 
-# License and Acknoledgements
+# License and Acknowledgements
 All development work supported by DAPRA ASKE HR00111990013 and UW-Madison.
 
 Licensed under the Apache License, Version 2.0 (the "License");
