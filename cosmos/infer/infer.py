@@ -46,7 +46,7 @@ def run_inference(img_dir, proposal_dir, model_config, weights, out_dir, device_
 @click.argument("weights")
 @click.argument("out_dir")
 def run_cli(img_dir, proposal_dir, model_config,weights, out_dir):
-    run_inference(img_dir, proposal_dir, model_config,weights, out_dir)
+    run_inference(img_dir, proposal_dir, model_config,weights, out_dir, 'cuda:0')
 
 if __name__ == "__main__":
     run_cli()
