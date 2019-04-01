@@ -210,7 +210,7 @@ def get_blank_rows(inp_np, blank_row_h):
         curr_bot = curr_top + blank_row_h
     return white_rows
 
-def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=10, filter_thres=5):
+def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blank_row_height=15, filter_thres=5):
     """
      Function that handles writing of object proposals
     :param img_p: Path to image
