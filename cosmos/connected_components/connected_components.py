@@ -254,17 +254,16 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
                 nxt = white_rows[i+1]
                 rows2.append((b[curr:nxt, :], curr, nxt))
             for r, c2, n in rows2:
-                components = get_components(r, numpy=True)
-                if len(components) == 0:
+                # Replacing components with finding the proper pixel vals
+                one_inds = np.argwhere(r)
+                if len(one_inds) == 0:
                     continue
-                x1 = min(components, key=lambda x: x[1])
-                x1 = x1[1]
-                y1 = min(components, key=lambda x: x[0])
-                y1 = y1[0]
-                x2 = max(components, key=lambda x: x[3])
-                x2 = x2[3]
-                y2 = max(components, key=lambda x: x[2])
-                y2 = y2[2]
+                h_one_inds = np.hsplit(one_inds, 2)
+
+                x1 = int(np.min(h_one_inds[1]))
+                y1 = int(np.min(h_one_inds[0]))
+                x2 = int(np.max(h_one_inds[1]))
+                y2 = int(np.max(h_one_inds[0]))
 
                 key = (num_cols, column_index)
                 val = (top_coord + c2 + y1, c[0] + x1, top_coord + c2 + y2, c[0]+x2)
