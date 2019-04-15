@@ -107,21 +107,39 @@ if __name__ == '__main__':
         htmlfile2xml(hpath, xml)
 
     pool = mp.Pool(processes=args.threads)
-    results = [pool.apply_async(preprocess_pdfs, args=(x,)) for x in os.listdir(args.pdfdir)]
-    [r.get() for r in results]
 
-    results = [pool.apply_async(resize_pngs, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
-    [r.get() for r in results]
+    print('Start preprocessing pdfs')
+    if args.threads == 1:
+        [preprocess_pdfs(x) for x in os.listdir(args.pdfdir)]
+    else:
+        results = [pool.apply_async(preprocess_pdfs, args=(x,)) for x in os.listdir(args.pdfdir)]
+        [r.get() for r in results]
+    print('End preprocessing pdfs')
+
+    print('Begin resizing pngs')
+    if args.threads == 1:
+        [resize_pngs(x) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+    else:
+        results = [pool.apply_async(resize_pngs, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+        [r.get() for r in results]
+    print('End resizing pngs')
 
     print('Begin writing proposals')
-
-    results = [pool.apply_async(write_proposals, args=(os.path.join(f'{tmp}', 'images', x),), kwds={"output_dir" : os.path.join(tmp,"cc_proposals")}) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
-    [r.get() for r in results]
+    if args.threads == 1:
+        [write_proposals(os.path.join(f'{tmp}', 'images', x), output_dir=os.path.join(tmp,"cc_proposals")) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+    else:
+        results = [pool.apply_async(write_proposals, args=(os.path.join(f'{tmp}', 'images', x),), kwds={"output_dir" : os.path.join(tmp,"cc_proposals")}) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+        [r.get() for r in results]
+    print('End writing proposals')
 
 
     print('Begin preprocessing pngs')
-    results = [pool.apply_async(preprocess_pngs, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
-    [r.get() for r in results]
+    if args.threads == 1:
+        [preprocess_pngs(x) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+    else:
+        results = [pool.apply_async(preprocess_pngs, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+        [r.get() for r in results]
+    print('End preprocessing pngs')
 
     with open('test.txt', 'w') as wf:
         for f in os.listdir(f'{tmp}/images'):
@@ -137,8 +155,12 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(html, 'latex'))
 
     print('Begin converting to html')
-    results = [pool.apply_async(convert_to_html, args=(x,)) for x in os.listdir(xml)]
-    [r.get() for r in results]
+    if args.threads == 1:
+        [convert_to_html(x) for x in os.listdir(xml)]
+    else:
+        results = [pool.apply_async(convert_to_html, args=(x,)) for x in os.listdir(xml)]
+        [r.get() for r in results]
+    print('End converting to html')
 
     # postprocess
     tmp_html = html.replace('html', 'html_tmp')
@@ -154,8 +176,13 @@ if __name__ == '__main__':
         shutil.rmtree(html)
         shutil.move(tmp_html, html)
 
-    results = [pool.apply_async(update_xmls, args=(x,)) for x in os.listdir(html) if x != 'img']
-    [r.get() for r in results]
+    print('Begin updating xmls')
+    if args.threads == 1:
+        [update_xmls(x) for x in os.listdir(html) if x != 'img']
+    else:
+        results = [pool.apply_async(update_xmls, args=(x,)) for x in os.listdir(html) if x != 'img']
+        [r.get() for r in results]
+    print('End updating xmls')
 
     # Construct handles multiprocessing within it.
 
