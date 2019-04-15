@@ -228,5 +228,5 @@ if __name__ == '__main__':
         for page in glob.glob(f"{tmp}/images/*.png"):
             shutil.move(page, args.output + "/images/")
 
-    if not args.debug:
-        shutil.rmtree(f'{tmp}')
+    #if not args.debug:
+    #    shutil.rmtree(f'{tmp}')
