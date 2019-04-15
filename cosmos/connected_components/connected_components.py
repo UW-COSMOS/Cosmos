@@ -241,8 +241,29 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
     obj_count = 0
     obj_heights = 0
     for row, top_coord, bottom_coord in rows:
-        num_cols = get_columns_for_row(row)
-        blocks, coords, col_idx = divide_row_into_columns(row, num_cols)
+        blocks = coords = col_idx = num_cols = None
+        # Old way
+        if row.shape[0] < 10 * blank_row_height:
+            num_cols = get_columns_for_row(row)
+            blocks, coords, col_idx = divide_row_into_columns(row, num_cols)
+        else:
+            # New way
+            rowT = row.T
+            white_cols = get_blank_rows(rowT, blank_row_height)
+            cols = []
+            blocks = []
+            coords = []
+            col_idx = []
+            num_cols = len(col_idx)
+            for i in range(len(white_cols)-1):
+                curr = white_cols[i]
+                nxt = white_cols[i+1]
+                spl = rowT[curr:nxt, :]
+                spl = spl.T
+                blocks.append(spl)
+                coords.append((curr, nxt))
+                col_idx.append(i)
+
         for ind, b in enumerate(blocks):
             c = coords[ind]
             column_index = col_idx[ind]
