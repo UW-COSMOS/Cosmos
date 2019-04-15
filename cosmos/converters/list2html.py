@@ -198,7 +198,6 @@ def list2html(input_list, image_name, image_dir, output_dir, unicode_df=None,tes
     #input_list = group_cls_columnwise(input_list, 'Body Text')
     doc = dominate.document(title=image_name[:-4])
     
-    
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
     im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
     with doc:
@@ -231,9 +230,8 @@ def list2html(input_list, image_name, image_dir, output_dir, unicode_df=None,tes
                     # We do a quick loading and deloading to properly convert encodings
                     div(raw(b_text), cls='hocr', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}', data_score=f'{score}')
                     loaded = html.fromstring(b_text)                    
-                    tree = etree.fromstring(etree.tostring(loaded))
-                    latex_tree = variable_ocr(im2latex_model, tree, cropped, [])
-                    div(raw(etree.tostring(latex_tree).decode("utf-8")), cls='hocr_img2latex', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}')
+                    # Running variable ocr is too expensive right now. We need a better solution for this
+                    # If we were to run variable ocr over every token, it would go here.
                     tree = etree.fromstring(etree.tostring(loaded))
                     if unicode_df is not None:
                         match = FILE_NAME_PATTERN.search(image_name)
@@ -243,13 +241,6 @@ def list2html(input_list, image_name, image_dir, output_dir, unicode_df=None,tes
                         #occasionally the class here would be replaced by 'Page Header', cannot figure our why
                         div(raw(etree.tostring(unicode_tree).decode("utf-8")), cls='text_unicode', data_coordinates=f'{coords[0]} {coords[1]} {coords[2]} {coords[3]}', id=str(first_id))
                         div(text, cls='equation_unicode')  
-
-                if tesseract_text:
-                    if t == 'Equation':
-                        txt = img2latex_api(im2latex_model, img=cropped, downsample_image_ratio=2, cropping=True, padding=True, gray_scale=True)
-                    else:
-                        txt = pytesseract.image_to_string(cropped, lang='eng')
-                    div(txt, cls='rawtext')
 
 
     with open(os.path.join(output_dir, f'{image_name[:-4]}.html'), 'w', encoding='utf-8') as wf:
