@@ -193,9 +193,6 @@ def list2html(input_list, image_name, image_dir, output_dir, unicode_df=None,tes
     :param feather_x: x feathering parameter to increase accuracy of ocr
     :param feather_y: x feathering parameter to increase accuracy of ocr
     """
-    input_list = group_cls(input_list, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
-    input_list = group_cls(input_list, 'Figure')
-    #input_list = group_cls_columnwise(input_list, 'Body Text')
     doc = dominate.document(title=image_name[:-4])
     
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
