@@ -99,6 +99,8 @@ if __name__ == '__main__':
     def convert_to_html(xml_f):
         xpath = os.path.join(xml, xml_f)
         l = xml2list(xpath)
+        l = group_cls(input_list, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
+        l = group_cls(input_list, 'Figure')
         pdf_name = FILE_NAME.search(f'{xml_f[:-4]}.png').group(1)
         list2html(l, f'{xml_f[:-4]}.png', os.path.join(f'{tmp}', 'images'), html, unicodes[pdf_name])
 
