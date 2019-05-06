@@ -9,7 +9,3 @@ RUN pip install -r /requirements.txt
 COPY src/ /app
 WORKDIR /app
 
-ARG pdf_path
-
-CMD ["python", "pdf_ingestion.py", $pdf_path]
-
