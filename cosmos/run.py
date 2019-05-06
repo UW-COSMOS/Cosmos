@@ -32,6 +32,7 @@ from connected_components.connected_components import write_proposals
 from proposal_matcher.process import process_doc
 from config import ingestion_settings
 import psycopg2
+from postprocess.postprocess import group_cls
 
 # PDF directory path
 
@@ -85,6 +86,7 @@ if __name__ == '__main__':
         path, im = pp.resize_png(os.path.join(f'{tmp}', 'images', img_path))
         if path is not None:
             im.save(os.path.join(f'{tmp}', 'images', img_path))
+        print(os.path.join(f'{tmp}', 'images', img_path))
 
     def flatten_png(img_f):
         subprocess.run(['convert', '-flatten', os.path.join(f'{tmp}', 'images', img_f), os.path.join(f'{tmp}', 'images', img_f)])
@@ -93,35 +95,56 @@ if __name__ == '__main__':
         pth, padded_img = pp.pad_image(os.path.join(f'{tmp}', 'images', img_f))
         if pth is not None:
             padded_img.save(os.path.join(img_d, img_f))
+        print(os.path.join(img_d, img_f))
 
     FILE_NAME = re.compile("(.*\.pdf)_([0-9]+)\.png")
 
     def convert_to_html(xml_f):
         xpath = os.path.join(xml, xml_f)
         l = xml2list(xpath)
+        l = group_cls(l, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
+        l = group_cls(l, 'Figure')
         pdf_name = FILE_NAME.search(f'{xml_f[:-4]}.png').group(1)
-        list2html(l, f'{xml_f[:-4]}.png', os.path.join(f'{tmp}', 'images'), html, unicodes[pdf_name])
+        list2html(l, f'{xml_f[:-4]}.png', os.path.join(f'{tmp}', 'images'), html, unicodes[pdf_name] if pdf_name in unicodes else None)
 
     def update_xmls(html_f):
         hpath = os.path.join(html, html_f)
         htmlfile2xml(hpath, xml)
 
     pool = mp.Pool(processes=args.threads)
-    results = [pool.apply_async(preprocess_pdfs, args=(x,)) for x in os.listdir(args.pdfdir)]
-    [r.get() for r in results]
 
-    results = [pool.apply_async(resize_pngs, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
-    [r.get() for r in results]
+    print('Start preprocessing pdfs')
+    if args.threads == 1:
+        [preprocess_pdfs(x) for x in os.listdir(args.pdfdir)]
+    else:
+        results = [pool.apply_async(preprocess_pdfs, args=(x,)) for x in os.listdir(args.pdfdir)]
+        [r.get() for r in results]
+    print('End preprocessing pdfs')
+
+    print('Begin resizing pngs')
+    if args.threads == 1:
+        [resize_pngs(x) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+    else:
+        results = [pool.apply_async(resize_pngs, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+        [r.get() for r in results]
+    print('End resizing pngs')
 
     print('Begin writing proposals')
-
-    results = [pool.apply_async(write_proposals, args=(os.path.join(f'{tmp}', 'images', x),), kwds={"output_dir" : os.path.join(tmp,"cc_proposals")}) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
-    [r.get() for r in results]
+    if args.threads == 1:
+        [write_proposals(os.path.join(f'{tmp}', 'images', x), output_dir=os.path.join(tmp,"cc_proposals")) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+    else:
+        results = [pool.apply_async(write_proposals, args=(os.path.join(f'{tmp}', 'images', x),), kwds={"output_dir" : os.path.join(tmp,"cc_proposals")}) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+        [r.get() for r in results]
+    print('End writing proposals')
 
 
     print('Begin preprocessing pngs')
-    results = [pool.apply_async(preprocess_pngs, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
-    [r.get() for r in results]
+    if args.threads == 1:
+        [preprocess_pngs(x) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+    else:
+        results = [pool.apply_async(preprocess_pngs, args=(x,)) for x in os.listdir(os.path.join(f'{tmp}', 'images'))]
+        [r.get() for r in results]
+    print('End preprocessing pngs')
 
     with open('test.txt', 'w') as wf:
         for f in os.listdir(f'{tmp}/images'):
@@ -137,8 +160,12 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(html, 'latex'))
 
     print('Begin converting to html')
-    results = [pool.apply_async(convert_to_html, args=(x,)) for x in os.listdir(xml)]
-    [r.get() for r in results]
+    if args.threads == 1:
+        [convert_to_html(x) for x in os.listdir(xml)]
+    else:
+        results = [pool.apply_async(convert_to_html, args=(x,)) for x in os.listdir(xml)]
+        [r.get() for r in results]
+    print('End converting to html')
 
     # postprocess
     tmp_html = html.replace('html', 'html_tmp')
@@ -154,8 +181,13 @@ if __name__ == '__main__':
         shutil.rmtree(html)
         shutil.move(tmp_html, html)
 
-    results = [pool.apply_async(update_xmls, args=(x,)) for x in os.listdir(html) if x != 'img']
-    [r.get() for r in results]
+    print('Begin updating xmls')
+    if args.threads == 1:
+        [update_xmls(x) for x in os.listdir(html) if x != 'img']
+    else:
+        results = [pool.apply_async(update_xmls, args=(x,)) for x in os.listdir(html) if x != 'img']
+        [r.get() for r in results]
+    print('End updating xmls')
 
     # Construct handles multiprocessing within it.
 
@@ -201,5 +233,5 @@ if __name__ == '__main__':
         for page in glob.glob(f"{tmp}/images/*.png"):
             shutil.move(page, args.output + "/images/")
 
-    if not args.debug:
-        shutil.rmtree(f'{tmp}')
+    #if not args.debug:
+    #    shutil.rmtree(f'{tmp}')
