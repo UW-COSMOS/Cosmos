@@ -13,7 +13,7 @@ def db_mock_fn(objs: Mapping[T, T]) -> None:
     return None
 
 def test_pdf_ingestion():
-    pdfs = run_pdf_ingestion(db_mock_fn, run_ghostscript)
+    pdfs = run_pdf_ingestion('./pdfs', db_mock_fn, run_ghostscript)
     print(pdfs)
 
 

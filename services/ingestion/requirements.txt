@@ -1,0 +1,6 @@
+pillow
+click
+pymongo
+pandas
+pdfminer.six
+
