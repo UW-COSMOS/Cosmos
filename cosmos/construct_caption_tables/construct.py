@@ -121,10 +121,9 @@ def construct_single_df(html_f, target_cls, target_cls_association):
                     continue
                 img = target_div.find_next('img')
                 target_img_path = str(img['src'])
-                target_unic = str(target_div)#.find_next('div', 'text_unicode'))
-                target_unic = collect_words(target_unic, 'text_unicode')
-                target_tess = target_div.find_next('div', 'rawtext')
-                target_tess = target_tess.text.strip()
+                tdiv = str(target_div)
+                target_unic = collect_words(tdiv, 'text_unicode')
+                target_tess = collect_words(tdiv, 'hocr')
                 break
             # Sometimes there is no association to an object (Dangling caption).
             # TODO: Decide what to do in this case
@@ -144,10 +143,9 @@ def construct_single_df(html_f, target_cls, target_cls_association):
                         continue
                     img = assoc_div.find_next('img')
                     assoc_img_path = str(img['src'])
-                    assoc_unic = str(assoc_div)#.find_next('div', 'text_unicode'))
-                    assoc_unic = collect_words(assoc_unic, 'text_unicode')
-                    assoc_tess = assoc_div.find_next('div', 'rawtext')
-                    assoc_tess = assoc_tess.text.strip()
+                    adiv = str(assoc_div)
+                    assoc_unic = collect_words(adiv, 'text_unicode')
+                    assoc_tess = collect_words(adiv, 'hocr')
                     break
             df_dict['target_img_path'].append(target_img_path)
             df_dict['assoc_img_path'].append(assoc_img_path)
@@ -167,10 +165,9 @@ def construct_single_df(html_f, target_cls, target_cls_association):
                     continue
                 img = assoc_div.find_next('img')
                 assoc_img_path = str(img['src'])
-                assoc_unic = str(assoc_div)#.find_next('div', 'text_unicode'))
-                assoc_unic = collect_words(assoc_unic, 'text_unicode')
-                assoc_tess = assoc_div.find_next('div', 'rawtext')
-                assoc_tess = assoc_tess.text.strip()
+                adiv = str(assoc_div)
+                assoc_unic = collect_words(adiv, 'text_unicode')
+                assoc_tess = collect_words(adiv, 'hocr')
                 df_dict['target_img_path'].append(None)
                 df_dict['assoc_img_path'].append(assoc_img_path)
                 df_dict['target_unicode'].append(None)
@@ -192,9 +189,13 @@ def construct(html_dir, target_cls, assoc_cls, output_file, processes=160):
     :param output_file: Output path
     :param processes: Number of processes
     """
-    pool = mp.Pool(processes=processes)
-    ret = [pool.apply_async(construct_single_df, args=(f, target_cls, assoc_cls,)) for f in glob.glob(os.path.join(html_dir, '*.html'))]
-    results = [r.get() for r in ret]
+    results = []
+    if processes == 1:
+        results = [construct_single_df(f, target_cls, assoc_cls) for f in glob.glob(os.path.join(html_dir, '*.html'))]
+    else:
+        pool = mp.Pool(processes=processes)
+        ret = [pool.apply_async(construct_single_df, args=(f, target_cls, assoc_cls,)) for f in glob.glob(os.path.join(html_dir, '*.html'))]
+        results = [r.get() for r in ret]
     results = [r for r in results if r is not None]
     final_df = None
     if len(results) > 0:
