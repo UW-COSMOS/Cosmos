@@ -32,6 +32,7 @@ from connected_components.connected_components import write_proposals
 from proposal_matcher.process import process_doc
 from config import ingestion_settings
 import psycopg2
+from postprocess.postprocess import group_cls
 
 # PDF directory path
 
@@ -85,6 +86,7 @@ if __name__ == '__main__':
         path, im = pp.resize_png(os.path.join(f'{tmp}', 'images', img_path))
         if path is not None:
             im.save(os.path.join(f'{tmp}', 'images', img_path))
+        print(os.path.join(f'{tmp}', 'images', img_path))
 
     def flatten_png(img_f):
         subprocess.run(['convert', '-flatten', os.path.join(f'{tmp}', 'images', img_f), os.path.join(f'{tmp}', 'images', img_f)])
@@ -93,16 +95,17 @@ if __name__ == '__main__':
         pth, padded_img = pp.pad_image(os.path.join(f'{tmp}', 'images', img_f))
         if pth is not None:
             padded_img.save(os.path.join(img_d, img_f))
+        print(os.path.join(img_d, img_f))
 
     FILE_NAME = re.compile("(.*\.pdf)_([0-9]+)\.png")
 
     def convert_to_html(xml_f):
         xpath = os.path.join(xml, xml_f)
         l = xml2list(xpath)
-        l = group_cls(input_list, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
-        l = group_cls(input_list, 'Figure')
+        l = group_cls(l, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
+        l = group_cls(l, 'Figure')
         pdf_name = FILE_NAME.search(f'{xml_f[:-4]}.png').group(1)
-        list2html(l, f'{xml_f[:-4]}.png', os.path.join(f'{tmp}', 'images'), html, unicodes[pdf_name])
+        list2html(l, f'{xml_f[:-4]}.png', os.path.join(f'{tmp}', 'images'), html, unicodes[pdf_name] if pdf_name in unicodes else None)
 
     def update_xmls(html_f):
         hpath = os.path.join(html, html_f)

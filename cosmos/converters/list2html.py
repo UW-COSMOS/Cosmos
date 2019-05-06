@@ -13,7 +13,6 @@ import string
 from lxml import html, etree
 from dominate.util import raw
 from latex_ocr.img2latex import img2latex_api, get_im2latex_model
-from postprocess.postprocess import group_cls, group_cls_columnwise
 from config import IM2LATEX_WEIGHT
 from .pdf_extractor import parse_pdf
 
