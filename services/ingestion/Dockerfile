@@ -1,5 +1,8 @@
 FROM python:3.7-alpine
 
+# Install bash and vim
+RUN apk add bash vim
+
 # Ghostscript
 RUN apk add ghostscript=9.26-r2
 
