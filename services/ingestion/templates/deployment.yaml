@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   name: {{ include "ingestion.fullname" . }}
@@ -23,18 +23,8 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - name: http
-              containerPort: 80
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
+          command: ['/bin/bash'] #["{{ .Values.command }}"]
+          #args: ["{{ .Values.pdf_dir }}"]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
