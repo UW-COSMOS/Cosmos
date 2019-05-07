@@ -1,5 +1,5 @@
-apiVersion: apps/v1beta1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: {{ include "ingestion.fullname" . }}
   labels:
@@ -8,11 +8,6 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
-  replicas: {{ .Values.replicaCount }}
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: {{ include "ingestion.name" . }}
-      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
@@ -23,19 +18,15 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ['/bin/bash'] #["{{ .Values.command }}"]
-          #args: ["{{ .Values.pdf_dir }}"]
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-    {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
-    {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
+          volumeMounts:
+              - mountPath: /input
+                name: input-volume
+          command: ['python3', 'pdf_ingestion.py', '/input']
+          env:
+              - name: DBCONNECT
+                value: "mongodb://{{ .Values.mongouser }}:{{ .Values.mongopwd }}@{{ .Values.mongourl }}:{{ .Values.mongoport }}"
+      restartPolicy: Never
+      volumes:
+          - name: input-volume
+            hostPath:
+                path: {{ .Values.pdfDir }}

@@ -43,7 +43,6 @@ def parse_pdf(fp):
         for idx, page in enumerate(PDFPage.create_pages(doc)):
             interpreter.process_page(page)
             layout = device.get_result()
-            #print(layout.bbox)
             for child in layout:
                 if isinstance(child, LTTextBox):
                     for line in child:

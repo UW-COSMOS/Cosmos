@@ -4,8 +4,8 @@ Entry script for ingesting PDFs, creating the first object and passing it to the
 
 # Logging config
 import logging
-logging.basicConfig(format='%(levelname) :: %(asctime)s :: %(message)s', level=logging.DEBUG)
-
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
+logging.getLogger("pdfminer").setLevel(logging.WARNING)
 import click
 import tempfile
 import time
@@ -16,12 +16,11 @@ from PIL import Image
 from typing import Mapping, TypeVar, Callable
 from pdf_extractor import parse_pdf
 from pymongo import MongoClient
+import json
 
 
 T = TypeVar('T')
 
-@click.command()
-@click.argument('pdf_dir')
 def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None], subprocess_fn: Callable[[str, str], None]) -> Mapping[T, T]:
     """
     Entry point for ingesting PDF documents
@@ -59,8 +58,12 @@ def run_ghostscript(pdf_path: str, img_tmp: str) -> None:
                         ], stdout=gs_stdout, stderr=gs_stderr)
         out = gs_stdout.read()
         err = gs_stdout.read()
-        logging.info(out)
-        logging.warn(err)
+        if len(out):
+            logging.info("Ghostscript output:")
+            logging.info(str(out))
+        if len(err):
+            logging.warning("Ghostscript err: ")
+            logging.warning(err)
 
 
 def insert_pdfs_mongo(pdfs: Mapping[T, T]) -> None:
@@ -68,8 +71,9 @@ def insert_pdfs_mongo(pdfs: Mapping[T, T]) -> None:
     Insert pdfs into mongodb
     TODO: Pass correct config
     """
-    client = MongoClient()
-    pdf_collection = db.pdfs
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    pdf_collection = db.raw_pdfs
     pdf_collection.insert_many(pdfs)
 
 
@@ -78,9 +82,10 @@ def load_page_data(img_dir: str, current_obj: Mapping[T, T]) -> Mapping[T, T]:
     Iterate through the img directory, and retrieve the page level data
     """
     page_data = []
-    for f in glob.glob(f'{img_tmp}/*'):
+    for f in glob.glob(f'{img_dir}/*'):
+        logging.info(f)
         page_obj = {}
-        page_num = int(os.basename(f))
+        page_num = int(os.path.basename(f))
         img = Image.open(f)
         width, height = img.size
         with open(f, 'rb') as bimage:
@@ -99,17 +104,24 @@ def load_pdf_metadata(pdf_path: str, current_obj: Mapping[T, T]) -> Mapping[T, T
     """
     Load the pdf metadata
     """
-    pdf_name = os.basename(pdf_path)
+    pdf_name = os.path.basename(pdf_path)
     df, limit = parse_pdf(pdf_path)
     df = df.to_dict()
+    # Hack here: throw this df into json and back
+    df = json.dumps(df)
+    df = json.loads(df)
     limit = list(limit)
     current_obj['metadata'] = df
     current_obj['metadata_dimension'] = limit
     current_obj['pdf_name'] = pdf_name
     current_obj['event_stream'].append('metadata')
     return current_obj
-    
+
+@click.command()
+@click.argument('pdf_dir')
+def click_wrapper(pdf_dir: str) -> None:   
+    run_pdf_ingestion(pdf_dir, insert_pdfs_mongo, run_ghostscript)
 
 if __name__ == '__main__':
-    run_pdf_ingestion(insert_pdfs_mongo, run_ghostscript)
+    click_wrapper()
 
