@@ -73,8 +73,11 @@ def insert_pdfs_mongo(pdfs: Mapping[T, T]) -> None:
     """
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
+    logging.info(db)
     pdf_collection = db.raw_pdfs
-    pdf_collection.insert_many(pdfs)
+    result = pdf_collection.insert_many(pdfs)
+    logging.info(result.inserted_ids)
+    logging.info(pdf_collection.count_documents({}))
 
 
 def load_page_data(img_dir: str, current_obj: Mapping[T, T]) -> Mapping[T, T]:
