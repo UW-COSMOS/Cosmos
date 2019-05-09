@@ -25,7 +25,7 @@ def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None
     """
     Entry point for ingesting PDF documents
     """
-    logging.info('Running proposal creation')
+    logging.info('Running ingestion')
     start_time = time.time()
     pdfs = []
     for pdf_path in glob.glob(os.path.join(pdf_dir, '*.pdf')):
@@ -39,7 +39,7 @@ def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None
     db_insert_fn(pdfs)
 
     end_time = time.time()
-    logging.info(f'End running proposal creation. Total time: {end_time - start_time} s')
+    logging.info(f'End running ingestion. Total time: {end_time - start_time} s')
     return pdfs
 
 def run_ghostscript(pdf_path: str, img_tmp: str) -> None:
@@ -73,11 +73,8 @@ def insert_pdfs_mongo(pdfs: Mapping[T, T]) -> None:
     """
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
-    logging.info(db)
     pdf_collection = db.raw_pdfs
     result = pdf_collection.insert_many(pdfs)
-    logging.info(result.inserted_ids)
-    logging.info(pdf_collection.count_documents({}))
 
 
 def load_page_data(img_dir: str, current_obj: Mapping[T, T]) -> Mapping[T, T]:
