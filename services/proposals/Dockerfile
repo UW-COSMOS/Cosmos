@@ -4,7 +4,7 @@ FROM python:3.7-alpine
 #RUN apk add bash vim
 
 # Pillow requirements
-#run apk add build-base jpeg-dev zlib-dev
+run apk add build-base jpeg-dev zlib-dev
 
 COPY requirements.txt /
 
