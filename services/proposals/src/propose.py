@@ -35,7 +35,12 @@ def propose(db_insert_fn: Callable[[Mapping[T, T], T], None]) -> None:
                     bstring = page['bytes']
                     bytesio = io.BytesIO(bstring)
                     img = resize_png(bytesio)
+                    # Convert it back to bytes
+                    resize_bytes_stream = io.BytesIO()
+                    img.save(resize_bytes_stream, format=img.format)
+                    resize_bytes = resize_bytes_stream.getvalue()
                     coords = get_proposals(img)
+                    page['resize_bytes'] = resize_bytes
                     page['proposals'] = coords
                 db_insert_fn(full, client)
     except pymongo.errors.PyMongoError as err:
