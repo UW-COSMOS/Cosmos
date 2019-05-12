@@ -38,7 +38,7 @@ def detect(db_insert_fn: Callable[[Mapping[T, T], T], None]) -> None:
                     img.save(padded_bytes_stream, format=img.format)
                     padded_bytes = padded_bytes_stream.getvalue()
                     page['padded_bytes'] = padded_bytes
-                detected_objs = run_inference(page_data, INSERTMODELCONFIG, INSERTWEIGHTS, INSERTDEVICESTR, pdf_name=full['pdf_name'])
+                detected_objs = run_inference(page_data, 'model_config.yaml', 'model_weights.pth', os.environ["DEVICE"], pdf_name=full['pdf_name'])
                 for page in page_data:
                     page_num = page['page_num']
                     if page_num not in detected_objs:
