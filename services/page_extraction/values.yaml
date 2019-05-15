@@ -1,0 +1,21 @@
+# Default values for ingestion.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: iaross/page_extraction
+  tag: dev
+  pullPolicy: Always
+
+# Path to directory to ingest. This will be mounted inside the docker instance at /input
+pdfDir: /Users/iross/COSMOS/pdfs
+#pdfDir: /Users/ankur/Projects/Mask-RCNN-exp/services/ingestion/tests/pdfs
+
+mongouser: root
+mongopwd: password
+mongourl: cosmos-mongodb.default.svc.cluster.local
+mongoport: 27017
+
+nameOverride: ""
+fullnameOverride: ""
+
