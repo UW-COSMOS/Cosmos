@@ -20,3 +20,6 @@
 .idea/
 *.tmproj
 .vscode/
+
+# Source directory
+src/
