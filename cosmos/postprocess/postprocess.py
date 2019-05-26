@@ -66,7 +66,7 @@ def check_caption_body(soup):
         if len(lines) > 0:
             line = lines[0]
             clean_line = line.getText().strip().replace('\n', ' ').replace('  ', ' ').lower()
-            matches = re.findall('^(figure|fig)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', clean_line, flags=re.IGNORECASE|re.MULTILINE)
+            matches = re.findall('^(figure|fig|plate|scheme)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', clean_line, flags=re.IGNORECASE|re.MULTILINE)
             if len(matches) >0:
                 seg_type["class"] = "Figure Caption"
             matches = re.findall('^(table|tbl|tab)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', clean_line, flags=re.IGNORECASE|re.MULTILINE)
@@ -219,4 +219,3 @@ def postprocess(html_path, output_path):
                 new_soup = check_caption_body(soup)
                 print(f"Writing to {output_path}")
                 fout.write(str(new_soup))
-
