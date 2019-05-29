@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata :
   name: {{ include "proposals.fullname" . }}
   labels:
@@ -8,7 +8,7 @@ metadata :
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
   selector:
       matchLabels:
         app.kubernetes.io/name: {{ include "proposals.name" . }}
@@ -24,6 +24,12 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ['python3', 'propose.py']
+          lifecycle:
+              postStart:
+                  exec:
+                      command: ["/bin/sh", "-c", "export POD_ID=${HOSTNAME##*-}"]
           env:
               - name: DBCONNECT
                 value: "mongodb://{{ .Values.mongouser }}:{{ .Values.mongopwd }}@{{ .Values.mongourl }}:{{ .Values.mongoport }}"
+              - name: REPLICA_COUNT
+                value: {{ .Values.replicaCount }}
