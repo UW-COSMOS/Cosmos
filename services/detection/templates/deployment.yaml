@@ -22,19 +22,19 @@ spec:
     spec:
       containers:
         - name: {{ .Chart.Name }}
-          {{ if .Values.gpu false }}
+          {{ if eq .Values.gpu false }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{ else }}
-          image: "{{ .Values.image-gpu.repository }}:{{ .Values.image-gpu.tag }}"
-          imagePullPolicy: {{ .Values.image-gpu.pullPolicy }}
+          image: "{{ .Values.imageGpu.repository }}:{{ .Values.imageGpu.tag }}"
+          imagePullPolicy: {{ .Values.imageGpu.pullPolicy }}
           {{ end }}
           command: ['python3', 'detect.py']
           env:
               - name: DBCONNECT
                 value: "mongodb://{{ .Values.mongouser }}:{{ .Values.mongopwd }}@{{ .Values.mongourl }}:{{ .Values.mongoport }}"
               - name: DEVICE
-                {{ if .Values.gpu false }}
+                {{ if eq .Values.gpu false }}
                 value: "cpu"
                 {{ else }}
                 value: "cuda:0"

@@ -7,6 +7,8 @@ image:
   tag: test
   pullPolicy: Always
 
+replicaCount: 2
+
 mongouser: root
 mongopwd: password
 mongourl: cosmos-mongodb.default.svc.cluster.local

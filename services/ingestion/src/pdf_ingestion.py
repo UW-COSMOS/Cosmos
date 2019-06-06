@@ -42,7 +42,6 @@ def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None
 def insert_pdfs_mongo(pdfs: Mapping[T, T]) -> None:
     """
     Insert pdfs into mongodb
-    TODO: Pass correct config
     """
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
@@ -79,6 +78,7 @@ def load_pdf_metadata(pdf_path: str, current_obj: Mapping[T, T]) -> Mapping[T, T
     Load the pdf metadata
     """
     pdf_name = os.path.basename(pdf_path)
+    # Df maps coordinates to unicode, limit is the dimensions of the pdf
     df, limit = parse_pdf(pdf_path)
     df = df.to_dict()
     # Hack here: throw this df into json and back

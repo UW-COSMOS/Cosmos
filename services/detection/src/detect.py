@@ -58,8 +58,8 @@ def detect(db_insert_fn: Callable[[Mapping[T, T], T], None]) -> None:
 
 def mongo_insert_fn(obj: Mapping[T, T], client: T) -> None:
     db = client.pdfs
-    cc_pdfs = db.cc_pdfs
-    result = cc_pdfs.insert_one(obj)
+    detect_pdfs = db.detect_pdfs
+    result = detect_pdfs.insert_one(obj)
     logging.info(f"Inserted result: {result}")
 
 
