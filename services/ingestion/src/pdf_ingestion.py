@@ -12,6 +12,8 @@ import time
 import os
 import glob
 import subprocess
+import io
+from preprocess import resize_png
 from PIL import Image
 from typing import Mapping, TypeVar, Callable
 from pdf_extractor import parse_pdf
@@ -109,6 +111,13 @@ def load_page_data(img_dir: str, current_obj: Mapping[T, T]) -> Mapping[T, T]:
         with open(f, 'rb') as bimage:
             bstring = bimage.read()
             page_obj['bytes'] = bstring
+            bytesio = io.BytesIO(bstring)
+            img = resize_png(bytesio)
+            # Convert it back to bytes
+            resize_bytes_stream = io.BytesIO()
+            img.save(resize_bytes_stream, format='PNG')
+            resize_bytes = resize_bytes_stream.getvalue()
+            page_obj['resize_bytes'] = resize_bytes
         page_obj['page_width'] = width
         page_obj['page_height'] = height
         page_obj['page_num'] = page_num
