@@ -3,3 +3,4 @@ pymongo
 pandas
 pdfminer.six
 chardet
+pillow
