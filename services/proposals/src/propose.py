@@ -9,9 +9,9 @@ import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 import time
 import io
-from preprocess import resize_png
 from connected_components import get_proposals
 from typing import Mapping, TypeVar, Callable
+from PIL import Image
 import re
 
 T = TypeVar('T')
@@ -42,23 +42,23 @@ def propose(db_insert_fn: Callable[[Mapping[T, T], T], None]) -> None:
                 if doc_num % replica_count != pod_id:
                     continue
                 logging.info('Document found and added to queue')
+                if 'page_data' not in full:
+                    full['page_data'] = []
                 page_data = full['page_data']
-                for page in page_data:
-                    bstring = page['bytes']
-                    bytesio = io.BytesIO(bstring)
-                    img = resize_png(bytesio)
-                    # Convert it back to bytes
-                    resize_bytes_stream = io.BytesIO()
-                    img.save(resize_bytes_stream, format='PNG')
-                    resize_bytes = resize_bytes_stream.getvalue()
+                for page in db.pages.find({'pdf_id' : full['_id']}):
+                    tpage = {}
+                    for i in ['page_width', 'page_height', 'page_num']:
+                        tpage[i] = page[i]
+                    bstring = page['resize_bytes']
+                    img = Image.open(io.BytesIO(bstring)).convert('RGB')
                     coords = get_proposals(img)
-                    page['resize_bytes'] = resize_bytes
-                    page['proposals'] = coords
+                    tpage['proposals'] = coords
+                    page_data.append(tpage)
                 db_insert_fn(full, client)
     except pymongo.errors.PyMongoError as err:
         logging.error("Error in pymongo:")
         logging.error(err)
-            
+
     end_time = time.time()
     logging.info(f'Exiting proposal generation. Time up: {end_time - start_time}')
 
