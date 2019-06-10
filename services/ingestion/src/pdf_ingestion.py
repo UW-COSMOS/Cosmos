@@ -45,7 +45,10 @@ def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None
             db_insert_pages_fn(pages)
             pdfs.append(pdf_obj)
 
-    docids = db_insert_fn(pdfs)
+    if len(pdfs) > 0:
+        db_insert_fn(pdfs)
+    else:
+        logging.info("The pdfs directory was empty. Nothing inserted")
 
     end_time = time.time()
     logging.info(f'End running metadata ingestion. Total time: {end_time - start_time} s')
