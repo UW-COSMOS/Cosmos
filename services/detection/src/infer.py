@@ -3,7 +3,7 @@ from torch_model.model.utils.config_manager import ConfigManager
 import torch
 from torch_model.inference.inference import InferenceHelper
 from torch_model.inference.data_layer.inference_loader import InferenceLoader
-from ingestion.ingest_images import ImageDB
+from ingest_images import ImageDB
 
 
 

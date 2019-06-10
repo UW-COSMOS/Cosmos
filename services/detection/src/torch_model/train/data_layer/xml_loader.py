@@ -21,7 +21,7 @@ from collections import namedtuple
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
-from ingestion.ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods, ImageDB
+from ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods, ImageDB
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from dataclasses import dataclass
