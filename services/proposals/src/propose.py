@@ -12,6 +12,7 @@ import io
 from preprocess import resize_png
 from connected_components import get_proposals
 from typing import Mapping, TypeVar, Callable
+import re
 
 T = TypeVar('T')
 
@@ -23,13 +24,24 @@ def propose(db_insert_fn: Callable[[Mapping[T, T], T], None]) -> None:
     start_time = time.time()
     client = MongoClient(os.environ["DBCONNECT"])
     logging.info(f'Connected to client: {client}. Setting watch on raw_pdfs collection')
+    pod_name = os.environ["POD_NAME"]
+    podre = re.search(r'\d+$', pod_name)
+    pod_id = int(podre.group()) if podre else None
+    if pod_id is None:
+        logging.error('Error parsing for pod id')
+        return
+    replica_count = int(os.environ["REPLICA_COUNT"])
     db = client.pdfs
     # Open a cursor that will watch for inserts on raw_pdfs
     try:
         with db.raw_pdfs.watch([{'$match': {'operationType': 'insert'}}]) as stream:
             for doc in stream:
-                logging.info('Document found and added to queue')
                 full = doc['fullDocument']
+                obj_id = str(full['_id'])
+                doc_num = int(obj_id, 16)
+                if doc_num % replica_count != pod_id:
+                    continue
+                logging.info('Document found and added to queue')
                 page_data = full['page_data']
                 for page in page_data:
                     bstring = page['bytes']
