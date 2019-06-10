@@ -43,10 +43,11 @@ class InferenceHelper:
             probabilities = cls_scores.squeeze()
             bb = batch.center_bbs[0]
             pred = self.cls[pred_idxs[0]]
+            # Convert the tensor to a list of coords
             if page_id in xml_dict:
-                xml_dict[page_id].append((bb, pred, float(probabilities[pred_idxs[0]].item())))
+                xml_dict[page_id].append((bb.tolist(), pred, float(probabilities[pred_idxs[0]].item())))
             else:
-                xml_dict[page_id]= [(bb, pred, float(probabilities[pred_idxs[0]].item()))]
+                xml_dict[page_id]= [(bb.tolist(), pred, float(probabilities[pred_idxs[0]].item()))]
 
         if out is not None:
             if not isdir(out):

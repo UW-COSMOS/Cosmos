@@ -2,7 +2,7 @@
 Utilities for loading inference data into the model
 """
 # TODO refactor so xml_loader and inference_loader import from a utilities directory
-from ingestion.ingest_images import load_image, load_proposal, get_example_for_uuid
+from ingest_images import load_image, load_proposal, get_example_for_uuid
 from torch.utils.data import Dataset
 import torch
 import os

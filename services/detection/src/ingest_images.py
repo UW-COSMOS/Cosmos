@@ -1,4 +1,5 @@
 import sqlalchemy
+import numpy as np
 from evaluate.evaluate import calculate_iou
 from collections import namedtuple
 import torch
@@ -255,10 +256,7 @@ def db_ingest_objs(objs, pdf_name, warped_size, partition, session):
             if label == 0 or label == "0":
                 print("found 0")
                 continue
-            if label is not None and xml_dir is not None:
-                uuids.append(uuid)
-            elif xml_dir is None:
-                uuids.append(uuid)
+            uuids.append(uuid)
             if label in class_stats:
                 class_stats[label] += 1
             else:
