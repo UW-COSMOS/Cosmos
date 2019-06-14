@@ -29,7 +29,7 @@ spec:
           image: "{{ .Values.imageGpu.repository }}:{{ .Values.imageGpu.tag }}"
           imagePullPolicy: {{ .Values.imageGpu.pullPolicy }}
           {{ end }}
-          command: ['conda', 'run', '-n', 'detection', 'python', 'detect.py', '>>', 'stdouterr', '2>&1']
+          command: ['/opt/conda/envs/detection/bin/python','detect.py']
           env:
               - name: DBCONNECT
                 value: "mongodb://{{ .Values.mongouser }}:{{ .Values.mongopwd }}@{{ .Values.mongourl }}:{{ .Values.mongoport }}"
@@ -39,6 +39,6 @@ spec:
                 {{ else }}
                 value: "cuda:0"
                 {{ end }}
-          resources:
-              requests:
-                   memory: "10Gi"
+#          resources:
+#              requests:
+#                   memory: "4Gi"
