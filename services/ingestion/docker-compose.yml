@@ -1,0 +1,9 @@
+version: "2.3"
+services:
+    cosmos:
+        build: .
+        ipc: host
+        volumes:
+            - .:/develop/
+        command: tail -F anything
+
