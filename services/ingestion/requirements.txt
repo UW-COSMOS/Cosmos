@@ -4,4 +4,4 @@ pymongo
 pandas
 pdfminer.six
 chardet
-
+camelot
