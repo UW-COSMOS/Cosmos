@@ -197,6 +197,12 @@ def load_pdf_metadata(pdf_path, current_obj):
     current_obj['event_stream'] = ['metadata']
     return current_obj, err
 
+def load_pdf_tables(pdf_path: str, current_obj: Mapping[T,T]) -> Mapping[T, T]:
+    tables = camelot.read_pdf(pdf_path)
+    table_list = [table.df for table in tables]
+    current_obj['extracted_tables'] = table_list
+    return current_obj
+
 @click.command()
 @click.argument('pdf_dir')
 @click.argument('num_processes')
