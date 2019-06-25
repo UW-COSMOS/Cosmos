@@ -17,7 +17,7 @@ from typing import Mapping, TypeVar, Callable
 from pdf_extractor import parse_pdf
 from pymongo import MongoClient
 import json
-
+import camelot
 
 T = TypeVar('T')
 
@@ -34,12 +34,14 @@ def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None
             pdf_obj = {}
             pdf_obj = load_page_data(img_tmp, pdf_obj)
             pdf_obj = load_pdf_metadata(pdf_path, pdf_obj)
+            pdf_obj = load_pdf_tables(pdf_path, pdf_obj)
             pdfs.append(pdf_obj)
 
     if len(pdfs) > 0:
+        print(pdfs)
         db_insert_fn(pdfs)
     else:
-        logging.info("The pdfs directory was empty. Nothing inserted")
+        logging.info("The pdfs directory "+ pdf_dir + " was empty. Nothing inserted")
 
     end_time = time.time()
     logging.info(f'End running ingestion. Total time: {end_time - start_time} s')
@@ -118,6 +120,12 @@ def load_pdf_metadata(pdf_path: str, current_obj: Mapping[T, T]) -> Mapping[T, T
     current_obj['metadata_dimension'] = limit
     current_obj['pdf_name'] = pdf_name
     current_obj['event_stream'].append('metadata')
+    return current_obj
+
+def load_pdf_tables(pdf_path: str, current_obj: Mapping[T,T]) -> Mapping[T, T]:
+    tables = camelot.read_pdf(pdf_path)
+    table_list = [table.df for table in tables]
+    current_obj['extracted_tables'] = table_list
     return current_obj
 
 @click.command()

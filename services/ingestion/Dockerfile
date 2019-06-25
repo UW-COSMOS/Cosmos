@@ -16,10 +16,10 @@ RUN pip install -r /requirements.txt
 
 # Copy test documents to /test
 
-COPY tests/pdfs /test
+#COPY tests/pdfs /test
 
 COPY src/ /app
 WORKDIR /app
 
-ENTRYPOINT [ "python3", "pdf_ingestion.py",  "/test/" ]
+ENTRYPOINT [ "python3", "pdf_ingestion.py",  "/ssd/sahil/Cosmos/cosmos/data/test_docs/" ]
 
