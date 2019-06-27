@@ -34,11 +34,10 @@ def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None
             pdf_obj = {}
             pdf_obj = load_page_data(img_tmp, pdf_obj)
             pdf_obj = load_pdf_metadata(pdf_path, pdf_obj)
-            pdf_obj = load_pdf_tables(pdf_path, pdf_obj)
+            #pdf_obj = load_pdf_tables(pdf_path, pdf_obj)
             pdfs.append(pdf_obj)
 
     if len(pdfs) > 0:
-        print(pdfs)
         db_insert_fn(pdfs)
     else:
         logging.info("The pdfs directory "+ pdf_dir + " was empty. Nothing inserted")
