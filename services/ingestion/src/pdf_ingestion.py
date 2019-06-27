@@ -18,6 +18,7 @@ from pdf_extractor import parse_pdf
 from pymongo import MongoClient
 import json
 import camelot
+import pickle
 
 T = TypeVar('T')
 
@@ -34,7 +35,7 @@ def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None
             pdf_obj = {}
             pdf_obj = load_page_data(img_tmp, pdf_obj)
             pdf_obj = load_pdf_metadata(pdf_path, pdf_obj)
-            #pdf_obj = load_pdf_tables(pdf_path, pdf_obj)
+            pdf_obj = load_pdf_tables(pdf_path, pdf_obj)
             pdfs.append(pdf_obj)
 
     if len(pdfs) > 0:
@@ -123,7 +124,7 @@ def load_pdf_metadata(pdf_path: str, current_obj: Mapping[T, T]) -> Mapping[T, T
 
 def load_pdf_tables(pdf_path: str, current_obj: Mapping[T,T]) -> Mapping[T, T]:
     tables = camelot.read_pdf(pdf_path)
-    table_list = [table.df for table in tables]
+    table_list = [pickle.dumps(table.df) for table in tables]
     current_obj['extracted_tables'] = table_list
     return current_obj
 
