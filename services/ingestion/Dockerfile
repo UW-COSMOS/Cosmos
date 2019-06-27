@@ -1,14 +1,87 @@
-FROM python:3.7-alpine
+#FROM python:3.7-alpine
+FROM ubuntu:16.04
 
-# Install bash and vim
-RUN apk add bash vim
+# Install some basic utilities
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    sudo \
+    git \
+    bzip2 \
+    libx11-6 \
+    bash \
+    vim \
+    ghostscript \
+    build-essential \
+    libjpeg-dev \
+    libgtk2.0-dev \
+    zlib1g-dev \
+ && rm -rf /var/lib/apt/lists/*
 
-# Ghostscript
-RUN apk add ghostscript=9.26-r2
+# Create a working directory
+RUN mkdir /app
 
-# Pillow requirements
-run apk add build-base jpeg-dev zlib-dev
+WORKDIR /app
 
+# Create a non-root user and switch to it
+RUN adduser --disabled-password --gecos '' --shell /bin/bash user \
+ && chown -R user:user /app
+RUN echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-user
+USER user
+
+# All users can use /home/user as their home directory
+ENV HOME=/home/user
+RUN chmod 777 /home/user
+
+# Install Miniconda
+RUN curl -so ~/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh \
+ && chmod +x ~/miniconda.sh \
+ && ~/miniconda.sh -b -p ~/miniconda \
+ && rm ~/miniconda.sh
+ENV PATH=/home/user/miniconda/bin:$PATH
+ENV CONDA_AUTO_UPDATE_CONDA=false
+
+# Create a Python 3.6 environment
+RUN /home/user/miniconda/bin/conda install conda-build \
+ && /home/user/miniconda/bin/conda create -y --name py36 python=3.7 \
+ && /home/user/miniconda/bin/conda clean -ya
+ENV CONDA_DEFAULT_ENV=py36
+ENV CONDA_PREFIX=/home/user/miniconda/envs/$CONDA_DEFAULT_ENV
+ENV PATH=$CONDA_PREFIX/bin:$PATH
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Create a working directory
+# RUN mkdir /app
+
+# Install Miniconda
+#RUN curl -so ~/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh \
+# && chmod +x ~/miniconda.sh \
+# && ~/miniconda.sh -b -p ~/miniconda \
+# && rm ~/miniconda.sh
+#ENV PATH=/miniconda/bin:$PATH
+#ENV CONDA_AUTO_UPDATE_CONDA=false
+
+# Create a Python 3.6 environment
+#RUN ~/miniconda/bin/conda install conda-build \
+# && ~/miniconda/bin/conda create -y --name py36 python=3.7 \
+# && ~/miniconda/bin/conda clean -ya
+#ENV CONDA_DEFAULT_ENV=py36
+#ENV CONDA_PREFIX=~/miniconda/envs/$CONDA_DEFAULT_ENV
+#ENV PATH=$CONDA_PREFIX/bin:$PATH
+
+# Pillow and other requirements requirements
 COPY requirements.txt /
 
 RUN pip install -r /requirements.txt
@@ -21,5 +94,7 @@ RUN pip install -r /requirements.txt
 COPY src/ /app
 WORKDIR /app
 
-ENTRYPOINT [ "python3", "pdf_ingestion.py",  "/ssd/sahil/Cosmos/cosmos/data/test_docs/" ]
+RUN export DBCONNECT=mongodb://sverma25:Cosmos@cosmos0000.chtc.wisc.edu:27017/pdfs?authSource=admin
 
+
+#ENTRYPOINT [ "python3", "pdf_ingestion.py",  "/ssd/sahil/Cosmos/cosmos/data/test_docs/" ]
