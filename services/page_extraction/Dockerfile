@@ -21,5 +21,5 @@ RUN pip install -r /requirements.txt
 COPY src/ /app
 WORKDIR /app
 
-ENTRYPOINT [ "python3", "pdf_ingestion.py",  "/test/" ]
+ENTRYPOINT [ "python3", "page_extraction.py",  "/test/" ]
 
