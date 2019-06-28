@@ -16,7 +16,7 @@ RUN pip install -r /requirements.txt
 
 # Copy test documents to /test
 
-COPY tests/pdfs /test
+#COPY tests/pdfs /test
 
 COPY src/ /app
 WORKDIR /app
