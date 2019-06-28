@@ -9,10 +9,8 @@ logging.getLogger("pdfminer").setLevel(logging.WARNING)
 import click
 import tempfile
 import time
-import subprocess
 import os
 import glob
-from PIL import Image
 from typing import Mapping, TypeVar, Callable
 from pdf_extractor import parse_pdf
 from pymongo import MongoClient
@@ -21,53 +19,28 @@ import json
 
 T = TypeVar('T')
 
-def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None], subprocess_fn: Callable[[str, str], None]) -> Mapping[T, T]:
+def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None]) -> Mapping[T, T]:
     """
     Entry point for ingesting PDF documents
     """
+
     logging.info('Running ingestion')
     start_time = time.time()
     pdfs = []
     for pdf_path in glob.glob(os.path.join(pdf_dir, '*.pdf')):
         with tempfile.TemporaryDirectory() as img_tmp:
-            subprocess_fn(pdf_path, img_tmp)
             pdf_obj = {}
-            pdf_obj = load_page_data(img_tmp, pdf_obj)
             pdf_obj = load_pdf_metadata(pdf_path, pdf_obj)
             pdfs.append(pdf_obj)
 
-    if len(pdfs) > 0:
-        db_insert_fn(pdfs)
-    else:
+    if len(pdfs) == 0:
         logging.info("The pdfs directory was empty. Nothing inserted")
+        return
+    docids = db_insert_fn(pdfs)
 
     end_time = time.time()
-    logging.info(f'End running ingestion. Total time: {end_time - start_time} s')
-    return pdfs
-
-def run_ghostscript(pdf_path: str, img_tmp: str) -> None:
-    """
-    Run ghostscript as a subprocess over pdf files
-    """
-    with tempfile.TemporaryFile() as gs_stdout, tempfile.TemporaryFile() as gs_stderr:
-        subprocess.run(['gs', '-dBATCH', 
-                              '-dNOPAUSE', 
-                              '-sDEVICE=png16m', 
-                              '-dGraphicsAlphaBits=4',
-                              '-dTextAlphaBits=4', 
-                              '-r600', 
-                              f'-sOutputFile="{img_tmp}/%d"', 
-                              pdf_path
-                        ], stdout=gs_stdout, stderr=gs_stderr)
-        out = gs_stdout.read()
-        err = gs_stdout.read()
-        if len(out):
-            logging.info("Ghostscript output:")
-            logging.info(str(out))
-        if len(err):
-            logging.warning("Ghostscript err: ")
-            logging.warning(err)
-
+    logging.info(f'End running metadata ingestion. Total time: {end_time - start_time} s')
+    return docids
 
 def insert_pdfs_mongo(pdfs: Mapping[T, T]) -> None:
     """
@@ -77,6 +50,7 @@ def insert_pdfs_mongo(pdfs: Mapping[T, T]) -> None:
     db = client.pdfs
     pdf_collection = db.raw_pdfs
     result = pdf_collection.insert_many(pdfs)
+    # TODO: page_data should ideally get stored in a page collection with a link up to these docid (?)
 
 
 def load_page_data(img_dir: str, current_obj: Mapping[T, T]) -> Mapping[T, T]:
@@ -98,7 +72,7 @@ def load_page_data(img_dir: str, current_obj: Mapping[T, T]) -> Mapping[T, T]:
         page_obj['page_num'] = page_num
         page_data.append(page_obj)
     current_obj['page_data'] = page_data
-    current_obj['event_stream'] = ['imagedata']
+    current_obj['event_stream'].append('imagedata')
     return current_obj
 
 
@@ -117,13 +91,13 @@ def load_pdf_metadata(pdf_path: str, current_obj: Mapping[T, T]) -> Mapping[T, T
     current_obj['metadata'] = df
     current_obj['metadata_dimension'] = limit
     current_obj['pdf_name'] = pdf_name
-    current_obj['event_stream'].append('metadata')
+    current_obj['event_stream'] = ['metadata']
     return current_obj
 
 @click.command()
 @click.argument('pdf_dir')
-def click_wrapper(pdf_dir: str) -> None:   
-    run_pdf_ingestion(pdf_dir, insert_pdfs_mongo, run_ghostscript)
+def click_wrapper(pdf_dir: str) -> None:
+    run_pdf_ingestion(pdf_dir, insert_pdfs_mongo)
 
 if __name__ == '__main__':
     click_wrapper()

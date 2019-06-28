@@ -1,7 +1,5 @@
-pillow
 click
 pymongo
 pandas
 pdfminer.six
 chardet
-
