@@ -38,7 +38,6 @@ def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None
             pdf_obj = load_pdf_metadata(pdf_path, pdf_obj)
             pdf_obj["_id"] = ObjectId() # Want to know the _id _before_ insertion so we can tag pages in their collection
             pdf_path = os.path.abspath("%s/%s" % (pdf_dir, pdf_obj["pdf_name"]))
-            # TODO: get real pdf_path as pdf_dir + pdf_name (from doc)
             subprocess_fn(pdf_path, img_tmp)
             pages = []
             pages = load_page_data(img_tmp, pdf_obj)
