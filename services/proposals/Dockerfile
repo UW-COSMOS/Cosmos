@@ -1,10 +1,10 @@
-FROM python:3.7-alpine
+FROM python:3.7
 
 # Install bash and vim
 #RUN apk add bash vim
 
 # Pillow requirements
-run apk add build-base jpeg-dev zlib-dev
+#run apt install build-base jpeg-dev zlib-dev
 
 COPY requirements.txt /
 
