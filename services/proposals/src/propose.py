@@ -14,6 +14,19 @@ from PIL import Image
 import re
 from joblib import Parallel, delayed
 import click
+import pickle
+
+
+def is_picklable(obj):
+    """
+    Helpful function to debug whether objects are pickleable (requirement for multiprocessing)
+    """
+    try:
+      pickle.dumps(obj)
+
+    except pickle.PicklingError:
+      return False
+    return True
 
 
 def load_docs(db, buffer_size):
@@ -28,16 +41,18 @@ def load_docs(db, buffer_size):
     yield current_docs
 
 
-def run_page(page, db_insert_fn, client):
+def run_page(page, db_insert_fn):
     """
     """
-    logging.info(f'Running proposal on page {page["page_num"]} on pdf {page["pdf_name"])')
+    # TODO: Currently logging does not work within a multiprocessing function.
+    logging.info(f'Running proposal on page {page["page_num"]} on pdf {page["pdf_name"]}')
     bstring = page['resize_bytes']
     img = Image.open(io.BytesIO(bstring)).convert('RGB')
     coords = get_proposals(img)
     page['proposals'] = coords
-    db_insert_fn(page, client)
+    return page
 
+#print(f"Pickle run_page: {is_picklable(run_page)}")
 
 def propose_doc(db_insert_fn, num_processes, multimachine=False, replica_count=1, pod_id=1):
     """
@@ -49,12 +64,14 @@ def propose_doc(db_insert_fn, num_processes, multimachine=False, replica_count=1
         obj_id = str(full['_id'])
         doc_num = int(obj_id, 16)
         if doc_num % replica_count != pod_id:
-            continue
+            return
         logging.info('Document found and added to queue')
     db = client.pdfs
     for batch in load_docs(db, 100):
         logging.info('Loaded next batch. Running proposals')
-        Parallel(n_jobs=num_processes)(delayed(run_page)(page, db_insert_fn, client) for page in batch)
+        pages = Parallel(n_jobs=num_processes)(delayed(run_page)(page, db_insert_fn) for page in batch)
+        db_insert_fn(pages, client)
+
     end_time = time.time()
     logging.info(f'Exiting proposal generation. Time up: {end_time - start_time}')
 
@@ -90,14 +107,15 @@ def propose(db_insert_fn):
     end_time = time.time()
     logging.info(f'Exiting proposal generation. Time up: {end_time - start_time}')
 
-def mongo_insert_fn(obj, client):
+def mongo_insert_fn(objs, client):
     db = client.pdfs
     pages = db.propose_pages
     #result = pages.replace_one({'_id':ObjectId(record['_id'])}, obj, upsert=True)
-    result = pages.insert_one(obj)
+    result = pages.insert_many(objs)
     logging.info(f"Inserted result: {result}")
 
 
+@click.command()
 @click.argument('num_processes')
 def click_wrapper(num_processes):
     propose_doc(mongo_insert_fn, int(num_processes))
