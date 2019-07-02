@@ -1,3 +1,3 @@
 cosmos/torch_model/tests/data/weights/ filter=lfs diff=lfs merge=lfs -text
 cosmos/torch_model/tests/data/weights/weights.pth filter=lfs diff=lfs merge=lfs -text
-*.pth filter=lfs diff=lfs merge=lfs -text
+cosmos/*.pth filter=lfs diff=lfs merge=lfs -text
