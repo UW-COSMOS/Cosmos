@@ -1,0 +1,13 @@
+version: "2.3"
+services:
+    detection:
+        build: .
+        runtime: nvidia
+        ipc: host
+        command: "python3 detect.py model_config.yml model_weights.pth 30"
+        #volumes:
+        #    - .:/develop/
+        #command: "tail -F /dev/null"
+        environment:
+            - DBCONNECT
+            - DEVICE
