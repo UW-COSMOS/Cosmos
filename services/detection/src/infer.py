@@ -7,7 +7,7 @@ from ingest_images import ImageDB
 
 
 
-def run_inference(page_objs, model_config, weights, device_str, out_dir=None, pdf_name=None):
+def run_inference(page_objs, model_config, weights, device_str):
     """
     Main function to run inference. Writes a bunch of XMLs to out_dir
     :param page_objs: List of page objects
@@ -28,11 +28,10 @@ def run_inference(page_objs, model_config, weights, device_str, out_dir=None, pd
     session, ingest_objs = ImageDB.initialize_and_ingest(page_objs,
                                                          cfg.WARPED_SIZE,
                                                          'test',
-                                                         cfg.EXPANSION_DELTA,
-                                                         pdf_name=pdf_name)
+                                                         cfg.EXPANSION_DELTA)
     loader = InferenceLoader(session, ingest_objs, cfg.CLASSES)
     device = torch.device(device_str)
     model.to(device)
     infer_session = InferenceHelper(model, loader, device)
-    return infer_session.run(out_dir)
+    return infer_session.run()
 
