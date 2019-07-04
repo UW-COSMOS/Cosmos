@@ -31,6 +31,9 @@ def ingest_pdf(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_f
         pdf_obj = load_pdf_metadata(pdf_path, pdf_obj)
         pdf_obj["_id"] = ObjectId() # Want to know the _id _before_ insertion so we can tag pages in their collection
         pdf_path = os.path.abspath("%s/%s" % (pdf_dir, pdf_obj["pdf_name"]))
+        # Logging this way to log inside the Parallel call
+        logger = logging.getLogger()
+        logger.info(f"Ingesting pdf at {pdf_path}")
         subprocess_fn(pdf_path, img_tmp)
         pages = []
         pages = load_page_data(img_tmp, pdf_obj)
@@ -138,7 +141,11 @@ def load_pdf_metadata(pdf_path, current_obj):
         df = json.dumps(df)
         df = json.loads(df)
         limit = list(limit)
-    df = limit = None
+    else:
+        df = limit = None
+    with open(pdf_path, 'rb') as pf:
+        seq = pf.read()
+        current_obj['bytes'] = seq
     current_obj['metadata'] = df
     current_obj['metadata_dimension'] = limit
     current_obj['pdf_name'] = pdf_name
