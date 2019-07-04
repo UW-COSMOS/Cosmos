@@ -1,3 +1,5 @@
 pymongo
 numpy
 pillow
+joblib
+click
