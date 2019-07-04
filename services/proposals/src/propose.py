@@ -10,13 +10,76 @@ logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=
 import time
 import io
 from connected_components import get_proposals
-from typing import Mapping, TypeVar, Callable
 from PIL import Image
 import re
+from joblib import Parallel, delayed
+import click
+import pickle
 
-T = TypeVar('T')
 
-def propose(db_insert_fn: Callable[[Mapping[T, T], T], None]) -> None:
+def is_picklable(obj):
+    """
+    Helpful function to debug whether objects are pickleable (requirement for multiprocessing)
+    """
+    try:
+      pickle.dumps(obj)
+
+    except pickle.PicklingError:
+      return False
+    return True
+
+
+def load_docs(db, buffer_size):
+    """
+    """
+    current_docs = []
+    for doc in db.pages.find():
+        current_docs.append(doc)
+        if len(current_docs) == buffer_size:
+            yield current_docs
+            current_docs = []
+    yield current_docs
+
+
+def run_page(page, db_insert_fn):
+    """
+    """
+    # TODO: Currently logging does not work within a multiprocessing function.
+    logging.info(f'Running proposal on page {page["page_num"]} on pdf {page["pdf_name"]}')
+    bstring = page['resize_bytes']
+    img = Image.open(io.BytesIO(bstring)).convert('RGB')
+    coords = get_proposals(img)
+    page['proposals'] = coords
+    return page
+
+#print(f"Pickle run_page: {is_picklable(run_page)}")
+
+def propose_doc(db_insert_fn, num_processes, multimachine=False, replica_count=1, pod_id=1):
+    """
+    """
+    logging.info('Starting proposal generation process')
+    start_time = time.time()
+    client = MongoClient(os.environ["DBCONNECT"])
+    if multimachine:
+        obj_id = str(full['_id'])
+        doc_num = int(obj_id, 16)
+        if doc_num % replica_count != pod_id:
+            return
+        logging.info('Document found and added to queue')
+    db = client.pdfs
+    for batch in load_docs(db, 100):
+        logging.info('Loaded next batch. Running proposals')
+        pages = Parallel(n_jobs=num_processes)(delayed(run_page)(page, db_insert_fn) for page in batch)
+        db_insert_fn(pages, client)
+
+    end_time = time.time()
+    logging.info(f'Exiting proposal generation. Time up: {end_time - start_time}')
+
+
+"""
+TODO: This function no longer works with the above code. It needs to be updated to run on the page level.
+"""
+def propose(db_insert_fn):
     """
     On event trigger, run the proposals script
     """
@@ -36,25 +99,7 @@ def propose(db_insert_fn: Callable[[Mapping[T, T], T], None]) -> None:
     try:
         with db.raw_pdfs.watch([{'$match': {'operationType': 'insert'}}]) as stream:
             for doc in stream:
-                full = doc['fullDocument']
-                obj_id = str(full['_id'])
-                doc_num = int(obj_id, 16)
-                if doc_num % replica_count != pod_id:
-                    continue
-                logging.info('Document found and added to queue')
-                if 'page_data' not in full:
-                    full['page_data'] = []
-                page_data = full['page_data']
-                for page in db.pages.find({'pdf_id' : full['_id']}):
-                    tpage = {}
-                    for i in ['page_width', 'page_height', 'page_num']:
-                        tpage[i] = page[i]
-                    bstring = page['resize_bytes']
-                    img = Image.open(io.BytesIO(bstring)).convert('RGB')
-                    coords = get_proposals(img)
-                    tpage['proposals'] = coords
-                    page_data.append(tpage)
-                db_insert_fn(full, client)
+                propose_doc(doc, db, db_insert_fn, multimachine=True, replica_count=replica_count, pod_id=pod_id)
     except pymongo.errors.PyMongoError as err:
         logging.error("Error in pymongo:")
         logging.error(err)
@@ -62,14 +107,21 @@ def propose(db_insert_fn: Callable[[Mapping[T, T], T], None]) -> None:
     end_time = time.time()
     logging.info(f'Exiting proposal generation. Time up: {end_time - start_time}')
 
-def mongo_insert_fn(obj: Mapping[T, T], client: T) -> None:
+def mongo_insert_fn(objs, client):
     db = client.pdfs
-    cc_pdfs = db.cc_pdfs
-    result = cc_pdfs.insert_one(obj)
+    pages = db.propose_pages
+    #result = pages.replace_one({'_id':ObjectId(record['_id'])}, obj, upsert=True)
+    result = pages.insert_many(objs)
     logging.info(f"Inserted result: {result}")
 
 
+@click.command()
+@click.argument('num_processes')
+def click_wrapper(num_processes):
+    propose_doc(mongo_insert_fn, int(num_processes))
+
+
 if __name__ == '__main__':
-    propose(mongo_insert_fn)
+    click_wrapper()
 
 
