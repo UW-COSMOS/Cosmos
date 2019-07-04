@@ -5,7 +5,7 @@ services:
         ipc: host
         volumes:
             - ${INPUT_DIR}:/input/
-        command: "python3 src/pdf_ingestion.py /input 30"
+        command: "python3 pdf_ingestion.py /input 30"
         environment:
             - DBCONNECT
 
