@@ -4,3 +4,4 @@ pandas
 pdfminer.six
 chardet
 pillow
+joblib
