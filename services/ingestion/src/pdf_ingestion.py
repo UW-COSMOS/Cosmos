@@ -17,6 +17,7 @@ from preprocess import resize_png
 from PIL import Image
 from pdf_extractor import parse_pdf
 from pymongo import MongoClient
+import pymongo
 from bson.objectid import ObjectId
 import json
 from joblib import Parallel, delayed
@@ -27,18 +28,23 @@ from joblib import Parallel, delayed
 
 def ingest_pdf(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn):
     with tempfile.TemporaryDirectory() as img_tmp:
+        err = ""
         pdf_obj = {}
         pdf_obj = load_pdf_metadata(pdf_path, pdf_obj)
         pdf_obj["_id"] = ObjectId() # Want to know the _id _before_ insertion so we can tag pages in their collection
         pdf_path = os.path.abspath("%s/%s" % (pdf_dir, pdf_obj["pdf_name"]))
-        # Logging this way to log inside the Parallel call
-        logger = logging.getLogger()
-        logger.info(f"Ingesting pdf at {pdf_path}")
         subprocess_fn(pdf_path, img_tmp)
         pages = []
         pages = load_page_data(img_tmp, pdf_obj)
-        db_insert_pages_fn(pages)
-        db_insert_fn(pdf_obj)
+        logs = []
+        try:
+            pdf_logs = db_insert_fn(pdf_obj)
+            pages_logs = db_insert_pages_fn(pages)
+            logs.append(pdf_logs)
+            logs.append(pages_logs)
+        except pymongo.errors.DocumentTooLarge:
+            return ['Document at {pdf_path} was too large, not inserted']
+        return logs
 
 
 def run_pdf_ingestion(pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, n_jobs):
@@ -49,25 +55,15 @@ def run_pdf_ingestion(pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, 
     logging.info('Running ingestion')
     start_time = time.time()
     pdf_paths = glob.glob(os.path.join(pdf_dir, '*.pdf'))
-    Parallel(n_jobs=n_jobs)(delayed(ingest_pdf)(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn) for pdf_path in pdf_paths)
-
+    logging.info(f'Ingesting {len(pdf_paths)} pdfs')
+    logs = Parallel(n_jobs=n_jobs)(delayed(ingest_pdf)(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn) for pdf_path in pdf_paths)
+    for log in logs:
+        logging.info(log)
 
     end_time = time.time()
     logging.info(f'End running metadata ingestion. Total time: {end_time - start_time} s')
     return
 
-def insert_pdf_mongo(pdf):
-    """
-    Insert pdfs into mongodb
-    """
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
-    pdf_collection = db.raw_pdfs
-    try:
-        result = pdf_collection.insert(pdf)
-    except pymongo.errors.DocumentTooLarge:
-        del pdf['bytes']
-        result = pdf_collection.insert(pdf)
 
 def run_ghostscript(pdf_path, img_tmp):
     """
@@ -100,7 +96,24 @@ def insert_pages_mongo(pages):
     db = client.pdfs
     page_collection = db.pages
     result = page_collection.insert_many(pages)
+    return f'Inserted pages: {results}'
 
+def insert_pdf_mongo(pdf):
+    """
+    Insert pdfs into mongodb
+    """
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    pdf_collection = db.raw_pdfs
+    try:
+        result = pdf_collection.insert(pdf)
+    except pymongo.errors.DocumentTooLarge:
+        del pdf['bytes']
+        try:
+            result = pdf_collection.insert(pdf)
+        except pymongo.errors.DocumentTooLarge as e:
+            raise e
+    return f"Inserted pdf : {result}"
 
 def load_page_data(img_dir, current_obj):
     """
@@ -151,7 +164,7 @@ def load_pdf_metadata(pdf_path, current_obj):
         limit = list(limit)
     else:
         limit = None
-    with open('pdf_path', 'rb') as rf:
+    with open(pdf_path, 'rb') as rf:
         seq = rf.read()
         current_obj['bytes'] = seq
     current_obj['metadata'] = df
