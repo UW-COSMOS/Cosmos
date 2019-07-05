@@ -63,7 +63,11 @@ def insert_pdf_mongo(pdf):
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
     pdf_collection = db.raw_pdfs
-    result = pdf_collection.insert(pdf)
+    try:
+        result = pdf_collection.insert(pdf)
+    except pymongo.errors.DocumentTooLarge:
+        del pdf['bytes']
+        result = pdf_collection.insert(pdf)
 
 def run_ghostscript(pdf_path, img_tmp):
     """
@@ -134,7 +138,11 @@ def load_pdf_metadata(pdf_path, current_obj):
     """
     pdf_name = os.path.basename(pdf_path)
     # Df maps coordinates to unicode, limit is the dimensions of the pdf
-    df, limit = parse_pdf(pdf_path)
+    df = limit = None
+    try:
+        df, limit = parse_pdf(pdf_path)
+    except TypeError:
+        df = limit = None
     if df is not None:
         df = df.to_dict()
         # Hack here: throw this df into json and back
@@ -142,15 +150,8 @@ def load_pdf_metadata(pdf_path, current_obj):
         df = json.loads(df)
         limit = list(limit)
     else:
-        df = limit = None
-    with open(pdf_path, 'rb') as pf:
-        seq = pf.read()
-        # Check the length of the bytes. If the bytes length is too long, we can't store the PDF on this object, so we set it to None.
-        max_byte_size = 14000000
-        if len(seq) > max_byte_size:
-            current_obj['bytes'] = None
-        else:
-            current_obj['bytes'] = seq
+        limit = None
+    current_obj['bytes'] = seq
     current_obj['metadata'] = df
     current_obj['metadata_dimension'] = limit
     current_obj['pdf_name'] = pdf_name
