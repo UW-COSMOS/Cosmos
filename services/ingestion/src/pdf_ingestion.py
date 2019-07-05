@@ -151,7 +151,9 @@ def load_pdf_metadata(pdf_path, current_obj):
         limit = list(limit)
     else:
         limit = None
-    current_obj['bytes'] = seq
+    with open('pdf_path', 'rb') as rf:
+        seq = rf.read()
+        current_obj['bytes'] = seq
     current_obj['metadata'] = df
     current_obj['metadata_dimension'] = limit
     current_obj['pdf_name'] = pdf_name
