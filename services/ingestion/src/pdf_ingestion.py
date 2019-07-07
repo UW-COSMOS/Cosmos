@@ -30,13 +30,15 @@ def ingest_pdf(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_f
     with tempfile.TemporaryDirectory() as img_tmp:
         err = ""
         pdf_obj = {}
-        pdf_obj = load_pdf_metadata(pdf_path, pdf_obj)
+        logs = []
+        pdf_obj, err = load_pdf_metadata(pdf_path, pdf_obj)
+        if not err: 
+            logs.append(err)
         pdf_obj["_id"] = ObjectId() # Want to know the _id _before_ insertion so we can tag pages in their collection
         pdf_path = os.path.abspath("%s/%s" % (pdf_dir, pdf_obj["pdf_name"]))
         subprocess_fn(pdf_path, img_tmp)
         pages = []
         pages = load_page_data(img_tmp, pdf_obj)
-        logs = []
         try:
             pdf_logs = db_insert_fn(pdf_obj)
             pages_logs = db_insert_pages_fn(pages)
@@ -96,7 +98,7 @@ def insert_pages_mongo(pages):
     db = client.pdfs
     page_collection = db.pages
     result = page_collection.insert_many(pages)
-    return f'Inserted pages: {results}'
+    return f'Inserted pages: {result}'
 
 def insert_pdf_mongo(pdf):
     """
@@ -152,9 +154,14 @@ def load_pdf_metadata(pdf_path, current_obj):
     pdf_name = os.path.basename(pdf_path)
     # Df maps coordinates to unicode, limit is the dimensions of the pdf
     df = limit = None
+    err = ''
     try:
         df, limit = parse_pdf(pdf_path)
-    except TypeError:
+    except TypeError as e:
+        err += f'{e}\n'
+        df = limit = None
+    except AttributeError as e:
+        err += f'{e}\n'
         df = limit = None
     if df is not None:
         df = df.to_dict()
@@ -171,7 +178,7 @@ def load_pdf_metadata(pdf_path, current_obj):
     current_obj['metadata_dimension'] = limit
     current_obj['pdf_name'] = pdf_name
     current_obj['event_stream'] = ['metadata']
-    return current_obj
+    return current_obj, err
 
 @click.command()
 @click.argument('pdf_dir')
