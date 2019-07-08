@@ -20,6 +20,9 @@ import json
 import camelot
 import pickle
 
+from io import BytesIO
+
+
 T = TypeVar('T')
 
 def run_pdf_ingestion(pdf_dir: str, db_insert_fn: Callable[[Mapping[T, T]], None], subprocess_fn: Callable[[str, str], None]) -> Mapping[T, T]:
@@ -128,10 +131,103 @@ def load_pdf_tables(pdf_path: str, current_obj: Mapping[T,T]) -> Mapping[T, T]:
     current_obj['extracted_tables'] = table_list
     return current_obj
 
+def detect_tables_from_pages():
+    print("Starting")
+    start_time = time.time()
+    
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    coll_raw_pdfs = db.raw_pdfs
+    coll_detect_pages = db.detect_pages
+    docs = []
+    df_list = []
+    
+    # Get all the documents stored in raw_pdfs
+    for raw_pdf in coll_raw_pdfs.find():
+        pages = []
+        coords = []
+
+        raw_pdf_name = raw_pdf['pdf_name']
+        raw_pdf_bytes = raw_pdf['bytes']
+        print(raw_pdf_name)
+
+        # Get all corresponding pages with tables and their coordinates from detect_pages
+        for page in coll_detect_pages.find({"pdf_name":raw_pdf['pdf_name']}):
+            for detected_obj in page['detected_objs']:
+                if detected_obj[1] == "Table":
+                    pdf_name = str(page["pdf_name"])
+                    page_num = str(page["page_num"])
+                    table_coords = str(detected_obj[0])
+
+                    pages.append(page_num)
+                    coords.append(table_coords)
+
+                    print(pdf_name, page_num, table_coords)
+
+        print()
+        
+        mapped = list(zip(pages, coords))
+
+        # For all new documents, create a new file
+        file = open('new.pdf', 'wb')
+        for line in BytesIO(raw_pdf_bytes):
+            file.write(line)
+        file.close()
+
+        # For each document, find all tables at specified coords
+        # Compare each table extraction with Lattice and Stream, and choose best one
+        for pair in mapped:
+            my_page = pair[0]
+            my_coords = pair[1][1:-1].replace('.0', '').replace(' ', '')
+
+            tables_stream = camelot.read_pdf('new.pdf',
+                                             pages = my_page,
+                                             flavor = 'stream',
+                                             table_region = [my_coords],
+                                             flag_size = True,
+                                             strip_text = ' .\n',
+                                             edge_tol = 25
+                                            )
+    
+            tables_lattice = camelot.read_pdf('new.pdf',
+                                              pages = my_page, 
+                                              flavor = 'lattice',
+                                              table_region = [my_coords],
+                                              split_text = True,
+                                              flag_size = True,
+                                              strip_text = ' .\n',
+                                              line_scale = 100,
+                                              shift_text = [''],
+                                              copy_text = ['h', 'v']
+                                             )
+            
+            if tables_lattice.n == 0 or tables_lattice[0].accuracy < tables_stream[0].accuracy:
+                table = tables_stream[0]
+                flavor = "Stream"
+            else:
+                table = tables_lattice[0]
+                flavor = "Lattice"
+
+            df = table.df
+            df_list.append(df)
+        
+        os.remove('new.pdf')
+        docs.append(raw_pdf_name)
+        print()
+        print()
+    
+    print(len(docs))
+    print(len(df_list))
+    
+    end_time = time.time()
+    total_time = end_time - start_time
+    print("Total time taken is: " + total_time)
+
 @click.command()
 @click.argument('pdf_dir')
 def click_wrapper(pdf_dir: str) -> None:   
-    run_pdf_ingestion(pdf_dir, insert_pdfs_mongo, run_ghostscript)
+    #run_pdf_ingestion(pdf_dir, insert_pdfs_mongo, run_ghostscript)
+    detect_tables_from_pages()
 
 if __name__ == '__main__':
     click_wrapper()
