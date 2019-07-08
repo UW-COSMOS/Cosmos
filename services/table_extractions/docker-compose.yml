@@ -1,0 +1,11 @@
+version: "2.3"
+services:
+    ingestion:
+        build: .
+        ipc: host
+        volumes:
+            - .:/develop/
+        command: tail -F anything
+        environment:
+
+
