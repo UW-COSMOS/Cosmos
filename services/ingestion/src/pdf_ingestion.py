@@ -26,7 +26,7 @@ from joblib import Parallel, delayed
 # No type hints on this one because we need to pickle it:
 # https://github.com/python/typing/issues/511
 
-def ingest_pdf(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn):
+def ingest_pdf(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, skip):
     with tempfile.TemporaryDirectory() as img_tmp:
         err = ""
         pdf_obj = {}
@@ -34,8 +34,12 @@ def ingest_pdf(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_f
         pdf_obj, err = load_pdf_metadata(pdf_path, pdf_obj)
         if not err: 
             logs.append(err)
+        pdf_name = pdf_obj['pdf_name']
+        pdf_path = os.path.abspath("%s/%s" % (pdf_dir, pdf_name))
+        # There needs to be hash index on pdf_name in the pdf and pages collections or else this will be so slow
+        if skip and do_skip(pdf_path):
+            return []
         pdf_obj["_id"] = ObjectId() # Want to know the _id _before_ insertion so we can tag pages in their collection
-        pdf_path = os.path.abspath("%s/%s" % (pdf_dir, pdf_obj["pdf_name"]))
         subprocess_fn(pdf_path, img_tmp)
         pages = []
         pages = load_page_data(img_tmp, pdf_obj)
@@ -46,10 +50,22 @@ def ingest_pdf(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_f
             logs.append(pages_logs)
         except pymongo.errors.DocumentTooLarge:
             return ['Document at {pdf_path} was too large, not inserted']
+        except pymongo.errors.OperationFailure as e:
+            # TODO: If this happens in pages, we should roll back the pdf insert.
+            # We should really be using transactions here.
+            return [f'Operation failure: {e}']
         return logs
 
 
-def run_pdf_ingestion(pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, n_jobs):
+def do_skip(pdf_name):
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    pdf_collection = db.raw_pdfs
+    return pdf_collection.count_documents({'pdf_name': pdf_name}, limit=1) != 0
+
+
+
+def run_pdf_ingestion(pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, n_jobs, skip):
     """
     Entry point for ingesting PDF documents
     """
@@ -58,9 +74,10 @@ def run_pdf_ingestion(pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, 
     start_time = time.time()
     pdf_paths = glob.glob(os.path.join(pdf_dir, '*.pdf'))
     logging.info(f'Ingesting {len(pdf_paths)} pdfs')
-    logs = Parallel(n_jobs=n_jobs)(delayed(ingest_pdf)(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn) for pdf_path in pdf_paths)
-    for log in logs:
-        logging.info(log)
+    logs = Parallel(n_jobs=n_jobs)(delayed(ingest_pdf)(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, skip) for pdf_path in pdf_paths)
+    for log_list in logs:
+        for log in log_list:
+            logging.info(log)
 
     end_time = time.time()
     logging.info(f'End running metadata ingestion. Total time: {end_time - start_time} s')
@@ -183,8 +200,10 @@ def load_pdf_metadata(pdf_path, current_obj):
 @click.command()
 @click.argument('pdf_dir')
 @click.argument('num_processes')
-def click_wrapper(pdf_dir: str, num_processes: str) -> None:
-    run_pdf_ingestion(pdf_dir, insert_pdf_mongo, insert_pages_mongo, run_ghostscript, int(num_processes))
+@click.option('--skip/--no-skip', help="Don't try to update already ingested pdfs. Good to use if you ran into an error on ingestion and want to continue the ingestion")
+def click_wrapper(pdf_dir, num_processes, skip) -> None:
+    print(skip)
+    run_pdf_ingestion(pdf_dir, insert_pdf_mongo, insert_pages_mongo, run_ghostscript, int(num_processes), skip)
 
 if __name__ == '__main__':
     click_wrapper()
