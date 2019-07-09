@@ -11,90 +11,72 @@ logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=
 import time
 import io
 from preprocess import pad_image
-from typing import Mapping, TypeVar, Callable
 import base64
 from infer import run_inference
+import click
+from joblib import Parallel, delayed
 
-T = TypeVar('T')
 
-def detect() -> None:
+def preprocess_page(page):
+    bytesio = io.BytesIO(page['resize_bytes'])
+    img = pad_image(bytesio)
+    padded_bytes_stream = io.BytesIO()
+    img.save(padded_bytes_stream, format='PNG')
+    padded_bytes = padded_bytes_stream.getvalue()
+    page['padded_bytes'] = padded_bytes
+    return page
+
+
+def load_pages(db, buffer_size):
     """
-    On event trigger, run the proposals script
     """
+    current_docs = []
+    for doc in db.propose_pages.find():
+        current_docs.append(doc)
+        if len(current_docs) == buffer_size:
+            yield current_docs
+            current_docs = []
+    yield current_docs
+
+
+def pages_detection_scan(config_pth, weights_pth, num_processes, db_insert_fn):
     logging.info('Starting detection over papers')
     start_time = time.time()
     client = MongoClient(os.environ["DBCONNECT"])
-    logging.info(f'Connected to client: {client}. Setting watch on cc_pdfs collection')
+    logging.info(f'Connected to client: {client}.')
     db = client.pdfs
-    # Open a cursor that will watch for inserts on cc_pdfs
-    try:
-        with db.cc_pdfs.watch([{'$match': {'operationType': 'insert'}}]) as stream:
-            for doc in stream:
-                full = doc['fullDocument']
-                process_doc(full, mongo_insert_fn, client)
-    except pymongo.errors.PyMongoError as err:
-        logging.error("Error in pymongo:")
-        logging.error(err)
+    for batch in load_pages(db, 500):
+        pages = Parallel(n_jobs=num_processes)(delayed(preprocess_page)(page) for page in batch)
+        detected_objs = run_inference(pages, config_pth, weights_pth, os.environ["DEVICE"])
+        for page in pages:
+            page_id = str(page['_id'])
+            page['detected_objs'] = detected_objs[page_id]
+            del page['padded_bytes']
+        db_insert_fn(pages, client)
 
     end_time = time.time()
-    logging.info(f'Exiting proposal generation. Time up: {end_time - start_time}')
+    logging.info(f'Exiting detection. Time up: {end_time - start_time}')
 
-def get_page_bytes(client, pdf_id, page_num):
-    """
-    TODO: Docstring for get_page_bytes.
-
-    Args:
-        pdf_id (TODO): TODO
-        page_no (TODO): TODO
-
-    Returns: TODO
-
-    """
+def mongo_insert_fn(objs, client):
     db = client.pdfs
-    pages = db.pages
-    result = pages.find_one({"pdf_id" : pdf_id, "page_num" : page_num})
-    bytesio = io.BytesIO(result['resize_bytes'])
-    return bytesio
-
-def process_doc(full: Mapping[T, T], db_insert_fn: Callable[[Mapping[T, T], T], None], client: T, config_pth: str = 'model_config.yaml', weights_pth: str = 'model_weights.pth') -> Mapping[T, T]:
-    logging.info('Document found and added to queue')
-
-    page_data = full['page_data']
-    # loop over pages once to prep them for inference
-    for page in page_data:
-        bytesio = get_page_bytes(client, full["_id"], page["page_num"])
-        img = pad_image(bytesio)
-        padded_bytes_stream = io.BytesIO()
-        img.save(padded_bytes_stream, format='PNG')
-        padded_bytes = padded_bytes_stream.getvalue()
-        page['padded_bytes'] = padded_bytes
-    print('test running inference')
-    detected_objs = run_inference(page_data, config_pth, weights_pth, os.environ["DEVICE"], pdf_name=full['pdf_name'])
-    # loop over pages again to map detected objects back into the pages to be written.
-    for page in page_data:
-        page_num = page['page_num']
-        page_num = str(page_num)
-        if page_num not in detected_objs:
-            logging.info(f"No detected objects for {full['pdf_name']} on page {page_num}")
-            page['detected_objs'] = []
-            continue
-        objs = detected_objs[page_num]
-        page['detected_objs'] = objs
-        del page["padded_bytes"]
-
-    full['event_stream'].append('detection')
-    db_insert_fn(full, client)
-    return full
+    try:
+        result = db.detect_pages.insert_many(objs)
+        logging.info(f"Inserted results: {result}")
+    except pymongo.errors.BulkWriteError:
+        for obj in objs:
+            result = db.detect_pages.replace_one({'_id': obj['_id']}, obj, upsert=True)
+            logging.info(f"Inserted result: {result}")
 
 
-def mongo_insert_fn(obj: Mapping[T, T], client: T) -> None:
-    db = client.pdfs
-    detect_pdfs = db.detect_pdfs
-    result = detect_pdfs.insert_one(obj)
-    logging.info(f"Inserted result: {result}")
+@click.command()
+@click.argument('config_path')
+@click.argument('weights_path')
+@click.argument('num_processes')
+def click_wrapper(config_path, weights_path, num_processes):
+    pages_detection_scan(config_path, weights_path, int(num_processes), mongo_insert_fn)
 
 
 if __name__ == '__main__':
-    detect()
+    click_wrapper()
 
 
