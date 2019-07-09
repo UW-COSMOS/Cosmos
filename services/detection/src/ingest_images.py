@@ -22,6 +22,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import yaml
 import io
+import logging
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
 
 normalizer = NormalizeWrapper()
@@ -113,6 +115,8 @@ def load_proposal_obj(obj):
     :param obj: Object to load proposals off of
     :return: BBoxes object denoted proposal
     """
+    if obj['proposals'] is None:
+        return None
     np_arr = np.array(obj['proposals'])
     bbox_absolute = torch.from_numpy(np_arr).reshape(-1,4)
     return BBoxes(bbox_absolute, "xyxy")
@@ -223,11 +227,10 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
     IngestObjs = namedtuple('IngestObjs', 'uuids class_stats nproposals ngt_boxes')
     return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
 
-def db_ingest_objs(objs, pdf_name, warped_size, partition, session):
+def db_ingest_objs(objs, warped_size, partition, session):
     """
     ingest the db
     :param objs: Objects to ingest
-    :param pdf_name: PDF name for logging
     :param warped_size: Size of warped image
     :param partition: For train mode this corresponds to train/val/test
     :param session: DB Session to work on
@@ -243,8 +246,8 @@ def db_ingest_objs(objs, pdf_name, warped_size, partition, session):
         bstring = obj['padded_bytes']
         image = Image.open(io.BytesIO(bstring))
         proposals = load_proposal_obj(obj)
-        if proposals.shape[0] == 0:
-            logging.info(f"No proposals for {pdf_name}, page {page_num}")
+        if proposals is None or proposals.shape[0] == 0:
+            logging.info(f"No proposals for {obj['pdf_name']}, page {obj['page_num']}")
             continue
         ret = [image, None, proposals, None]
         pts, proposals_len, gt_box_len = unpack_page(ret, warped_size)
@@ -261,7 +264,7 @@ def db_ingest_objs(objs, pdf_name, warped_size, partition, session):
                 class_stats[label] += 1
             else:
                 class_stats[label] = 1
-            ex = Ex(page_id=page_num, object_id=uuid, window=pt.ex_window, bbox=pt.ex_proposal, gt_box=pt.gt_box, label=pt.gt_cls, partition=partition)
+            ex = Ex(page_id=str(obj['_id']), object_id=uuid, window=pt.ex_window, bbox=pt.ex_proposal, gt_box=pt.gt_box, label=pt.gt_cls, partition=partition)
             examples.append(ex)
     session.add_all(examples)
     IngestObjs = namedtuple('IngestObjs', 'uuids class_stats nproposals ngt_boxes')
@@ -337,7 +340,7 @@ class ImageDB:
         return Session() 
 
     @staticmethod
-    def initialize_and_ingest(objs, warped_size, partition, expansion_delta, pdf_name=None):
+    def initialize_and_ingest(objs, warped_size, partition, expansion_delta):
         """
         Initialize and ingest the db from the inputs
         :param img_dir: Image directory
@@ -356,7 +359,7 @@ class ImageDB:
             ingest_objs = db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session)
         # Alternatively, we can pass in a list of objects and call that loading function
         else:
-            ingest_objs = db_ingest_objs(objs, pdf_name, warped_size, partition, session)
+            ingest_objs = db_ingest_objs(objs, warped_size, partition, session)
         compute_neighborhoods(session, partition, expansion_delta)
         session.commit()
         return session, ingest_objs
