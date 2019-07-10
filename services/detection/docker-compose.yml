@@ -4,7 +4,13 @@ services:
         build: .
         runtime: nvidia
         ipc: host
-        command: "python3 detect.py model_config.yml model_weights.pth 30"
+        command: 
+            - /bin/bash
+            - -c
+            - |
+              export LC_ALL=C.UTF-8
+              export LANG=C.UTF-8
+              python3 detect.py model_config.yaml model_weights.pth 30 --skip
         #volumes:
         #    - .:/develop/
         #command: "tail -F /dev/null"
