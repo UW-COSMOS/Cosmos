@@ -1,6 +1,6 @@
 version: "2.3"
 services:
-    ingestion:
+    table_extractions:
         build: .
         ipc: host
         volumes:
