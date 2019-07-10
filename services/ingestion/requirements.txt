@@ -1,8 +1,7 @@
-pillow
 click
 pymongo
 pandas
 pdfminer.six
 chardet
-opencv-python
-camelot-py[cv]
+pillow
+joblib
