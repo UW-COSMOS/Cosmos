@@ -21,6 +21,7 @@ from io import BytesIO
 
 T = TypeVar('T')
 
+
 def run_table_extraction(n_jobs, skip) -> None:
     """
     Entry point for extracting tables from ingested PDFs
@@ -28,85 +29,95 @@ def run_table_extraction(n_jobs, skip) -> None:
 
     logging.info('Running table extraction')
     start_time = time.time()
-    table_extraction(skip)
+
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+
+    for batch in load_raw_pdfs(db, 100):
+        logs = Parallel(n_jobs=n_jobs)(delayed(table_extraction)(raw_pdf, db, skip) for raw_pdf in batch)
+
+        for log_list in logs:
+            for log in log_list:
+                logging.info(log)
 
     end_time = time.time()
     logging.info(f'End running table extractions. Total time: {end_time - start_time} s')
     return
 
 
-def table_extraction(skip) -> None:
+def load_raw_pdfs(db, buffer_size) -> list:
+    """
+    Load documents buffer_size at a time
+    """
+    coll_raw_pdfs = db.raw_pdfs
+    current_docs = []
+
+    for doc in coll_raw_pdfs.find():
+        current_docs.append(doc)
+        if len(current_docs) == buffer_size:
+            yield current_docs
+            current_docs = []
+    yield current_docs
+
+
+def table_extraction(raw_pdf, db, skip) -> list:
     """
     Retrieve the tables from each table, and store them in mongodb.
     """
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
 
-    coll_raw_pdfs = db.raw_pdfs
     coll_detect_pages = db.detect_pages
     coll_tables = db.tables
 
-    docs_count = 0
-    tables_count = 0
+    logs = []
 
-    tables_data = []
+    raw_pdf_name = raw_pdf['pdf_name']
+    raw_pdf_bytes = raw_pdf['bytes']
 
-    # Get all the documents stored in raw_pdfs
-    for raw_pdf in coll_raw_pdfs.find():
-        raw_pdf_name = raw_pdf['pdf_name']
-        raw_pdf_bytes = raw_pdf['bytes']
+    logs.append(f'Scanning {raw_pdf_name}')
 
-        logging.info(f'Scanning {raw_pdf_name}')
-        #print(raw_pdf_name)
-        #print()
-
-        if skip & do_skip(coll_detect_pages, raw_pdf_name):
-            logging.info('Document previously extracted. Skipping')
-            continue
-
+    # If document has already been scanned, ignore it based on skip settings
+    if skip & do_skip(coll_tables, raw_pdf_name):
+        logs.append('Document previously extracted. Skipping')
+    else:
         # Get all page numbers and coordinates for each table in a document
-        [pages, coords] = get_pages_and_coordinates(coll_detect_pages, raw_pdf_name)
+        [pages, coords, pages_and_coords_logs] = get_pages_and_coordinates(coll_detect_pages, raw_pdf_name)
 
-        # Extract the tables
-        [tables, flavor] = extract_tables(raw_pdf_bytes, pages, coords)
+        # If no pages with tables are found, skip
+        if not pages:
+            logs.append('No tables detected in this document')
+        else:
+            # Extract the tables
+            [table_df, flavor, extract_tables_logs] = extract_tables(raw_pdf_bytes, pages, coords)
 
-        # Prepare the data to be inserted
-        tables_data_per_doc = load_tables(raw_pdf_name, pages, coords, tables, flavor)
+            # Prepare the data to be inserted
+            tables_data = load_tables(raw_pdf_name, pages, coords, table_df, flavor)
 
-        # Insert the data into mongodb
-        tables_data.append(tables_data_per_doc)
+            # Insert the data into mongodb
+            insert_tables_mongo_logs = insert_tables_mongo(coll_tables, tables_data)
 
-        # Update the counts
-        tables_count += len(tables)
-        docs_count += 1
-        #print()
-        #print()
+            logs.append(pages_and_coords_logs)
+            logs.append(extract_tables_logs)
+            logs.append(insert_tables_mongo_logs)
 
-    # Insert the data into mongodb
-    insert_tables_mongo(coll_tables, tables_data)
-
-    logging.info(f'Extracted from  {docs_count} documents')
-    logging.info(f'Tables extracted {tables_count}')
-
-    print(docs_count)
-    print(tables_count)
+    return logs
 
 
-def do_skip(coll_detect_pages: pymongo.collection.Collection, raw_pdf_name: str):
+def do_skip(coll_tables: pymongo.collection.Collection, raw_pdf_name: str):
     """
     Check if document is already scanned or not. If yes, skip it
     """
-    return coll_detect_pages.count_documents({'pdf_name': raw_pdf_name}, limit=1) != 0
+    return coll_tables.count_documents({'pdf_name': raw_pdf_name}, limit=1) != 0
 
 
 def get_pages_and_coordinates(coll_detect_pages: pymongo.collection.Collection, raw_pdf_name: str) -> list:
     """
     For each document in raw_pdfs, retrieve all pages that have detected tables, and their coordinates.
     """
-    logging.info(f'Taking out metadata for {raw_pdf_name}')
-
+    logs = []
     pages = []
     coords = []
+
+    logs.append(f'Taking out metadata for {raw_pdf_name}')
 
     for page in coll_detect_pages.find({"pdf_name": raw_pdf_name}):
         for detected_obj in page['detected_objs']:
@@ -117,22 +128,18 @@ def get_pages_and_coordinates(coll_detect_pages: pymongo.collection.Collection, 
                 pages.append(page_num)
                 coords.append(table_coords)
 
-                logging.info(f'Page: {page_num}, Coords: {table_coords}')
-                #print(page_num, table_coords)
+                logs.append(f'Page: {page_num}, Coords: {table_coords}')
 
-    return [pages, coords]
+    return [pages, coords, logs]
 
 
 def extract_tables(raw_pdf_bytes:bytes, pages: list, coords: list) -> list:
     """
     Extract each table using both Lattice and Stream. Compare and choose the best one.
     """
+    logs = []
 
-    logging.info('Extracting tables')
-
-    if not pages:
-        logging.info('No tables detected')
-        return [[],[]]
+    logs.append('Extracting tables')
 
     file = open('new.pdf', 'wb')
     for line in BytesIO(raw_pdf_bytes):
@@ -189,37 +196,35 @@ def extract_tables(raw_pdf_bytes:bytes, pages: list, coords: list) -> list:
 
     os.remove('new.pdf')
 
-    return [df_list, flavor_list]
+    return [df_list, flavor_list, logs]
 
 
-def load_tables(pdf_name: str, pages: list, coords: list, tables: list, flavor: list) -> Mapping[T,T]:
+def load_tables(pdf_name: str, pages: list, coords: list, table_df: list, flavor: list) -> list:
     """
     Prepare the data containing the table, and corresponding doc, page, coords, and extraction flavor
     """
-    logging.info(f'Storing document {pdf_name}')
-
     detected_tables = {}
-    table_list = [pickle.dumps(table) for table in tables]
+
+    table_list = [pickle.dumps(table) for table in table_df]
 
     detected_tables['pdf_name'] = pdf_name
     detected_tables['extracted_tables'] = list(zip(table_list, pages, coords, flavor))
 
-    return detected_tables
+    return [detected_tables]
 
 
-def insert_tables_mongo(coll_tables: pymongo.collection.Collection, detected_tables: list) -> None:
+def insert_tables_mongo(coll_tables: pymongo.collection.Collection, detected_tables: list) -> str:
     """
     Insert tables into mongodb
     """
-    logging.info(f'Inserting tables')
-    coll_tables.insert_many(detected_tables)
+    result = coll_tables.insert_one(detected_tables)
+    return f'Inserted tables: {result}'
 
 
 @click.command()
 @click.argument('num_processes')
-@click.option('--skip/--no-skip', help="Don't try to update already extracted pdfs. Good to use if you "
-                                                       "ran into an error on ingestion and want to continue the "
-                                                       "ingestion")
+@click.option('--skip/--no-skip', help="Don't try to update already extracted pdfs. Good to use if you ran into an "
+                                       "error on ingestion and want to continue the ingestion")
 def click_wrapper(num_processes: str, skip) -> None:
     print(skip)
     run_table_extraction(int(num_processes), skip)
