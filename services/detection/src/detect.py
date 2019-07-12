@@ -31,18 +31,18 @@ def load_pages(db, buffer_size):
     """
     """
     current_docs = []
-    for doc in db.propose_pages.find():
+    for doc in db.propose_pages.find().batch_size(buffer_size):
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs
             current_docs = []
     yield current_docs
 
+
 def do_skip(page, client):
     db = client.pdfs
     coll = db.detect_pages
     return coll.count_documents({'pdf_name': page['pdf_name'], 'page_num': page['page_num']}, limit=1) != 0
-    
 
 
 def pages_detection_scan(config_pth, weights_pth, num_processes, db_insert_fn, skip):
