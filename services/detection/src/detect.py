@@ -51,7 +51,7 @@ def pages_detection_scan(config_pth, weights_pth, num_processes, db_insert_fn, s
     client = MongoClient(os.environ["DBCONNECT"])
     logging.info(f'Connected to client: {client}.')
     db = client.pdfs
-    for batch in load_pages(db, 500):
+    for batch in load_pages(db, 100):
         if skip:
             batch = [page for page in batch if not do_skip(page, client)]
             if len(batch) == 0:
