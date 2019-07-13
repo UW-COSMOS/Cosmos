@@ -1,9 +1,9 @@
 version: "2.3"
 services:
-    proposals:
+    ocr:
         build: .
         ipc: host
-        command: "python3 propose.py 30"
+        command: "python3 ocr.py 10 --no-skip"
         #volumes:
         #    - .:/develop/
         #command: "tail -F /dev/null"
