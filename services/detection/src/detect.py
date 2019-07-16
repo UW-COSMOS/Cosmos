@@ -31,18 +31,18 @@ def load_pages(db, buffer_size):
     """
     """
     current_docs = []
-    for doc in db.propose_pages.find():
+    for doc in db.propose_pages.find().batch_size(buffer_size):
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs
             current_docs = []
     yield current_docs
 
+
 def do_skip(page, client):
     db = client.pdfs
     coll = db.detect_pages
     return coll.count_documents({'pdf_name': page['pdf_name'], 'page_num': page['page_num']}, limit=1) != 0
-    
 
 
 def pages_detection_scan(config_pth, weights_pth, num_processes, db_insert_fn, skip):
@@ -51,7 +51,7 @@ def pages_detection_scan(config_pth, weights_pth, num_processes, db_insert_fn, s
     client = MongoClient(os.environ["DBCONNECT"])
     logging.info(f'Connected to client: {client}.')
     db = client.pdfs
-    for batch in load_pages(db, 500):
+    for batch in load_pages(db, 100):
         if skip:
             batch = [page for page in batch if not do_skip(page, client)]
             if len(batch) == 0:

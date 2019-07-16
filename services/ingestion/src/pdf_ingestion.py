@@ -202,7 +202,6 @@ def load_pdf_metadata(pdf_path, current_obj):
 @click.argument('num_processes')
 @click.option('--skip/--no-skip', help="Don't try to update already ingested pdfs. Good to use if you ran into an error on ingestion and want to continue the ingestion")
 def click_wrapper(pdf_dir, num_processes, skip) -> None:
-    print(skip)
     run_pdf_ingestion(pdf_dir, insert_pdf_mongo, insert_pages_mongo, run_ghostscript, int(num_processes), skip)
 
 if __name__ == '__main__':
