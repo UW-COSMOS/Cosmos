@@ -9,6 +9,7 @@ FROM python:3.7
 COPY requirements.txt /
 
 RUN pip install -r /requirements.txt
+RUN pip install elasticsearch_dsl
 
 COPY src/ /app
 WORKDIR /app

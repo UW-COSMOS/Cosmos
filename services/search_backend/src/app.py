@@ -14,12 +14,7 @@ import base64
 import json
 from flask import jsonify
 
-class CustomJSONEncoder(JSONEncoder):
-    def default(self, obj): return json_util.default(obj)
-
-
 app = Flask(__name__)
-#app.json_encoder = CustomJSONEncoder
 
 @app.route('/search')
 def search():

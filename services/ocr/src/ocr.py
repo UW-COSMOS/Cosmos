@@ -63,12 +63,21 @@ def process_page(page):
         bytes_stream = io.BytesIO()
         cropped_img.save(bytes_stream, format='PNG')
         bstring = bytes_stream.getvalue()
+        words = obj_ocr['text']
+        word_list = []
+        for ind, word in words.iteritems():
+            word = str(word)
+            word = strip_regx.sub('', word)
+            if not word:
+                continue
+            word_list.append(word)
+        word_dump = ' '.join(word_list)
         obj_ocr = obj_ocr.to_dict()
         obj_ocr = json.dumps(obj_ocr)
         obj_ocr = json.loads(obj_ocr)
         final_obj = {'bounding_box': bb, 'bytes': bstring,
                      'page_ocr_df': obj_ocr, 'class': cls, 'score': score,
-                     'pdf_name': page['pdf_name'], 'page_num': page['page_num']}
+                     'pdf_name': page['pdf_name'], 'page_num': page['page_num'], content: word_dump}
         objs.append(final_obj)
     return (objs, None)
     
