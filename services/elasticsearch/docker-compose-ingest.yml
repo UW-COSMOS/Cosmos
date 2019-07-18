@@ -9,3 +9,8 @@ services:
       #command: "tail -F /dev/null"
       environment:
           - DBCONNECT
+
+networks:
+  default:
+    external:
+      name: elasticsearch_esnet
