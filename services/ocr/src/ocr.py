@@ -33,15 +33,15 @@ def load_pages(db, buffer_size):
 
 
 def do_skip(page, client):
-    db = client.pdfs
-    coll = db.ocr_pages
-    return coll.count_documents({'pdf_name': page['pdf_name'], 'page_num': page['page_num']}, limit=1) != 0
-
+    # TODO
+    return False
 
 def process_page(page):
     if 'detected_objs' not in page:
         return (None, f'No detected objs on page: {page["_id"]}')
     detected_objs = page['detected_objs']
+    # Sanity check that filters objects not of length 3
+    detected_objs = [obj for obj in detected_objs if len(obj) == 3]
     l = group_cls(detected_objs, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
     l = group_cls(l, 'Figure')
     page['merged_objs'] = l
@@ -52,6 +52,7 @@ def process_page(page):
     tess_df['right'] = tess_df['left'] + tess_df['width']
     #print(tess_df)
     objs = []
+    strip_regx = re.compile('[^a-zA-Z]') # Strip all non alphabet characters
     for obj in l:
         bb, cls, score = obj
         tl_x, tl_y, br_x, br_y = bb
@@ -67,17 +68,18 @@ def process_page(page):
         word_list = []
         for ind, word in words.iteritems():
             word = str(word)
-            word = strip_regx.sub('', word)
+            #word = strip_regx.sub('', word)
             if not word:
                 continue
             word_list.append(word)
+        word_list = [word for word in word_list if word != 'nan']
         word_dump = ' '.join(word_list)
         obj_ocr = obj_ocr.to_dict()
         obj_ocr = json.dumps(obj_ocr)
         obj_ocr = json.loads(obj_ocr)
         final_obj = {'bounding_box': bb, 'bytes': bstring,
                      'page_ocr_df': obj_ocr, 'class': cls, 'score': score,
-                     'pdf_name': page['pdf_name'], 'page_num': page['page_num'], content: word_dump}
+                     'pdf_name': page['pdf_name'], 'page_num': page['page_num'], 'content': word_dump}
         objs.append(final_obj)
     return (objs, None)
     

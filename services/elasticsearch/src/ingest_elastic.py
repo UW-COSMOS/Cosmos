@@ -6,6 +6,7 @@ logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=
 from elasticsearch_dsl import Document, Text, connections
 import pymongo
 from pymongo import MongoClient
+import os
 
 class Snippet(Document):
     content = Text()
@@ -19,7 +20,7 @@ class Snippet(Document):
 
 
 def ingest_elasticsearch():
-    connections.create_connection()
+    connections.create_connection(hosts=['es01'])
     Snippet.init()
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
