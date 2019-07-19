@@ -14,7 +14,6 @@ import os
 def load_detected_pages(db, buffer_size):
     """
     """
-    print("inside load_detected_pages")
     current_docs = []
     for doc in db.ocr_pages.find():
         current_docs.append(doc)
@@ -30,7 +29,6 @@ def do_skip(page, client):
 
 
 def postprocess(db_insert_fn, num_processes, weights_pth, skip):
-    print("inside postprocess")
     logging.info('Starting post-processing over detected objects')
     start_time = time.time()
     client = MongoClient(os.environ["DBCONNECT"])
@@ -51,7 +49,7 @@ def postprocess(db_insert_fn, num_processes, weights_pth, skip):
 def mongo_insert_fn(objs, client):
     db = client.pdfs
     try:
-        pages = db.postprocess_pages.insert_many(objs)
+        result = db.postprocess_pages.insert_many(objs)
         logging.info(f"Inserted result: {result}")
     except pymongo.errors.BulkWriteError:
         for obj in objs:

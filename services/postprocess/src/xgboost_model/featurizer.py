@@ -79,24 +79,26 @@ def process_html(html_file):
         return html_list
 
 def get_feat_vec(predict, predict_list, classes):
-    max_nhds = 15
+    max_nhds = 15 # Maximum of 15 neighbors considered for creating neighborhood features
     feat_vec = []    
     p_bb, p_cls_scores, text = predict
     p_score, p_cls = p_cls_scores[0]
     
-    # Neighbhorhood features
+    # Neighborhood features
     nbhds = compute_neighbors(predict, predict_list)
     if len(nbhds) > max_nhds:
         max_nhds = len(nbhds)
     nbhds_sorted = sorted(nbhds, key=lambda nbhds: (nbhds[0]))
     feat_nbhd1 = []
-    for nbhd in nbhds:
-        nbhd_bb, nbhd_cls_scores, _ = nbhd[0]
-        nbhd_score, nbhd_cls = nbhd_cls_scores[0]
-        nbhd_score = 0.1
-        nbhd_bb = tuple(nbhd_bb)
-        feat_nbhd1.append(classes.index(nbhd_cls))
-    feat_nbhd1.extend([-1] * (15 - len(feat_nbhd1)))
+    nbhr_count = 1
+    for nbhr in nbhds:
+        nbhr_bb, nbhr_cls_scores, _ = nbhr[0]
+        nbhr_score, nbhr_cls = nbhr_cls_scores[0]
+        feat_nbhd1.append(classes.index(nbhr_cls))
+        if nbhr_count == 15:
+            break
+        nbhr_count += 1
+    feat_nbhd1.extend([-1] * (max_nhds - len(feat_nbhd1)))
 
     width, height = get_width_height(p_bb)  
         
@@ -117,7 +119,9 @@ def get_feat_vec(predict, predict_list, classes):
     
     fig_matches = 1 if len(re.findall('^(figure|fig)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', text, flags=re.IGNORECASE|re.MULTILINE)) > 0 else 0
     table_matches = 1 if len(re.findall('^(table|tbl|tab)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', text, flags=re.IGNORECASE|re.MULTILINE)) > 0 else 0  
-    
+    feat_vec.append(fig_matches)
+    feat_vec.append(table_matches)
+
     return feat_vec        
 
 def get_feat_vec_train(predict, predict_list, classes):
