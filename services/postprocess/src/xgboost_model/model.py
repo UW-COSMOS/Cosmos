@@ -10,10 +10,6 @@ from sklearn.metrics import accuracy_score
 with open("classes.yaml") as stream:
     classes  = yaml.load(stream)["classes"]
 
-class XGBoostModel():
-    def __init__():
-        return XGBClassifier()
-
 class PostProcessTrainer:
     def __init__(self, model, train_set_x, train_set_y, val_set_x, val_set_y, log_dir ='./log_dir', model_path='pp_model_weights.pth'):
         self.train_set_x = train_set_x

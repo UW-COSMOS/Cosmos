@@ -43,7 +43,6 @@ class InferenceHelper:
             probs, pred_idxs = torch.sort(cls_scores, dim=1, descending=True)
             pred_idxs = pred_idxs.tolist()[0]
             pred_cls = [self.cls[i] for i in pred_idxs]
-            # Convert the tensor to a list of coords
             prediction = list(zip(probs.tolist()[0], pred_cls))
             pred_tuple = (bb.tolist(), prediction)
             page_id = db_ex.page_id
