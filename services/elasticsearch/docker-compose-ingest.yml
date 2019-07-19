@@ -1,0 +1,16 @@
+version: '2.3'
+services:
+  ingest_elastic:
+      build: .
+      ipc: host
+      command: "python ingest_elastic.py"
+      #volumes:
+      #    - .:/develop/
+      #command: "tail -F /dev/null"
+      environment:
+          - DBCONNECT
+
+networks:
+  default:
+    external:
+      name: elasticsearch_esnet

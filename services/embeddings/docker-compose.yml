@@ -1,9 +1,9 @@
 version: "2.3"
 services:
-    ocr:
+    embeddings:
         build: .
         ipc: host
-        #command: "python3 ocr.py 10 --no-skip"
+        #command: "python3 embeddings.py 30"
         volumes:
             - .:/develop/
         command: "tail -F /dev/null"

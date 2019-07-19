@@ -16,7 +16,7 @@ def load_detected_pages(db, buffer_size):
     """
     print("inside load_detected_pages")
     current_docs = []
-    for doc in db.detect_pages1.find():
+    for doc in db.ocr_pages.find():
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs

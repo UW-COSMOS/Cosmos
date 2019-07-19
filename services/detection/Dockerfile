@@ -44,8 +44,8 @@ ENV PATH=$CONDA_PREFIX/bin:$PATH
 RUN conda install -y -c pytorch \
     cuda100=1.0 \
     magma-cuda100=2.4.0 \
-    "pytorch=1.0.0=py3.6_cuda10.0.130_cudnn7.4.1_1" \
-    torchvision=0.2.1 \
+    "pytorch=1.0.0=py3.7_cuda10.0.130_cudnn7.4.1_1" \
+    torchvision=0.3.0 \
  && conda clean -ya
 
 RUN pip install pymongo \
