@@ -39,12 +39,12 @@ class InferenceHelper:
             ex_sub = ex[0].unsqueeze(0)
             rois, cls_scores = self.model(ex_sub, windows_sub,radii, angles, ex_color, batch.center_bbs, self.device)
             #probabilities = torch.nn.functional.softmax(cls_scores).squeeze()
-            probs, pred_idxs = torch.max(cls_scores, dim=1)
-            probabilities = cls_scores.squeeze()
-            bb = batch.center_bbs[0]
-            pred = self.cls[pred_idxs[0]]
-            # Convert the tensor to a list of coords
-            pred_tuple = (bb.tolist(), pred, float(probabilities[pred_idxs[0]].item()))
+            bb = batch.center_bbs[0] 
+            probs, pred_idxs = torch.sort(cls_scores, dim=1, descending=True)
+            pred_idxs = pred_idxs.tolist()[0]
+            pred_cls = [self.cls[i] for i in pred_idxs]
+            prediction = list(zip(probs.tolist()[0], pred_cls))
+            pred_tuple = (bb.tolist(), prediction)
             page_id = db_ex.page_id
             pred_dict[page_id].append(pred_tuple)
 
