@@ -4,7 +4,8 @@ services:
         build: .
         ipc: host
         command: "python3 postprocess.py 30 pp_model_weights.pth"
-        #volumes:
+        volumes:
+             - .:/develop/
         #    - .:/cosmos/
         #    - ${INPUT_DIR}:/input/
         #    - ${OUTPUT_DIR}:/output/
