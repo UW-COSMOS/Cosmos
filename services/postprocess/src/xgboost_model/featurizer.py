@@ -14,11 +14,11 @@ def get_width_height(bbox):
     return bbox[2]-bbox[0], bbox[3]-bbox[1]
 
 def compute_neighbors(center, predict_list):
-    center_bbox,_ = center
+    center_bbox,_,_ = center
     nbhds = []
     for cand in predict_list:
         if(center != cand):
-            nbhd_bbox,_ = cand
+            nbhd_bbox,_,_ = cand
             nbhd_bbox = [max(0, nbhd_bbox[0]-expansion_delta), max(0, nbhd_bbox[1]-expansion_delta), min(orig_size, nbhd_bbox[2]+expansion_delta), min(orig_size, nbhd_bbox[3]+expansion_delta)] 
             iou = calculate_iou(nbhd_bbox, center_bbox)
             if iou >0:
@@ -81,7 +81,7 @@ def process_html(html_file):
 def get_feat_vec(predict, predict_list, classes):
     max_nhds = 15
     feat_vec = []    
-    p_bb, p_cls_scores = predict
+    p_bb, p_cls_scores, text = predict
     p_score, p_cls = p_cls_scores[0]
     
     # Neighbhorhood features
@@ -91,7 +91,7 @@ def get_feat_vec(predict, predict_list, classes):
     nbhds_sorted = sorted(nbhds, key=lambda nbhds: (nbhds[0]))
     feat_nbhd1 = []
     for nbhd in nbhds:
-        nbhd_bb, nbhd_cls_scores = nbhd[0]
+        nbhd_bb, nbhd_cls_scores, _ = nbhd[0]
         nbhd_score, nbhd_cls = nbhd_cls_scores[0]
         nbhd_score = 0.1
         nbhd_bb = tuple(nbhd_bb)
@@ -115,10 +115,8 @@ def get_feat_vec(predict, predict_list, classes):
 
     #Textual features
     
-    #fig_matches = 1 if len(re.findall('^(figure|fig)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', text, flags=re.IGNORECASE|re.MULTILINE)) > 0 else 0
-    #table_matches = 1 if len(re.findall('^(table|tbl|tab)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', text, flags=re.IGNORECASE|re.MULTILINE)) > 0 else 0  
-    feat_vec.append(0)
-    feat_vec.append(0)   
+    fig_matches = 1 if len(re.findall('^(figure|fig)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', text, flags=re.IGNORECASE|re.MULTILINE)) > 0 else 0
+    table_matches = 1 if len(re.findall('^(table|tbl|tab)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', text, flags=re.IGNORECASE|re.MULTILINE)) > 0 else 0  
     
     return feat_vec        
 
@@ -175,7 +173,7 @@ def get_target(predict, list_map, classes):
     return classes.index(gt_cls)
 
 def load_data_objs(objs, classes):
-    predict_list = objs['detected_objs']
+    predict_list = objs['ocr_detected_objs']
     features = []
     for predict in predict_list:
         features.append(get_feat_vec(predict, predict_list, classes))
