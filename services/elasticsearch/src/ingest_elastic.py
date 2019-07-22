@@ -10,6 +10,7 @@ import os
 
 class Snippet(Document):
     content = Text()
+    cls = Text()
 
     class Index:
         name = 'snippet'
@@ -26,7 +27,8 @@ def ingest_elasticsearch():
     db = client.pdfs
     for batch in load_pages(db, 100):
         for obj in batch:
-            Snippet(_id=str(obj['_id']), content=str(obj['content'])).save()
+            print(str(obj['class']))
+            Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
     Snippet._index.refresh()
 
 

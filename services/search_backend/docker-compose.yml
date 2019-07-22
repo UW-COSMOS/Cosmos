@@ -3,7 +3,7 @@ services:
     search_backend:
         build: .
         ipc: host
-        command: "flask run --host=0.0.0.0"
+        command: "flask run --host=0.0.0.0 --port=5001"
         #volumes:
         #    - .:/develop/
         #command: "tail -F /dev/null"
@@ -12,7 +12,7 @@ services:
             - FLASK_APP=app.py
             - FLASK_ENV=development
         ports:
-            - 5000:5000
+            - 5001:5001
 networks:
   default:
     external:
