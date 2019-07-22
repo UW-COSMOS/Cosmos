@@ -12,7 +12,7 @@ import time
 import io
 from preprocess import pad_image
 import base64
-from infer import run_inference
+from infer import run_inference, get_model
 import click
 from joblib import Parallel, delayed
 
@@ -51,13 +51,16 @@ def pages_detection_scan(config_pth, weights_pth, num_processes, db_insert_fn, s
     client = MongoClient(os.environ["DBCONNECT"])
     logging.info(f'Connected to client: {client}.')
     db = client.pdfs
+    i = 0
+    device_str = os.environ["DEVICE"]
+    model = get_model(config_pth, weights_pth, device_str)
     for batch in load_pages(db, 100):
         if skip:
             batch = [page for page in batch if not do_skip(page, client)]
             if len(batch) == 0:
                 continue
         pages = Parallel(n_jobs=num_processes)(delayed(preprocess_page)(page) for page in batch)
-        detected_objs = run_inference(pages, config_pth, weights_pth, os.environ["DEVICE"])
+        detected_objs = run_inference(model, pages, config_pth, device_str)
         for page in pages:
             page_id = str(page['_id'])
             page['detected_objs'] = detected_objs[page_id]
