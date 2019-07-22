@@ -28,7 +28,7 @@ def search():
     try:
         obj_type = request.args.get('type', '')
         query = request.args.get('q', '')
-        s = Search().query('match', content=query)[:20]
+        s = Search().query('match', content=query).query('match', cls=obj_type)[:20]#.filter('term', cls=obj_type)[:20]
         response = s.execute()
         logging.info(str(response))
         result_list = []
