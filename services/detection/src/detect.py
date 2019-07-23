@@ -31,7 +31,7 @@ def load_pages(db, buffer_size):
     """
     """
     current_docs = []
-    for doc in db.propose_pages.find().batch_size(buffer_size):
+    for doc in db.propose_pages.find(no_cursor_timeout=True).batch_size(buffer_size):
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs
@@ -51,7 +51,6 @@ def pages_detection_scan(config_pth, weights_pth, num_processes, db_insert_fn, s
     client = MongoClient(os.environ["DBCONNECT"])
     logging.info(f'Connected to client: {client}.')
     db = client.pdfs
-    i = 0
     device_str = os.environ["DEVICE"]
     model = get_model(config_pth, weights_pth, device_str)
     for batch in load_pages(db, 100):
@@ -59,6 +58,7 @@ def pages_detection_scan(config_pth, weights_pth, num_processes, db_insert_fn, s
             batch = [page for page in batch if not do_skip(page, client)]
             if len(batch) == 0:
                 continue
+            logging.info("Done skipping")
         pages = Parallel(n_jobs=num_processes)(delayed(preprocess_page)(page) for page in batch)
         detected_objs = run_inference(model, pages, config_pth, device_str)
         for page in pages:
