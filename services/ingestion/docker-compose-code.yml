@@ -4,7 +4,9 @@ services:
         build: .
         ipc: host
         volumes:
+            #    - .:/develop/
             - ${INPUT_DIR}:/input/
+        #command: "tail -F /dev/null"
         command: "python3 code_ingestion.py /input 30"
         environment:
             - DBCONNECT
