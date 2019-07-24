@@ -1,0 +1,11 @@
+version: "2.3"
+services:
+    code_ingestion:
+        build: .
+        ipc: host
+        volumes:
+            - ${INPUT_DIR}:/input/
+        command: "python3 code_ingestion.py /input 30"
+        environment:
+            - DBCONNECT
+
