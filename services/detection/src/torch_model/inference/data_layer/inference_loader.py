@@ -21,14 +21,14 @@ class InferenceLoader(XMLLoader):
     Inference dataset object, based on XMLLoader
     """
 
-    def __init__(self, session, ingest_objs, classes):
+    def __init__(self, ingest_objs, classes):
         """
         Init function
         :param session: DB Session
         :param ingest_objs: Database statistics object
         :param classes: List of classes
         """
-        super().__init__(session, ingest_objs, classes)
+        super().__init__(ingest_objs, classes)
 
     @staticmethod
     def collate(batch):
