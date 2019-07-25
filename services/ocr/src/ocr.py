@@ -32,8 +32,9 @@ def load_pages(db, buffer_size):
 
 
 def do_skip(page, client):
-    # TODO
-    return False
+    db = client.pdfs
+    coll = db.ocr_pages
+    return coll.count_documents({'pdf_name': page['pdf_name'], 'page_num': page['page_num']}, limit=1) != 0
 
 
 def process_page(page):
@@ -102,6 +103,9 @@ def ocr_scan(db_insert_fn, num_processes, skip):
 
 def mongo_insert_fn(objs, client):
     db = client.pdfs
+    if len(objs) == 0:
+        logging.info("Batch has no ocr pages")
+        return
     result = db.ocr_pages.insert_many(objs)
     logging.info(f"Inserted results: {result}")
 
