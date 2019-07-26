@@ -35,14 +35,19 @@ def search():
         for result in response:
             id = result.meta.id
             obj_id = ObjectId(id)
-            res = db.ocr_objs.find_one({'_id': obj_id})
+            res = None
+            if result['cls'] == 'code':
+                res = db.code_objs.find_one({'_id': obj_id})
+            else:
+                res = db.ocr_objs.find_one({'_id': obj_id})
             result_list.append(res)
 
         for result in result_list:
             result['_id'] = str(result['_id'])
-            encoded = base64.encodebytes(result['bytes'])
-            result['bytes'] = encoded.decode('ascii')
-            del result['page_ocr_df']
+            if 'bytes' in result:
+                encoded = base64.encodebytes(result['bytes'])
+                result['bytes'] = encoded.decode('ascii')
+                del result['page_ocr_df']
         results_obj = {'results': result_list}
         return jsonify(results_obj) 
     except TypeError:
