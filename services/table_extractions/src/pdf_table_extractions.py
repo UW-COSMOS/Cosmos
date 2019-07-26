@@ -19,7 +19,9 @@ from itertools import zip_longest
 import shutil
 from PyPDF2 import PdfFileReader
 
-logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
+logging.basicConfig(
+#                    filename = 'mylogs.log', filemode = 'w',
+                    format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 logging.getLogger("pdfminer").setLevel(logging.WARNING)
 T = TypeVar('T')
 
@@ -71,7 +73,7 @@ def create_pdf(pdf_name: str, pdf_bytes: bytes):
         for line in BytesIO(pdf_bytes):
             file.write(line)
     except Exception:
-        raise Exception('Could not create pdf from bytes')
+        logging.info('Could not create pdf from bytes')
     finally:
         file.close()
 
@@ -109,6 +111,8 @@ def run_table_extraction(n_jobs: int, skip: bool) -> None:
         logging.info(f'Batch extraction rate: {batch_rate} tables/min')
 
     end_time = time.time()
+
+    delete_dir()
 
     logging.info(f'Completed table extractions')
     logging.info(f'Total time: {end_time - start_time} s')
@@ -195,7 +199,6 @@ def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, ta
                 delete_dir()
                 create_dir()
 
-    delete_dir()
     yield grouper(table_data, tables_per_job)
 
 
@@ -217,7 +220,7 @@ def table_extraction(table_metadata: list, skip: bool) -> list:
             table_coords = table['coords']
             table_coords2 = table['camelot_coords']
 
-            logs.append(f'Processing {pdf_name}, page {table_page}, coords {table_coords}')
+            logs.append(f'Processing {pdf_name}, page {table_page}, coords {table_coords} and {table_coords2}')
             # If document has already been scanned, ignore it based on skip settings
             if skip & do_skip(coll_tables, pdf_name):
                 logs.append('Document previously extracted. Skipping')
@@ -327,6 +330,7 @@ def is_picklable(obj):
     except pickle.PicklingError:
         return False
     return True
+
 # print(f"Pickle table_extraction: {is_picklable(table_extraction)}")
 
 
