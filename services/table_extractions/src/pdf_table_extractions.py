@@ -16,10 +16,64 @@ import pickle
 from joblib import Parallel, delayed
 from io import BytesIO
 from itertools import zip_longest
+import shutil
+from PyPDF2 import PdfFileReader
 
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 logging.getLogger("pdfminer").setLevel(logging.WARNING)
 T = TypeVar('T')
+
+filedir_pdfs = "extraction_pdfs/"
+
+
+def create_dir():
+    """
+    Create dir to store PDFs
+    """
+    while True:
+        try:
+            if not path.exists(filedir_pdfs):
+                os.mkdir(filedir_pdfs)
+            break
+        except OSError as e:
+            logging.info(f'Failed to create dir {filedir_pdfs}. Error: {e}')
+            logging.info(f'Death  before dishonor. Trying again')
+            pass
+
+
+def delete_dir():
+    """
+    Delete dir with PDFs
+    """
+    while True:
+        try:
+            if path.exists(filedir_pdfs):
+                shutil.rmtree(filedir_pdfs)
+            break
+        except OSError as e:
+            logging.info(f'Failed to delete dir {filedir_pdfs}. Error {e}')
+            logging.info(f'Death before dishonor. Trying again')
+            pass
+
+
+def create_pdf(pdf_name: str, pdf_bytes: bytes):
+    """
+    Create PDF and store it in filedir_pdf
+    """
+    # If path exists, do not create pdf
+    if path.exists(filedir_pdfs+pdf_name):
+        return
+
+    file = open(filedir_pdfs + pdf_name, 'wb')
+
+    # Create document
+    try:
+        for line in BytesIO(pdf_bytes):
+            file.write(line)
+    except Exception:
+        raise Exception('Could not create pdf from bytes')
+    finally:
+        file.close()
 
 
 def run_table_extraction(n_jobs: int, skip: bool) -> None:
@@ -33,7 +87,10 @@ def run_table_extraction(n_jobs: int, skip: bool) -> None:
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
 
-    for batch in load_table_metadata(db, buffer_size = n_jobs):
+    buffer_size = n_jobs
+    tables_per_job = 10
+
+    for batch in load_table_metadata(db, buffer_size, tables_per_job):
         t1 = time.time()
         logs = Parallel(n_jobs=n_jobs)(delayed(table_extraction)(table_metadata, skip) for table_metadata in batch)
 
@@ -42,7 +99,14 @@ def run_table_extraction(n_jobs: int, skip: bool) -> None:
                 logging.info(log)
 
         t2 = time.time()
-        logging.info(f'Time for this batch: {t2-t1} s')
+        
+        batch_size = buffer_size*tables_per_job
+        batch_time = t2-t1
+        batch_rate = batch_size/(batch_time/60)
+        
+        logging.info(f'Batch size: {batch_size} tables')
+        logging.info(f'Batch time: {batch_time} s')
+        logging.info(f'Batch extraction rate: {batch_rate} tables/min')
 
     end_time = time.time()
 
@@ -55,19 +119,21 @@ def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, ta
     """
     Load documents buffer_size at a time
     """
-    coll_raw_pdfs = db.raw_pdfs
-    coll_detect_pages = db.detect_pages
-    mongo_query_detect_pages = coll_detect_pages.find({},
-                                                      {'page_height': 1, 'page_width': 1, 'pdf_name': 1, 'page_num': 1, 'detected_objs': 1},
-                                                      no_cursor_timeout=True)
     table_data = []
     pdf_data = {}
+
+    coll_raw_pdfs = db.raw_pdfs
+    coll_detect_pages = db.postprocess_pages
+    mongo_query_detect_pages = coll_detect_pages.find({},
+                                                      {'pdf_name': 1, 'page_num': 1, 'pp_detected_objs': 1},
+                                                      no_cursor_timeout=True)
+
+    delete_dir()
+    create_dir()
 
     # Go through detect pages and get each page of a document
     for page in mongo_query_detect_pages:
         pdf_name = page['pdf_name']
-        page_height = page['page_height']
-        page_width = page['page_width']
         pdf_bytes = []
 
         # Get bytes of page's pdf
@@ -85,40 +151,52 @@ def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, ta
                 pdf_bytes = raw_pdf['bytes']
                 pdf_data[pdf_name] = pdf_bytes
 
-        # Get table coords and page of table in pdf
-        for detected_obj in page['detected_objs']:
-            if detected_obj[1][0][1] == "Table":
+        for detected_obj in page['pp_detected_objs']:
+            # Get table coords and page of table in pdf
+            if detected_obj[1] == "Table":
                 page_num = str(page['page_num'])
+
+                create_pdf(pdf_name, pdf_bytes)
+                PDFcoords = PdfFileReader(open(filedir_pdfs + pdf_name, 'rb')).getPage(0).mediaBox
+                pdf_width = PDFcoords[2]
+                pdf_height = PDFcoords[3]
 
                 # Taking out coords, and translating them for camelot
                 detected_coords = detected_obj[0]
-                table_coords = []
+                coords = []
                 for coord in detected_coords:
-                    table_coords.append(int(coord))
+                    coords.append(int(coord))
 
-                x1 = int(table_coords[0] - 100)
-                y1 = int(page_height - table_coords[1] + 100)
-                x2 = int(table_coords[2] + 100)
-                y2 = int(page_height - table_coords[3] - 100)
-                coords_camelot = []
-                coords_camelot.append(x1) if x1 > 0 else coords_camelot.append(0)
-                coords_camelot.append(y1) if y1 < page_height else coords_camelot.append(page_height)
-                coords_camelot.append(x2) if x2 < page_width else coords_camelot.append(page_width)
-                coords_camelot.append(y2) if y2 > 0 else coords_camelot.append(0)p
+                img_height = img_width = 1920
 
-                table_coords = str(table_coords)[1:-1]
-                coords_camelot = str(coords_camelot)[1:-1]
+                x1 = int(coords[0])
+                y1 = int(img_height - coords[1])
+                x2 = int(coords[2])
+                y2 = int(img_height - coords[3])
+                coords_img = [x1, y1, x2, y2]
 
-                page_data = {"pdf_name": pdf_name, "bytes": pdf_bytes, "page_height": page_height,
-                             "page_width": page_width, "coords": table_coords, "camelot_coords": coords_camelot,
+                pdf_img_ratio = pdf_height / img_height
+                coords_pdf = [float(pdf_img_ratio * x) for x in coords_img]
+
+                coords_table = str(coords)[1:-1]
+                coords_camelot = str(coords_pdf)[1:-1]
+
+                page_data = {"pdf_name": pdf_name, "bytes": pdf_bytes,
+                             "coords": coords_table, "camelot_coords": coords_camelot,
                              "page_num": page_num}
                 table_data.append(page_data)
 
-                if len(table_data) == buffer_size*tables_per_job:
-                    yield list(grouper(table_data, tables_per_job))
-                    table_data = []
+            # Return grouped list once enough tables have been identified
+            if len(table_data) == buffer_size * tables_per_job:
+                yield grouper(table_data, tables_per_job)
 
-    yield list(grouper(table_data, tables_per_job))
+                # Start fresh after a yield
+                table_data = []
+                delete_dir()
+                create_dir()
+
+    delete_dir()
+    yield grouper(table_data, tables_per_job)
 
 
 def table_extraction(table_metadata: list, skip: bool) -> list:
@@ -128,7 +206,7 @@ def table_extraction(table_metadata: list, skip: bool) -> list:
 
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
-    coll_tables = db.tables_acc
+    coll_tables = db.tables
 
     logs = []
 
@@ -136,12 +214,10 @@ def table_extraction(table_metadata: list, skip: bool) -> list:
         for table in table_metadata:
             pdf_name = table['pdf_name']
             table_page = table['page_num']
-            table_height = table['page_height']
-            table_width = table['page_width']
             table_coords = table['coords']
             table_coords2 = table['camelot_coords']
 
-            logs.append(f'Processing {pdf_name}, page {table_page}, height {table_height}, width {table_width}, coords {table_coords} and {table_coords2}')
+            logs.append(f'Processing {pdf_name}, page {table_page}, coords {table_coords}')
             # If document has already been scanned, ignore it based on skip settings
             if skip & do_skip(coll_tables, pdf_name):
                 logs.append('Document previously extracted. Skipping')
@@ -172,23 +248,13 @@ def extract_tables(table: dict) -> list:
     """
     logs = []
     pdf_name = table['pdf_name']
-    pdf_bytes = table['bytes']
     table_coords = table['camelot_coords']
     table_page = table['page_num']
 
     logs.append('Extracting tables')
 
     try:
-        file = open(pdf_name, 'wb')
-        try:
-            for line in BytesIO(pdf_bytes):
-                file.write(line)
-        except Exception:
-            raise Exception('Could not create pdf from bytes')
-        finally:
-            file.close()
-
-        tables_stream = camelot.read_pdf(pdf_name,
+        tables_stream = camelot.read_pdf(filedir_pdfs+pdf_name,
                                          pages=table_page,
                                          flavor='stream',
                                          table_regions=[table_coords],
@@ -197,7 +263,7 @@ def extract_tables(table: dict) -> list:
                                          edge_tol=25
                                          )
 
-        tables_lattice = camelot.read_pdf(pdf_name,                                            
+        tables_lattice = camelot.read_pdf(filedir_pdfs+pdf_name,                                            
                                           pages=table_page,                                    
                                           flavor='lattice',                                    
                                           table_regions=[table_coords],                        
@@ -246,9 +312,9 @@ def insert_tables_mongo(coll_tables: pymongo.collection.Collection, detected_tab
     return [f'Inserted table: {result}']
 
 
-def grouper(iterable: iter, n: int, fillvalue=None):
+def grouper(iterable: iter, n: int, fillvalue=None) -> list:
     args = [iter(iterable)] * n
-    return zip_longest(*args, fillvalue=fillvalue)
+    return list(zip_longest(*args, fillvalue=fillvalue))
 
 
 def is_picklable(obj):
@@ -275,4 +341,5 @@ def click_wrapper(num_processes: str, skip) -> None:
 
 if __name__ == '__main__':
     click_wrapper()
+
 
