@@ -102,7 +102,7 @@ def run_table_extraction(n_jobs: int, skip: bool) -> None:
 
         t2 = time.time()
         
-        batch_size = buffer_size*tables_per_job
+        batch_size = sum([len(a) for a in batch])
         batch_time = t2-t1
         batch_rate = batch_size/(batch_time/60)
         
@@ -260,7 +260,7 @@ def extract_tables(table: dict) -> list:
         tables_stream = camelot.read_pdf(filedir_pdfs+pdf_name,
                                          pages=table_page,
                                          flavor='stream',
-                                         table_regions=[table_coords],
+                                         table_areas=[table_coords],
                                          flag_size=True,
                                          strip_text=' .\n',
                                          edge_tol=25
@@ -269,7 +269,7 @@ def extract_tables(table: dict) -> list:
         tables_lattice = camelot.read_pdf(filedir_pdfs+pdf_name,                                            
                                           pages=table_page,                                    
                                           flavor='lattice',                                    
-                                          table_regions=[table_coords],                        
+                                          table_areas=[table_coords],                        
                                           split_text=True,                                     
                                           flag_size=True,                                      
                                           strip_text=' .\n',                                   
