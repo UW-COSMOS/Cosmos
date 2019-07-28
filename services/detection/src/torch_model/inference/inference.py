@@ -5,6 +5,7 @@ from pascal_voc_writer import Writer
 from os.path import join, isdir
 from os import mkdir
 from tqdm import tqdm
+from collections import defaultdict
 
 class InferenceHelper:
     def __init__(self, model, dataset, device):
@@ -18,7 +19,7 @@ class InferenceHelper:
         self.device = device
         self.cls = [val for val in model.cls_names]
 
-    def run(self,out):
+    def run(self):
         """
         run inference
         :param out: the directory to output xmls
@@ -26,10 +27,9 @@ class InferenceHelper:
 
         """
         loader = DataLoader(self.dataset, batch_size=1, collate_fn=self.dataset.collate)
-        xml_dict = {}
+        pred_dict = defaultdict(list)
         for ex in tqdm(loader):
             batch, db_ex = ex
-            page_id = db_ex.page_id
             windows = batch.neighbor_windows.to(self.device)
             ex = batch.center_windows.to(self.device)
             ex_color = get_colorfulness(ex).to(self.device).reshape(-1,1)
@@ -39,28 +39,16 @@ class InferenceHelper:
             ex_sub = ex[0].unsqueeze(0)
             rois, cls_scores = self.model(ex_sub, windows_sub,radii, angles, ex_color, batch.center_bbs, self.device)
             #probabilities = torch.nn.functional.softmax(cls_scores).squeeze()
-            probs, pred_idxs = torch.max(cls_scores, dim=1)
-            probabilities = cls_scores.squeeze()
-            bb = batch.center_bbs[0]
-            pred = self.cls[pred_idxs[0]]
-            # Convert the tensor to a list of coords
-            if page_id in xml_dict:
-                xml_dict[page_id].append((bb.tolist(), pred, float(probabilities[pred_idxs[0]].item())))
-            else:
-                xml_dict[page_id]= [(bb.tolist(), pred, float(probabilities[pred_idxs[0]].item()))]
+            bb = batch.center_bbs[0] 
+            probs, pred_idxs = torch.sort(cls_scores, dim=1, descending=True)
+            pred_idxs = pred_idxs.tolist()[0]
+            pred_cls = [self.cls[i] for i in pred_idxs]
+            prediction = list(zip(probs.tolist()[0], pred_cls))
+            pred_tuple = (bb.tolist(), prediction)
+            page_id = db_ex.page_id
+            pred_dict[page_id].append(pred_tuple)
 
-        if out is not None:
-            if not isdir(out):
-                mkdir(out)
-
-            for pid in xml_dict:
-                writer = Writer("", 1000,1000)
-                for obj in xml_dict[pid]:
-                    bb, pred, probs = obj
-                    x0, y0, x1, y1 = bb.long().tolist()
-                    writer.addObject(pred, x0, y0, x1, y1,difficult=float(probs))
-                writer.save(join(out, f"{pid}.xml"))
-        return xml_dict
+        return pred_dict
 
     def _get_predictions(self, windows, proposals):
         """
