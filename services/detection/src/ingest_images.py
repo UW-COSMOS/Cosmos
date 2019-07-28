@@ -22,6 +22,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import yaml
 import io
+import logging
+
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
 
 normalizer = NormalizeWrapper()
@@ -113,6 +116,8 @@ def load_proposal_obj(obj):
     :param obj: Object to load proposals off of
     :return: BBoxes object denoted proposal
     """
+    if obj['proposals'] is None:
+        return None
     np_arr = np.array(obj['proposals'])
     bbox_absolute = torch.from_numpy(np_arr).reshape(-1,4)
     return BBoxes(bbox_absolute, "xyxy")
@@ -223,16 +228,17 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
     IngestObjs = namedtuple('IngestObjs', 'uuids class_stats nproposals ngt_boxes')
     return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
 
-def db_ingest_objs(objs, pdf_name, warped_size, partition, session):
+
+def db_ingest_objs(objs, warped_size, partition):
     """
     ingest the db
     :param objs: Objects to ingest
-    :param pdf_name: PDF name for logging
     :param warped_size: Size of warped image
     :param partition: For train mode this corresponds to train/val/test
     :param session: DB Session to work on
     :return: IngestObjs containing statistics about the DB
     """
+    session = ImageDB.build()
     class_stats = {}
     uuids = []
     nproposals = 0
@@ -243,8 +249,8 @@ def db_ingest_objs(objs, pdf_name, warped_size, partition, session):
         bstring = obj['padded_bytes']
         image = Image.open(io.BytesIO(bstring))
         proposals = load_proposal_obj(obj)
-        if proposals.shape[0] == 0:
-            logging.info(f"No proposals for {pdf_name}, page {page_num}")
+        if proposals is None or proposals.shape[0] == 0:
+            logging.info(f"No proposals for {obj['pdf_name']}, page {obj['page_num']}")
             continue
         ret = [image, None, proposals, None]
         pts, proposals_len, gt_box_len = unpack_page(ret, warped_size)
@@ -261,9 +267,11 @@ def db_ingest_objs(objs, pdf_name, warped_size, partition, session):
                 class_stats[label] += 1
             else:
                 class_stats[label] = 1
-            ex = Ex(page_id=page_num, object_id=uuid, window=pt.ex_window, bbox=pt.ex_proposal, gt_box=pt.gt_box, label=pt.gt_cls, partition=partition)
+            ex = Ex(page_id=str(obj['_id']), object_id=uuid, window=pt.ex_window, bbox=pt.ex_proposal, gt_box=pt.gt_box, label=pt.gt_cls, partition=partition)
             examples.append(ex)
     session.add_all(examples)
+    session.commit()
+    session.close()
     IngestObjs = namedtuple('IngestObjs', 'uuids class_stats nproposals ngt_boxes')
     return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
 
@@ -279,7 +287,7 @@ def get_example_for_uuid(uuid, session):
     return ex
 
 
-def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
+def compute_neighborhoods(partition, expansion_delta, orig_size=1920):
     """
     Compute the neighborhoods for a target image and input to DB
     :param session: DB Session
@@ -290,7 +298,9 @@ def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
     print('Computing neighborhoods')
     avg_nbhd_size = 0.0
     nbhds = 0.0
-    for ex in tqdm(session.query(Ex).filter(Ex.partition == partition)):
+    session = ImageDB.build()
+    partition_filter = session.query(Ex).filter(Ex.partition == partition)
+    for ex in tqdm(partition_filter):
         orig_bbox = ex.bbox
         nbhd_bbox = [max(0, orig_bbox[0]-expansion_delta), max(0, orig_bbox[1]-expansion_delta), min(orig_size, orig_bbox[2]+expansion_delta), min(orig_size, orig_bbox[3]+expansion_delta)]
         # Get all the examples on the same page
@@ -304,8 +314,11 @@ def compute_neighborhoods(session, partition, expansion_delta, orig_size=1920):
         nbhds += 1.0
         avg_nbhd_size += len(nbhd)
         session.add_all(nbhd)
+    session.commit()
+    session.close()
     print("=== Done Computing Neighborhoods ===")
-    print(f"Average of {avg_nbhd_size/nbhds} neighbors")
+    if nbhds != 0.0:
+        print(f"Average of {avg_nbhd_size/nbhds} neighbors")
 
 def get_neighbors_for_uuid(uuid, session):
     """
@@ -318,26 +331,26 @@ def get_neighbors_for_uuid(uuid, session):
     return ex.neighbors
 
 
+engine = create_engine('sqlite:///:memory:', echo=False)  
+Base.metadata.create_all(engine)
+Session = sessionmaker()
+Session.configure(bind=engine)
 
 class ImageDB:
     """
     SQL alchemy session factory
     """
     @staticmethod
-    def build(verbose=False):
+    def build():
         """
         Initlaize the db in memory and return the session
         :param verbose: Verbose logging
         :return: DB Session
         """
-        engine = create_engine('sqlite:///:memory:', echo=verbose)  
-        Base.metadata.create_all(engine)
-        Session = sessionmaker()
-        Session.configure(bind=engine)
         return Session() 
 
     @staticmethod
-    def initialize_and_ingest(objs, warped_size, partition, expansion_delta, pdf_name=None):
+    def initialize_and_ingest(objs, warped_size, partition, expansion_delta):
         """
         Initialize and ingest the db from the inputs
         :param img_dir: Image directory
@@ -348,7 +361,6 @@ class ImageDB:
         :param expansion_delta: Neighborhood expansion parameter
         :return: DB Session, database statistics (IngestObjs object)
         """
-        session = ImageDB.build()
         # For training, we check the type so we can read from files
         ingest_objs = None
         if type(objs) == tuple:
@@ -356,8 +368,13 @@ class ImageDB:
             ingest_objs = db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session)
         # Alternatively, we can pass in a list of objects and call that loading function
         else:
-            ingest_objs = db_ingest_objs(objs, pdf_name, warped_size, partition, session)
-        compute_neighborhoods(session, partition, expansion_delta)
-        session.commit()
-        return session, ingest_objs
+            ingest_objs = db_ingest_objs(objs, warped_size, partition)
+        compute_neighborhoods(partition, expansion_delta)
+        return ingest_objs
+
+    @staticmethod 
+    def cleanup():
+        Base.metadata.drop_all(engine)
+        Base.metadata.create_all(engine)
+
 
