@@ -38,6 +38,7 @@ def create_pdf(pdf_name: str, pdf_bytes: bytes):
     if pdf_name in pdf_loc:
         return
 
+    tempfile.tempdir = filedir_pdfs
     temp_file = tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", prefix=pdf_name, delete=False)
     pdf_loc[pdf_name] = temp_file.name
 
@@ -221,7 +222,7 @@ def extract_tables(table: dict) -> list:
     logs.append('Extracting tables')
 
     try:
-        tables_stream = camelot.read_pdf(filedir_pdfs+pdf_name,
+        tables_stream = camelot.read_pdf(pdf_loc[pdf_name],
                                          pages=table_page,
                                          flavor='stream',
                                          table_areas=[table_coords],
@@ -230,7 +231,7 @@ def extract_tables(table: dict) -> list:
                                          edge_tol=25
                                          )
 
-        tables_lattice = camelot.read_pdf(filedir_pdfs+pdf_name,                                            
+        tables_lattice = camelot.read_pdf(pdf_loc[pdf_name],
                                           pages=table_page,                                    
                                           flavor='lattice',
                                           table_areas=[table_coords],
