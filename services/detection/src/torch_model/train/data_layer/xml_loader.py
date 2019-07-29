@@ -22,8 +22,6 @@ from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
 from ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods, ImageDB
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
 from dataclasses import dataclass
 
 normalizer = NormalizeWrapper()
@@ -82,14 +80,14 @@ class XMLLoader(Dataset):
     other than annotations
     """
 
-    def __init__(self, session, ingest_objs, classes):
+    def __init__(self, ingest_objs, classes):
         """
         Initialize a XML loader object
         :param xml_dir: directory to get XML from
         :param img_dir: directory to load PNGs from
         :param img_type: the image format to load in
         """
-        self.session = session
+        self.session = ImageDB.build()
         self.uuids = ingest_objs.uuids
         self.ngt_boxes = ingest_objs.ngt_boxes
         self.nproposals = ingest_objs.nproposals
@@ -99,6 +97,9 @@ class XMLLoader(Dataset):
         self.print_stats()
         print(f"# of gt boxes:{self.ngt_boxes}")
         print(f"# of proposals:{self.nproposals}")
+
+    def __del__(self):
+        self.session.close()
 
 
     def __len__(self):

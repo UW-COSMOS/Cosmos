@@ -18,6 +18,10 @@ from io import BytesIO
 from itertools import zip_longest
 import shutil
 from PyPDF2 import PdfFileReader
+<<<<<<< HEAD
+=======
+import tempfile
+>>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
 
 logging.basicConfig(
 #                    filename = 'mylogs.log', filemode = 'w',
@@ -25,6 +29,7 @@ logging.basicConfig(
 logging.getLogger("pdfminer").setLevel(logging.WARNING)
 T = TypeVar('T')
 
+<<<<<<< HEAD
 filedir_pdfs = "extraction_pdfs/"
 
 
@@ -56,6 +61,10 @@ def delete_dir():
             logging.info(f'Failed to delete dir {filedir_pdfs}. Error {e}')
             logging.info(f'Death before dishonor. Trying again')
             pass
+=======
+IMG_HEIGHT = IMG_WIDTH = 1920
+pdf_loc = {}
+>>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
 
 
 def create_pdf(pdf_name: str, pdf_bytes: bytes):
@@ -63,19 +72,36 @@ def create_pdf(pdf_name: str, pdf_bytes: bytes):
     Create PDF and store it in filedir_pdf
     """
     # If path exists, do not create pdf
+<<<<<<< HEAD
     if path.exists(filedir_pdfs+pdf_name):
         return
 
     file = open(filedir_pdfs + pdf_name, 'wb')
+=======
+    if pdf_name in pdf_loc:
+        return
+
+    tempfile.tempdir = filedir_pdfs
+    temp_file = tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", prefix=pdf_name, delete=False)
+    pdf_loc[pdf_name] = temp_file.name
+>>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
 
     # Create document
     try:
         for line in BytesIO(pdf_bytes):
+<<<<<<< HEAD
             file.write(line)
     except Exception:
         logging.info('Could not create pdf from bytes')
     finally:
         file.close()
+=======
+            temp_file.write(line)
+    except Exception:
+        logging.info('Could not create pdf from bytes')
+    finally:
+        temp_file.close()
+>>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
 
 
 def run_table_extraction(n_jobs: int, skip: bool) -> None:
@@ -101,7 +127,11 @@ def run_table_extraction(n_jobs: int, skip: bool) -> None:
                 logging.info(log)
 
         t2 = time.time()
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
         batch_size = sum([len(a) for a in batch])
         batch_time = t2-t1
         batch_rate = batch_size/(batch_time/60)
@@ -112,8 +142,11 @@ def run_table_extraction(n_jobs: int, skip: bool) -> None:
 
     end_time = time.time()
 
+<<<<<<< HEAD
     delete_dir()
 
+=======
+>>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
     logging.info(f'Completed table extractions')
     logging.info(f'Total time: {end_time - start_time} s')
     return
@@ -132,6 +165,7 @@ def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, ta
                                                       {'pdf_name': 1, 'page_num': 1, 'pp_detected_objs': 1},
                                                       no_cursor_timeout=True)
 
+<<<<<<< HEAD
     delete_dir()
     create_dir()
 
@@ -198,6 +232,67 @@ def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, ta
                 table_data = []
                 delete_dir()
                 create_dir()
+=======
+    global filedir_pdfs
+
+    # Go through detect pages and get each page of a document
+    with tempfile.TemporaryDirectory() as filedir_pdfs:
+        for page in mongo_query_detect_pages:
+            pdf_name = page['pdf_name']
+
+            # Get bytes of page's pdf
+            if pdf_name in pdf_data:
+                pdf_bytes = pdf_data[pdf_name]
+            else:
+                mongo_query_raw_pdfs = coll_raw_pdfs.find({'pdf_name': pdf_name, 'bytes': {'$exists': True}},
+                                                          {'bytes': 1},
+                                                          no_cursor_timeout=True)
+                if not coll_raw_pdfs.count_documents({'pdf_name': pdf_name, 'bytes': {'$exists': True}},
+                                                     limit=1):
+                    continue
+
+                for raw_pdf in mongo_query_raw_pdfs.limit(1):
+                    pdf_bytes = raw_pdf['bytes']
+                    pdf_data[pdf_name] = pdf_bytes
+
+            for detected_obj in page['pp_detected_objs']:
+                # Get table coords and page of table in pdf
+                if detected_obj[1] == "Table":
+                    page_num = str(page['page_num'])
+
+                    create_pdf(pdf_name, pdf_bytes)
+                    PDFcoords = PdfFileReader(open(filedir_pdfs + pdf_name, 'rb')).getPage(0).mediaBox
+                    pdf_width = PDFcoords[2]
+                    pdf_height = PDFcoords[3]
+
+                    # Taking out coords, and translating them for camelot
+                    detected_coords = detected_obj[0]
+                    coords = [int(coord) for coord in detected_coords]
+
+                    x1 = int(coords[0])
+                    y1 = int(IMG_HEIGHT - coords[1])
+                    x2 = int(coords[2])
+                    y2 = int(IMG_HEIGHT - coords[3])
+                    coords_img = [x1, y1, x2, y2]
+
+                    pdf_img_ratio = pdf_height / IMG_HEIGHT
+                    coords_pdf = [float(pdf_img_ratio * x) for x in coords_img]
+
+                    coords_table = str(coords)[1:-1]
+                    coords_camelot = str(coords_pdf)[1:-1]
+
+                    page_data = {"pdf_name": pdf_name, "bytes": pdf_bytes,
+                                 "coords": coords_table, "camelot_coords": coords_camelot,
+                                 "page_num": page_num}
+                    table_data.append(page_data)
+
+                # Return grouped list once enough tables have been identified
+                if len(table_data) == buffer_size * tables_per_job:
+                    yield grouper(table_data, tables_per_job)
+
+                    # Start fresh after a yield
+                    table_data = []
+>>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
 
     yield grouper(table_data, tables_per_job)
 
@@ -238,11 +333,19 @@ def table_extraction(table_metadata: list, skip: bool) -> list:
     return logs
 
 
+<<<<<<< HEAD
 def do_skip(coll_tables: pymongo.collection.Collection, raw_pdf_name: str) -> bool:
     """
     Check if document is already scanned or not. If yes, skip it
     """
     return coll_tables.count_documents({'pdf_name': raw_pdf_name}, limit=1) != 0
+=======
+def do_skip(coll_tables: pymongo.collection.Collection, raw_pdf_name: str, page_num: str, coords: str) -> bool:
+    """
+    Check if document is already scanned or not. If yes, skip it
+    """
+    return coll_tables.count_documents({'pdf_name': raw_pdf_name, 'page_num': page_num, 'coords': coords}, limit=1) != 0
+>>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
 
 
 def extract_tables(table: dict) -> list:
@@ -257,7 +360,11 @@ def extract_tables(table: dict) -> list:
     logs.append('Extracting tables')
 
     try:
+<<<<<<< HEAD
         tables_stream = camelot.read_pdf(filedir_pdfs+pdf_name,
+=======
+        tables_stream = camelot.read_pdf(pdf_loc[pdf_name],
+>>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
                                          pages=table_page,
                                          flavor='stream',
                                          table_areas=[table_coords],
@@ -266,10 +373,17 @@ def extract_tables(table: dict) -> list:
                                          edge_tol=25
                                          )
 
+<<<<<<< HEAD
         tables_lattice = camelot.read_pdf(filedir_pdfs+pdf_name,                                            
                                           pages=table_page,                                    
                                           flavor='lattice',                                    
                                           table_areas=[table_coords],                        
+=======
+        tables_lattice = camelot.read_pdf(pdf_loc[pdf_name],
+                                          pages=table_page,                                    
+                                          flavor='lattice',
+                                          table_areas=[table_coords],
+>>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
                                           split_text=True,                                     
                                           flag_size=True,                                      
                                           strip_text=' .\n',                                   
