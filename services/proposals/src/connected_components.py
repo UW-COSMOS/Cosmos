@@ -165,7 +165,7 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5):
     if obj_count > 0:
         avg_height = obj_heights / obj_count
         if avg_height < 3 * blank_row_height:
-            write_proposals(img, white_thresh=white_thresh, blank_row_height=2 * blank_row_height, filter_thres=filter_thres)
+            get_proposals(img, white_thresh=white_thresh, blank_row_height=2 * blank_row_height, filter_thres=filter_thres)
             return
     for key in block_coords2:
         coords_list = block_coords2[key]

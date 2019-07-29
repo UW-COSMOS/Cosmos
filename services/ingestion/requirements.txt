@@ -5,3 +5,4 @@ pdfminer.six
 chardet
 pillow
 joblib
+

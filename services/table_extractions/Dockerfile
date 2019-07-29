@@ -51,9 +51,6 @@ ENV PATH=$CONDA_PREFIX/bin:$PATH
 COPY requirements.txt /
 RUN pip install -r /requirements.txt
 
-# Export the link for mongodb
-RUN export DBCONNECT=mongodb://sverma25:Cosmos@cosmos0000.chtc.wisc.edu:27017/pdfs?authSource=admin
-
 # Copy /app and work in it
 COPY src/ /app
 WORKDIR /app

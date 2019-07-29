@@ -4,8 +4,6 @@ services:
         build: .
         ipc: host
         volumes:
-            - .:/develop/
-        command: tail -F anything
-        environment:
-            - DB_CONNECT="mongodb://sverma25:Cosmos@cosmos0000.chtc.wisc.edu/pdfs:21017?authSource=admin"
+            - ${INPUT_DIR}:/input/
+        command: "python3 pdf_ingestion.py /input 30 --skip"
 

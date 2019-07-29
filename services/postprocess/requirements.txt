@@ -1,0 +1,14 @@
+pymongo
+numpy
+pillow
+pyyaml
+hyperyaml
+xgboost
+click
+joblib
+Pillow
+tqdm
+matplotlib
+pandas
+sklearn
+bs4
