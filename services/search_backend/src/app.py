@@ -1,5 +1,5 @@
 """
-Some endpoints 
+Some endpoints
 """
 
 import pymongo
@@ -15,7 +15,7 @@ import base64
 import json
 from flask import jsonify
 from elasticsearch import Elasticsearch
-from elasticsearch_dsl import Search, connections
+from elasticsearch_dsl import Search, connections, Q
 
 connections.create_connection(hosts=['es01'], timeout=20)
 
@@ -27,10 +27,25 @@ def search():
     db = client.pdfs
     try:
         obj_type = request.args.get('type', '')
-        query = request.args.get('q', '')
-        s = Search().query('match', content=query).query('match', cls=obj_type)[:20]#.filter('term', cls=obj_type)[:20]
+        query = request.args.get('query', '')
+        s = Search()
+        q = Q()
+
+        if query != '':
+            logging.info(query)
+            q = q & Q('match', content=query)
+
+        if obj_type != '':
+            logging.info(obj_type)
+            q = q & Q('match', cls=obj_type)
+
+        s = Search().query(q)
+        logging.info(s.to_dict())
+
+        s = s[:20]
+
         response = s.execute()
-        logging.info(str(response))
+#        logging.info(str(response))
         result_list = []
         for result in response:
             id = result.meta.id
@@ -44,9 +59,9 @@ def search():
             result['bytes'] = encoded.decode('ascii')
             del result['page_ocr_df']
         results_obj = {'results': result_list}
-        return jsonify(results_obj) 
+        return jsonify(results_obj)
     except TypeError:
         abort(400)
-    
+
 
 
