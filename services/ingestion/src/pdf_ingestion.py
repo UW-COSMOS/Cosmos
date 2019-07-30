@@ -65,7 +65,6 @@ def do_skip(pdf_name):
     return pdf_collection.count_documents({'pdf_name': pdf_name}, limit=1) != 0
 
 
-
 def run_pdf_ingestion(pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, n_jobs, skip):
     """
     Entry point for ingesting PDF documents
@@ -109,6 +108,7 @@ def run_ghostscript(pdf_path, img_tmp):
             logging.warning("Ghostscript err: ")
             logging.warning(err)
 
+
 def insert_pages_mongo(pages):
     """
     Insert pdfs into mongodb
@@ -118,6 +118,7 @@ def insert_pages_mongo(pages):
     page_collection = db.pages
     result = page_collection.insert_many(pages)
     return f'Inserted pages: {result}'
+
 
 def insert_pdf_mongo(pdf):
     """
@@ -135,6 +136,7 @@ def insert_pdf_mongo(pdf):
         except pymongo.errors.DocumentTooLarge as e:
             raise e
     return f"Inserted pdf : {result}"
+
 
 def load_page_data(img_dir, current_obj):
     """
@@ -199,15 +201,7 @@ def load_pdf_metadata(pdf_path, current_obj):
     current_obj['event_stream'] = ['metadata']
     return current_obj, err
 
-<<<<<<< HEAD
-=======
-def load_pdf_tables(pdf_path: str, current_obj: Mapping[T,T]) -> Mapping[T, T]:
-    tables = camelot.read_pdf(pdf_path)
-    table_list = [table.df for table in tables]
-    current_obj['extracted_tables'] = table_list
-    return current_obj
 
->>>>>>> d5c3a6985f1bd4ae4feacd04145a1d67e1c50310
 @click.command()
 @click.argument('pdf_dir')
 @click.argument('num_processes')
