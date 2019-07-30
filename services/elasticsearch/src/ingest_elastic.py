@@ -21,22 +21,28 @@ class Snippet(Document):
 
 
 def ingest_elasticsearch():
+    """
+    Ingest some mongo collections to elasticsearch
+    """
     connections.create_connection(hosts=['es01'])
     Snippet.init()
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
-    for batch in load_pages(db, 100):
+    for batch in load_pages(db.ocr_objs, 100):
         for obj in batch:
-            print(str(obj['class']))
+            Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
+    for batch in load_pages(db.code_objs, 100):
+        for obj in batch:
             Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
     Snippet._index.refresh()
 
 
-def load_pages(db, buffer_size):
+def load_pages(coll, buffer_size):
     """
+    Load pages from a given collection
     """
     current_docs = []
-    for doc in db.ocr_objs.find().batch_size(buffer_size):
+    for doc in coll.find().batch_size(buffer_size):
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs

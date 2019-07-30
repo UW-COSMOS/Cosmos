@@ -3,9 +3,9 @@ services:
     ocr:
         build: .
         ipc: host
-        #command: "python3 ocr.py 10 --no-skip"
-        volumes:
-            - .:/develop/
-        command: "tail -F /dev/null"
+        command: "python3 ocr.py 10 --skip"
+        #volumes:
+        #    - .:/develop/
+        #command: "tail -F /dev/null"
         environment:
             - DBCONNECT
