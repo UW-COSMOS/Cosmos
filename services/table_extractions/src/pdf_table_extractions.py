@@ -19,7 +19,7 @@ from joblib import Parallel, delayed
 from pymongo import MongoClient
 
 import camelot
-from .utils import grouper
+from utils import grouper
 
 # Logging config
 logging.basicConfig(
@@ -42,7 +42,7 @@ def create_pdf(pdf_name: str, pdf_bytes: bytes) -> None:
         return
 
     tempfile.tempdir = filedir_pdfs
-    temp_file = tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", prefix=pdf_name, delete=False)
+    temp_file = tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", prefix=pdf_name[:-4]+'_', delete=False)
 
     # Create document
     try:
@@ -71,7 +71,7 @@ def run_table_extraction(get_metadata: Callable, insert_tables: Callable, n_jobs
 
     for batch in get_metadata(db, buffer_size, tables_per_job):
         t1 = time.time()
-        logs = Parallel(n_jobs=n_jobs)(delayed(table_extraction)(prepare_table_data, insert_tables, table_metadata, skip) for table_metadata in batch)
+        logs = Parallel(n_jobs=n_jobs)(delayed(table_extraction)(insert_tables, table_metadata, skip) for table_metadata in batch)
 
         for log_list in logs:
             for log in log_list:
@@ -113,16 +113,16 @@ def table_extraction(insert_tables: Callable, table_metadata: list, skip: bool) 
 
             logs.append(f'Processing {pdf_name}, page {table_page}, coords {table_coords} and {table_coords2}')
             # If document has already been scanned, ignore it based on skip settings
-            if skip & do_skip(coll_tables, pdf_name):
+            if skip & do_skip(coll_tables, pdf_name, table_page, table_coords):
                 logs.append('Document previously extracted. Skipping')
             else:
                 # Extract the tables
-                df, flavor, extract_tables_logs = extract_tables(pdf_name, table_page, table_coords2)
+                df, flavor, extract_tables_logs = extract_tables(pdf_name, table_coords2, table_page)
 
                 prepare_table_data(table, df, flavor)
 
                 # Insert the data into mongodb
-                insert_tables_logs = insert_tables(coll_tables, table, df, flavor)
+                insert_tables_logs = insert_tables(coll_tables, table)
 
                 logs.extend(extract_tables_logs)
                 logs.extend(insert_tables_logs)
@@ -239,7 +239,7 @@ def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, ta
                     page_num = str(page['page_num'])
 
                     create_pdf(pdf_name, pdf_bytes)
-                    PDFcoords = PdfFileReader(open(filedir_pdfs + pdf_name, 'rb')).getPage(0).mediaBox
+                    PDFcoords = PdfFileReader(open(pdf_loc[pdf_name], 'rb')).getPage(0).mediaBox
                     pdf_width = PDFcoords[2]
                     pdf_height = PDFcoords[3]
 
