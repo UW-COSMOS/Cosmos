@@ -2,24 +2,26 @@
 Script for extracting tables from PDFs, given location (page and coords), and storing them in mongodb
 """
 
-# Logging config
+import json
 import logging
-import click
-import time
 import os
-from os import path
-from typing import Mapping, TypeVar
-import pymongo
-from pymongo import MongoClient
-import camelot
 import pickle
-from joblib import Parallel, delayed
-from io import BytesIO
-from itertools import zip_longest
-import shutil
-from PyPDF2 import PdfFileReader
 import tempfile
+import time
+from io import BytesIO
+from os import path
+from typing import TypeVar, Callable
 
+import click
+import pymongo
+from PyPDF2 import PdfFileReader
+from joblib import Parallel, delayed
+from pymongo import MongoClient
+
+import camelot
+from .utils import grouper
+
+# Logging config
 logging.basicConfig(
 #                    filename = 'mylogs.log', filemode = 'w',
                     format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
@@ -30,7 +32,7 @@ IMG_HEIGHT = IMG_WIDTH = 1920
 pdf_loc = {}
 
 
-def create_pdf(pdf_name: str, pdf_bytes: bytes):
+def create_pdf(pdf_name: str, pdf_bytes: bytes) -> None:
     """
     Create PDF and store it in filedir_pdf
     """
@@ -41,7 +43,6 @@ def create_pdf(pdf_name: str, pdf_bytes: bytes):
 
     tempfile.tempdir = filedir_pdfs
     temp_file = tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", prefix=pdf_name, delete=False)
-    pdf_loc[pdf_name] = temp_file.name
 
     # Create document
     try:
@@ -51,9 +52,10 @@ def create_pdf(pdf_name: str, pdf_bytes: bytes):
         logging.info('Could not create pdf from bytes')
     finally:
         temp_file.close()
+        pdf_loc[pdf_name] = temp_file.name
 
 
-def run_table_extraction(n_jobs: int, skip: bool) -> None:
+def run_table_extraction(get_metadata: Callable, insert_tables: Callable, n_jobs: int, skip: bool) -> None:
     """
     Entry point for extracting tables from ingested PDFs
     """
@@ -67,9 +69,9 @@ def run_table_extraction(n_jobs: int, skip: bool) -> None:
     buffer_size = n_jobs
     tables_per_job = 10
 
-    for batch in load_table_metadata(db, buffer_size, tables_per_job):
+    for batch in get_metadata(db, buffer_size, tables_per_job):
         t1 = time.time()
-        logs = Parallel(n_jobs=n_jobs)(delayed(table_extraction)(table_metadata, skip) for table_metadata in batch)
+        logs = Parallel(n_jobs=n_jobs)(delayed(table_extraction)(prepare_table_data, insert_tables, table_metadata, skip) for table_metadata in batch)
 
         for log_list in logs:
             for log in log_list:
@@ -89,6 +91,111 @@ def run_table_extraction(n_jobs: int, skip: bool) -> None:
     logging.info(f'Completed table extractions')
     logging.info(f'Total time: {end_time - start_time} s')
     return
+
+
+def table_extraction(insert_tables: Callable, table_metadata: list, skip: bool) -> list:
+    """
+    Retrieve the tables from each table, and store them in mongodb.
+    """
+
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    coll_tables = db.tables
+
+    logs = []
+
+    try:
+        for table in table_metadata:
+            pdf_name = table['pdf_name']
+            table_page = table['page_num']
+            table_coords = table['coords']
+            table_coords2 = table['camelot_coords']
+
+            logs.append(f'Processing {pdf_name}, page {table_page}, coords {table_coords} and {table_coords2}')
+            # If document has already been scanned, ignore it based on skip settings
+            if skip & do_skip(coll_tables, pdf_name):
+                logs.append('Document previously extracted. Skipping')
+            else:
+                # Extract the tables
+                df, flavor, extract_tables_logs = extract_tables(pdf_name, table_page, table_coords2)
+
+                prepare_table_data(table, df, flavor)
+
+                # Insert the data into mongodb
+                insert_tables_logs = insert_tables(coll_tables, table, df, flavor)
+
+                logs.extend(extract_tables_logs)
+                logs.extend(insert_tables_logs)
+    except Exception as e:
+        logs.append(f'An error occurred: {e}')
+    return logs
+
+
+def do_skip(coll_tables: pymongo.collection.Collection, raw_pdf_name: str, page_num: str, coords: str) -> bool:
+    """
+    Check if document is already scanned or not. If yes, skip it
+    """
+    return coll_tables.count_documents({'pdf_name': raw_pdf_name, 'page_num': page_num, 'coords': coords}, limit=1) != 0
+
+
+def prepare_table_data(table: dict, df: bytes, flavor: str) -> list:
+    '''
+    Prepare data for mango extraction
+    '''
+    table['table_df'] = df
+    table['flavor'] = flavor
+    del table['camelot_coords']
+
+    return table
+
+
+def extract_tables(pdf_name: str, table_coords: str, table_page: str) -> list:
+    """
+    Extract each table using both Lattice and Stream. Compare and choose the best one.
+    """
+    logs = []
+
+    logs.append('Extracting tables')
+
+    try:
+        stream_params = json.load(open("camelot_stream_params.txt"))
+        tables_stream = camelot.read_pdf(pdf_loc[pdf_name],
+                                         pages=table_page,
+                                         **stream_params
+                                         )
+
+        lattice_params = json.load(open("camelot_stream_params.txt"))
+        tables_lattice = camelot.read_pdf(pdf_loc[pdf_name],
+                                          pages=table_page,
+                                          table_areas=[table_coords],
+                                          **lattice_params
+                                          )
+
+        if tables_lattice.n == 0 and tables_stream.n == 0:
+            raise Exception('Table not detected')
+
+        elif tables_lattice.n == 0 or tables_lattice[0].accuracy < tables_stream[0].accuracy:
+            logs.append('Extracted table')
+            table_df = tables_stream[0].df
+            flavor = "Stream"
+
+        else:
+            logs.append('Extracted table')
+            table_df = tables_lattice[0].df
+            flavor = "Lattice"
+
+    except Exception as e:
+        logs.append(f'An error occurred: {e}')
+        table_df = None
+        flavor = "NA"
+
+    finally:
+        if path.exists(pdf_name):
+            os.remove(pdf_name)
+
+    pkld_df = pickle.dumps(table_df)
+
+    return [pkld_df, flavor, logs]
 
 
 def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, tables_per_job: int = 10) -> list:
@@ -167,112 +274,6 @@ def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, ta
     yield grouper(table_data, tables_per_job)
 
 
-def table_extraction(table_metadata: list, skip: bool) -> list:
-    """
-    Retrieve the tables from each table, and store them in mongodb.
-    """
-
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
-    coll_tables = db.tables
-
-    logs = []
-
-    try:
-        for table in table_metadata:
-            pdf_name = table['pdf_name']
-            table_page = table['page_num']
-            table_coords = table['coords']
-            table_coords2 = table['camelot_coords']
-
-            logs.append(f'Processing {pdf_name}, page {table_page}, coords {table_coords} and {table_coords2}')
-            # If document has already been scanned, ignore it based on skip settings
-            if skip & do_skip(coll_tables, pdf_name):
-                logs.append('Document previously extracted. Skipping')
-            else:
-                # Extract the tables
-                table, extract_tables_logs = extract_tables(table)
-
-                # Insert the data into mongodb
-                insert_tables_mongo_logs = insert_tables_mongo(coll_tables, table)
-
-                logs.extend(extract_tables_logs)
-                logs.extend(insert_tables_mongo_logs)
-    except Exception as e:
-        logs.append(f'An error occurred: {e}')
-    return logs
-
-
-def do_skip(coll_tables: pymongo.collection.Collection, raw_pdf_name: str, page_num: str, coords: str) -> bool:
-    """
-    Check if document is already scanned or not. If yes, skip it
-    """
-    return coll_tables.count_documents({'pdf_name': raw_pdf_name, 'page_num': page_num, 'coords': coords}, limit=1) != 0
-
-
-
-def extract_tables(table: dict) -> list:
-    """
-    Extract each table using both Lattice and Stream. Compare and choose the best one.
-    """
-    logs = []
-    pdf_name = table['pdf_name']
-    table_coords = table['camelot_coords']
-    table_page = table['page_num']
-
-    logs.append('Extracting tables')
-
-    try:
-        tables_stream = camelot.read_pdf(pdf_loc[pdf_name],
-                                         pages=table_page,
-                                         flavor='stream',
-                                         table_areas=[table_coords],
-                                         flag_size=True,
-                                         strip_text=' .\n',
-                                         edge_tol=25
-                                         )
-
-        tables_lattice = camelot.read_pdf(pdf_loc[pdf_name],
-                                          pages=table_page,                                    
-                                          flavor='lattice',
-                                          table_areas=[table_coords],
-                                          split_text=True,                                     
-                                          flag_size=True,                                      
-                                          strip_text=' .\n',                                   
-                                          line_scale=100,                                      
-                                          shift_text=[''],                                     
-                                          copy_text=['h', 'v']                                 
-                                          )
-
-        if tables_lattice.n == 0 and tables_stream.n == 0:
-            raise Exception('Table not detected')
-
-        elif tables_lattice.n == 0 or tables_lattice[0].accuracy < tables_stream[0].accuracy:
-            logs.append('Extracted table')
-            table_df = tables_stream[0].df
-            flavor = "Stream"
-
-        else:
-            logs.append('Extracted table')
-            table_df = tables_lattice[0].df
-            flavor = "Lattice"
-
-    except Exception as e:
-        logs.append(f'An error occurred: {e}')
-        table_df = None
-        flavor = "NA"
-
-    finally:
-        if path.exists(pdf_name):
-            os.remove(pdf_name)
-
-    table['table_df'] = pickle.dumps(table_df)
-    table['flavor'] = flavor
-    del table['camelot_coords']
-
-    return [table, logs]
-
-
 def insert_tables_mongo(coll_tables: pymongo.collection.Collection, detected_table: dict) -> list:
     """
     Insert tables into mongodb
@@ -281,32 +282,14 @@ def insert_tables_mongo(coll_tables: pymongo.collection.Collection, detected_tab
     return [f'Inserted table: {result}']
 
 
-def grouper(iterable: iter, n: int, fillvalue=None) -> list:
-    args = [iter(iterable)] * n
-    return list(zip_longest(*args, fillvalue=fillvalue))
-
-
-def is_picklable(obj):
-    """
-    Helpful function to debug whether objects are pickleable (requirement for multiprocessing)
-    """
-    try:
-        pickle.dumps(obj)
-
-    except pickle.PicklingError:
-        return False
-    return True
-
-# print(f"Pickle table_extraction: {is_picklable(table_extraction)}")
-
-
 @click.command()
 @click.argument('num_processes')
 @click.option('--skip/--no-skip', help="Don't try to update already extracted pdfs. Good to use if you ran into an "
                                        "error on ingestion and want to continue the ingestion")
 def click_wrapper(num_processes: str, skip) -> None:
+    # print(f"Pickle table_extraction: {is_picklable(table_extraction)}")
     print(skip)
-    run_table_extraction(int(num_processes), skip)
+    run_table_extraction(load_table_metadata, insert_tables_mongo, int(num_processes), skip)
 
 
 if __name__ == '__main__':
