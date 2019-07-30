@@ -79,15 +79,13 @@ def process_html(html_file):
         return html_list
 
 def get_feat_vec(predict, predict_list, classes):
-    max_nhds = 15 # Maximum of 15 neighbors considered for creating neighborhood features
-    feat_vec = []    
+    max_nhds = 15
+    feat_vec = []
     p_bb, p_cls_scores, text = predict
     p_score, p_cls = p_cls_scores[0]
     
     # Neighborhood features
     nbhds = compute_neighbors(predict, predict_list)
-    if len(nbhds) > max_nhds:
-        max_nhds = len(nbhds)
     nbhds_sorted = sorted(nbhds, key=lambda nbhds: (nbhds[0]))
     feat_nbhd1 = []
     nbhr_count = 1
@@ -99,7 +97,6 @@ def get_feat_vec(predict, predict_list, classes):
             break
         nbhr_count += 1
     feat_nbhd1.extend([-1] * (max_nhds - len(feat_nbhd1)))
-
     width, height = get_width_height(p_bb)  
         
     feat_vec.append(classes.index(p_cls))
@@ -114,15 +111,15 @@ def get_feat_vec(predict, predict_list, classes):
     feat_vec.append(height) #Height of the object
     feat_vec.append(width*height) #Area of the object
     feat_vec.extend(feat_nbhd1)
-
+    
     #Textual features
     
     fig_matches = 1 if len(re.findall('^(figure|fig)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', text, flags=re.IGNORECASE|re.MULTILINE)) > 0 else 0
     table_matches = 1 if len(re.findall('^(table|tbl|tab)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', text, flags=re.IGNORECASE|re.MULTILINE)) > 0 else 0  
     feat_vec.append(fig_matches)
     feat_vec.append(table_matches)
-
-    return feat_vec        
+   
+    return feat_vec
 
 def get_feat_vec_train(predict, predict_list, classes):
     max_nhds = 15
@@ -162,7 +159,7 @@ def get_feat_vec_train(predict, predict_list, classes):
     feat_vec.append(fig_matches)
     feat_vec.append(table_matches)   
    
-    return feat_vec        
+    return feat_vec      
 
 
 def get_target(predict, list_map, classes):
@@ -181,8 +178,8 @@ def load_data_objs(objs, classes):
     features = []
     for predict in predict_list:
         features.append(get_feat_vec(predict, predict_list, classes))
-            
-    return np.array(features)
+    f = np.asarray(features)
+    return f
 
 #Use this function to load data for training the model
 def load_data(input_dir, classes):
