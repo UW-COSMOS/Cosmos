@@ -1,6 +1,6 @@
 {
-    'flavor': 'stream'
-    'flag_size': True
-    'strip_text': ' .\n'
-    'edge_tol': 25
+    "flavor": "stream",
+    "flag_size": true,
+    "strip_text": " .\n",
+    "edge_tol": 25
 }

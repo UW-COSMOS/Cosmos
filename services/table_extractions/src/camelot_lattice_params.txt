@@ -1,9 +1,9 @@
 {
-    'flavor': 'lattice',
-    'split_text': True,
-    'flag_size': True,
-    'strip_text': ' .\n',
-    'line_scale': 100,
-    'shift_text': [''],
-    'copy_text': ['h', 'v']
+    "flavor": "lattice",
+    "split_text": true,
+    "flag_size": true,
+    "strip_text": " .\n",
+    "line_scale": 100,
+    "shift_text": [''],
+    "copy_text": ['h', 'v']
 }
