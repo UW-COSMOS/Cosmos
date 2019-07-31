@@ -42,6 +42,30 @@ The procedure of the program is laid out generally as follows (docs correspond t
 8. Create knowledge base of figures and tables -- cosmos/construct_caption_tables
 9. Create knowledge base of equations -- cosmos/UnicodeParser
 
+# Installing locally
+1. Install kubectl (https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+2. Install minikube (https://kubernetes.io/docs/tasks/tools/install-minikube/) (if already installed, run minikube delete)
+3. Install Helm (https://helm.sh/docs/using_helm/#quickstart)
+4. Clone repo on branch v0.2.0 (https://github.com/UW-COSMOS/Cosmos/tree/v0.2.0)
+5. Head to the COSMOS root folder.
+6. Run (minikube start --memory 12288 --cpus 4 --disk-size 20g)
+7. Install dependencies (helm init)
+8. Ensure pods are running (kubectl get pods)
+9. Run this command a few times (helm repo update)
+10. Go to the services dir (cd services). Install MongoDB (install_mongo.sh)
+11. Retrieve the mongodb password: (export MONGODB_ROOT_PASSWORD=$(kubectl get secret --namespace default cosmos-mongodb -o jsonpath=“{.data.mongodb-root-password}” | base64 --decode))
+12. Run the clusters (kubectl run)
+13. Go to proposals dir in services (cd proposals). Run (install.sh)
+14. Ensure clusters are still running (kubectl get pods)
+15. Head to the detection service (cd ../detection)
+16. Change the values.yaml file (Pull Policy: IfNotPresent)
+17. SSH into the minikube (minikube ssh)
+18. Pull the docker files (docker pull ankurgos/detection:test). SSH out once done
+19. Go to the ingestion folder (cd ../ingestion)
+20. Change the values.yaml file (pdfDir: <Your Folder>)
+21. Run (install.sh)
+22. Go to src (cd src). Run (python pdf_ingestion.py)
+
 # License and Acknowledgements
 All development work supported by DAPRA ASKE HR00111990013 and UW-Madison.
 

@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: sverma25/ingestion
+  repository: sverma25/table_extractions
   tag: v1.0
   pullPolicy: Always
 
