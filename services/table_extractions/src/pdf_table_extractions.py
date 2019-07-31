@@ -2,10 +2,12 @@
 Script for extracting tables from PDFs, given location (page and coords), and storing them in mongodb
 """
 
+import errno
 import json
 import logging
 import os
 import pickle
+import shutil
 import tempfile
 import time
 from io import BytesIO
@@ -68,6 +70,7 @@ def run_table_extraction(get_metadata: Callable, insert_tables: Callable, n_jobs
 
     buffer_size = n_jobs
     tables_per_job = 10
+    total_tables = 0
 
     for batch in get_metadata(db, buffer_size, tables_per_job):
         t1 = time.time()
@@ -86,10 +89,23 @@ def run_table_extraction(get_metadata: Callable, insert_tables: Callable, n_jobs
         logging.info(f'Batch time: {batch_time} s')
         logging.info(f'Batch extraction rate: {batch_rate} tables/min')
 
+        total_tables += batch_size
+    
+    try:
+        shutil.rmtree(filedir_pdfs)
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            logging.info(f'Error: Could not delete tempfolder. {e}')
+
     end_time = time.time()
 
+    total_time = end_time - start_time
+    total_rate = total_tables/(total_time/60)
+
     logging.info(f'Completed table extractions')
-    logging.info(f'Total time: {end_time - start_time} s')
+    logging.info(f'Number of tables processed: {total_tables} tables')
+    logging.info(f'Total time: {total_time} s')
+    logging.info(f'Table extraction rate: {total_rate} tables/min')
     return
 
 
@@ -239,7 +255,12 @@ def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, ta
                     page_num = str(page['page_num'])
 
                     create_pdf(pdf_name, pdf_bytes)
-                    PDFcoords = PdfFileReader(open(pdf_loc[pdf_name], 'rb')).getPage(0).mediaBox
+                    
+                    PDFfile = PdfFileReader(open(pdf_loc[pdf_name], 'rb'))
+                    if PDFfile.isEncrypted:
+                        PDFfile.decrypt('')
+                    PDFcoords = PDFfile.getPage(0).mediaBox
+                    
                     pdf_width = PDFcoords[2]
                     pdf_height = PDFcoords[3]
 
@@ -271,7 +292,7 @@ def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, ta
                     # Start fresh after a yield
                     table_data = []
 
-    yield grouper(table_data, tables_per_job)
+        yield grouper(table_data, tables_per_job)
 
 
 def insert_tables_mongo(coll_tables: pymongo.collection.Collection, detected_table: dict) -> list:
