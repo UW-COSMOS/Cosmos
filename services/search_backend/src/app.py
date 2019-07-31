@@ -28,6 +28,7 @@ def search():
     try:
         obj_type = request.args.get('type', '')
         query = request.args.get('query', '')
+        page_num = int(request.args.get('pageNumber', 0))
         s = Search()
         q = Q()
 
@@ -42,7 +43,7 @@ def search():
         s = Search().query(q)
         logging.info(s.to_dict())
 
-        s = s[:20]
+        s = s[page_num*20:(page_num+1)*20]
 
         response = s.execute()
 #        logging.info(str(response))
