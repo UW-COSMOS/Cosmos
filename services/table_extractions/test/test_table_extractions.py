@@ -6,17 +6,14 @@ from ..src.pdf_table_extractions import run_table_extraction
 class TestTableExtractions(unittest.TestCase):
     tables = {}
 
-    def create_test_metadata(self):
+    def create_test_metadata(self, db, buffer_size, tables_per_job):
         metadata1 = {'pdf_name': 'test/test_docs/foo1.pdf', 'page_num': '1', 'coords': '', 'camelot_coords': '170, 370, 560, 270'}
         metadata2 = {'pdf_name': 'test/test_docs/foo2.pdf', 'page_num': '1', 'coords': '', 'camelot_coords': '316, 499, 566, 337'}
         metadata3 = {'pdf_name': 'test/test_docs/foo3.pdf', 'page_num': '1', 'coords': '', 'camelot_coords': '46, 704, 521, 546'}
 
         return [metadata1, metadata2, metadata3]
 
-    def prepare_test_table_data(self, table_df, flavor):
-        pass
-
-    def insert_test_tables_local(self, coll, detected_tables:dict):
+    def insert_test_tables_local(self, coll, detected_tables):
         self.tables.update({detected_tables['pdf_name']: pickle.loads(detected_tables['table_df'])})
 
     def easy_table(self):
@@ -32,7 +29,7 @@ class TestTableExtractions(unittest.TestCase):
         self.assertEqual((16, 4), df3.shape)
 
     def test_tables(self):
-        run_table_extraction(self.create_test_metadata, self.prepare_test_table_data, self.insert_test_tables_local, 1, False)
+        run_table_extraction(self.create_test_metadata, self.insert_test_tables_local, 1, False)
 
         self.easy_table()
         self.medium_table()
