@@ -6,5 +6,5 @@ services:
         volumes:
             - .:/develop/
         command: tail -F anything
-        environment:
+        
 

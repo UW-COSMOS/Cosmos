@@ -12,6 +12,7 @@ import tempfile
 import time
 from io import BytesIO
 from os import path
+import sys
 from typing import TypeVar, Callable
 
 import click
@@ -174,14 +175,14 @@ def extract_tables(pdf_name: str, table_coords: str, table_page: str) -> list:
     logs.append('Extracting tables')
 
     try:
-        stream_params = json.load(open("camelot_stream_params.txt"))
+        stream_params = json.load(open(os.path.join(sys.path[0], "camelot_stream_params.txt")))
         tables_stream = camelot.read_pdf(pdf_name,
                                          pages=table_page,
-                                         table_areas=[table_coords]
+                                         table_areas=[table_coords],
                                          **stream_params
                                          )
 
-        lattice_params = json.load(open("camelot_stream_params.txt"))
+        lattice_params = json.load(open(os.path.join(sys.path[0], "camelot_stream_params.txt")))
         tables_lattice = camelot.read_pdf(pdf_name,
                                           pages=table_page,
                                           table_areas=[table_coords],
