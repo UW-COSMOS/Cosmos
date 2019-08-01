@@ -83,7 +83,7 @@ def extract_objects(page):
         obj_ocr = json.loads(obj_ocr)
         final_obj = {'bounding_box': bb, 'bytes': bstring,
                      'page_ocr_df': obj_ocr, 'class': cls, 'score': score,
-                     'pdf_name': page['pdf_name'], 'page_num': page['page_num'], 'content': word_dump}
+                     'pdf_name': page['pdf_name'], 'page_num': page['page_num'], 'content': word_dump, 'table_df': table_df}
         objs.append(final_obj)
     return (objs, None)
 
