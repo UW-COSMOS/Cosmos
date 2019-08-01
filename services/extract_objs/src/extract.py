@@ -15,6 +15,7 @@ import re
 from joblib import Parallel, delayed
 import click
 import pickle
+from .table_extractions import extract_table_from_obj
 
 
 def load_pages(db, buffer_size):
@@ -49,6 +50,15 @@ def extract_objects(page):
     tess_df = pd.DataFrame(page['ocr_df'])
     for obj in detected_objs:
         bb, cls, score = obj
+
+        table_df  = None
+        if cls == 'Table':
+            pdf_name = page['pdf_name']
+            page_num = str(page['page_num'])
+            coords = bb
+
+            table_df = extract_table_from_obj(pdf_name, page_num, coords)
+
         tl_x, tl_y, br_x, br_y = bb
         obj_ocr = tess_df.loc[(tess_df['bottom'] <= br_y) & (tess_df['top'] >= tl_y) &
                           (tess_df['left'] >= tl_x) & (tess_df['right'] <= br_x)]
