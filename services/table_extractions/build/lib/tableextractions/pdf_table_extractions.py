@@ -12,6 +12,7 @@ import tempfile
 import time
 from io import BytesIO
 from os import path
+import sys
 from typing import TypeVar, Callable
 
 import click
@@ -133,7 +134,7 @@ def table_extraction(insert_tables: Callable, table_metadata: list, skip: bool) 
                 logs.append('Document previously extracted. Skipping')
             else:
                 # Extract the tables
-                df, flavor, extract_tables_logs = extract_tables(pdf_name, table_coords2, table_page)
+                df, flavor, extract_tables_logs = extract_tables(pdf_loc[pdf_name], table_coords2, table_page)
 
                 prepare_table_data(table, df, flavor)
 
@@ -174,14 +175,15 @@ def extract_tables(pdf_name: str, table_coords: str, table_page: str) -> list:
     logs.append('Extracting tables')
 
     try:
-        stream_params = json.load(open("camelot_stream_params.txt"))
-        tables_stream = camelot.read_pdf(pdf_loc[pdf_name],
+        stream_params = json.load(open(os.path.join(sys.path[0], "camelot_stream_params.txt")))
+        tables_stream = camelot.read_pdf(pdf_name,
                                          pages=table_page,
+                                         table_areas=[table_coords],
                                          **stream_params
                                          )
 
-        lattice_params = json.load(open("camelot_stream_params.txt"))
-        tables_lattice = camelot.read_pdf(pdf_loc[pdf_name],
+        lattice_params = json.load(open(os.path.join(sys.path[0], "camelot_stream_params.txt")))
+        tables_lattice = camelot.read_pdf(pdf_name,
                                           pages=table_page,
                                           table_areas=[table_coords],
                                           **lattice_params
@@ -204,10 +206,6 @@ def extract_tables(pdf_name: str, table_coords: str, table_page: str) -> list:
         logs.append(f'An error occurred: {e}')
         table_df = None
         flavor = "NA"
-
-    finally:
-        if path.exists(pdf_name):
-            os.remove(pdf_name)
 
     pkld_df = pickle.dumps(table_df)
 
