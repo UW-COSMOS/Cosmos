@@ -120,7 +120,7 @@ def extract_scan(db_insert_fn, num_processes, skip):
 
 def mongo_insert_fn(objs, client):
     db = client.pdfs
-    result = db.ocr_objs_test.insert_many(objs)
+    result = db.ocr_objs.insert_many(objs)
     logging.info(f"Inserted results: {result}")
 
 
