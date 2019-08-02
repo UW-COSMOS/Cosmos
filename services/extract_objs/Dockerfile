@@ -52,5 +52,5 @@ COPY requirements.txt /
 RUN pip install -r /requirements.txt
 
 # Copy /app and work in it
-COPY tableextractions/ /app
+COPY src/ /app
 WORKDIR /app

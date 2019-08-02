@@ -1,6 +1,6 @@
 version: "2.3"
 services:
-    table_extractions:
+    extract_objects:
         build: .
         ipc: host
         volumes:
