@@ -110,7 +110,7 @@ def convert_coords(pdf_name: str, detected_obj: list):
 #
 #    pkld_df = pickle.dumps(table_df)
 
-    return pkld_df
+#    return pkld_df
 
 
 def extract_table_from_obj(pdf_name: str, page_num: str, coords: list):
