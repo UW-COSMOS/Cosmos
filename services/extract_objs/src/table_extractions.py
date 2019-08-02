@@ -9,7 +9,7 @@ import pickle
 
 from PyPDF2 import PdfFileReader
 from pymongo import MongoClient
-from tableextractions import extract_tables
+from tableextractions.pdf_table_extractions import extract_tables
 
 IMG_HEIGHT = 1920
 
