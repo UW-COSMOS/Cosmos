@@ -1,0 +1,4 @@
+celery==4.3.0
+flask
+amqp
+redis

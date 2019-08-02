@@ -1,0 +1,56 @@
+version: "2.3"
+services:
+    rabbit:
+        hostname: rabbit
+        ipc: host
+        image: rabbitmq:latest
+        environment:
+            - RABBITMQ_DEFAULT_USER=admin
+            - RABBITMQ_DEFAULT_PASS=mypass
+        ports:
+            - "5673:5672"
+        networks:
+            - dsnet
+    
+    redis:
+        image: "redis:alpine"
+        volumes:
+            - ./redis_data:/data
+        restart: always
+        ports:
+            - "6379:6379"
+        command:
+            redis-server
+        networks:
+            - dsnet
+    worker:
+        build: 
+            context: .
+            dockerfile: Dockerfile
+        entrypoint: celery
+        command: -A workerA worker --loglevel=info
+        links:
+            - rabbit
+            - redis
+        depends_on:
+            - rabbit
+            - redis
+
+        networks:
+            - dsnet
+    
+    flask:
+        build: .
+        ipc: host
+        command: "flask run --host=0.0.0.0 --port=5003"
+        environment:
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
+        ports:
+            - 5003:5003
+        restart: always
+        networks:
+            - dsnet
+
+networks:
+    dsnet:
