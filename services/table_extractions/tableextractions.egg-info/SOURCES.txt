@@ -1,0 +1,10 @@
+setup.py
+tableextractions/__init__.py
+tableextractions/pdf_table_extractions.py
+tableextractions/utils.py
+tableextractions.egg-info/PKG-INFO
+tableextractions.egg-info/SOURCES.txt
+tableextractions.egg-info/dependency_links.txt
+tableextractions.egg-info/not-zip-safe
+tableextractions.egg-info/top_level.txt
+test/test_table_extractions.py
