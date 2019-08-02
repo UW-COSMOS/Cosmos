@@ -74,45 +74,6 @@ def convert_coords(pdf_name: str, detected_obj: list):
     return coords_camelot
 
 
-#def extract_tables(pdf_name: str, table_coords: str, table_page: str) -> list:
-#    """
-#    Extract each table using both Lattice and Stream. Compare and choose the best one.
-#    """
-#    try:
-#        stream_params = json.load(open("camelot_stream_params.txt"))
-#        tables_stream = camelot.read_pdf(pdf_name,
-#                                         pages=table_page,
-#                                         table_areas=[table_coords],
-#                                         **stream_params
-#                                         )
-#
-#        lattice_params = json.load(open("camelot_stream_params.txt"))
-#        tables_lattice = camelot.read_pdf(pdf_name,
-#                                          pages=table_page,
-#                                          table_areas=[table_coords],
-#                                          **lattice_params
-#                                          )
-#
-#        if tables_lattice.n == 0 and tables_stream.n == 0:
-#            raise Exception('Table not detected')
-#
-#        elif tables_lattice.n == 0 or tables_lattice[0].accuracy < tables_stream[0].accuracy:
-#            table_df = tables_stream[0].df
-#            flavor = "Stream"
-#
-#        else:
-#            table_df = tables_lattice[0].df
-#            flavor = "Lattice"
-#
-#    except Exception as e:
-#        table_df = None
-#        flavor = "NA"
-#
-#    pkld_df = pickle.dumps(table_df)
-
-#    return pkld_df
-
-
 def extract_table_from_obj(pdf_name: str, page_num: str, coords: list):
     pdf_bytes = extract_bytes(pdf_name)
     table_df = None
@@ -121,7 +82,7 @@ def extract_table_from_obj(pdf_name: str, page_num: str, coords: list):
         temp_file = create_pdf(pdf_name, pdf_bytes)
         file_loc = temp_file.name
         coords_camelot = convert_coords(file_loc, coords)
-        table_df = extract_tables(file_loc, coords_camelot, page_num)[0]
+        table_df = extract_tables(file_loc, coords_camelot, page_num, "camelot_lattice_params.txt", "camelot_stream_params.txt")[0]
         os.remove(temp_file.name)
 
     return table_df
