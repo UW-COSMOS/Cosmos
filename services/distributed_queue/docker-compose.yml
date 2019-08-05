@@ -9,8 +9,6 @@ services:
             - RABBITMQ_DEFAULT_PASS=mypass
         ports:
             - "5673:5672"
-        networks:
-            - dsnet
     
     redis:
         image: "redis:alpine"
@@ -21,8 +19,6 @@ services:
             - "6379:6379"
         command:
             redis-server
-        networks:
-            - dsnet
     worker:
         build: 
             context: .
@@ -36,9 +32,6 @@ services:
             - rabbit
             - redis
 
-        networks:
-            - dsnet
-    
     flask:
         build: .
         ipc: host
@@ -49,8 +42,8 @@ services:
         ports:
             - 5003:5003
         restart: always
-        networks:
-            - dsnet
 
 networks:
-    dsnet:
+    defualt:
+        external:
+            name: ingress
