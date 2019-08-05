@@ -31,7 +31,7 @@ def load_pages(db, buffer_size):
     """
     """
     current_docs = []
-    for doc in db.propose_pages.find(no_cursor_timeout=True).batch_size(buffer_size):
+    for doc in db.propose_pages.find({'detected_objs': None}, no_cursor_timeout=True):
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs
@@ -53,12 +53,7 @@ def pages_detection_scan(config_pth, weights_pth, num_processes, db_insert_fn, s
     db = client.pdfs
     device_str = os.environ["DEVICE"]
     model = get_model(config_pth, weights_pth, device_str)
-    for batch in load_pages(db, 100):
-        if skip:
-            batch = [page for page in batch if not do_skip(page, client)]
-            if len(batch) == 0:
-                continue
-            logging.info("Done skipping")
+    for batch in load_pages(db, 30):
         pages = Parallel(n_jobs=num_processes)(delayed(preprocess_page)(page) for page in batch)
         detected_objs = run_inference(model, pages, config_pth, device_str)
         for page in pages:
@@ -73,13 +68,14 @@ def pages_detection_scan(config_pth, weights_pth, num_processes, db_insert_fn, s
 
 def mongo_insert_fn(objs, client):
     db = client.pdfs
-    try:
-        result = db.detect_pages.insert_many(objs)
-        logging.info(f"Inserted results: {result}")
-    except pymongo.errors.BulkWriteError:
-        for obj in objs:
-            result = db.detect_pages.replace_one({'_id': obj['_id']}, obj, upsert=True)
-            logging.info(f"Inserted result: {result}")
+    for obj in objs:
+        result = db.propose_pages.update_one({'_id': obj['_id']},
+                                             {'$set':
+                                                {
+                                                    'detected_objs': obj['detected_objs']
+                                                }
+                                             }, upsert=False)
+        logging.info(f'Updated result: {result}')
 
 
 @click.command()
