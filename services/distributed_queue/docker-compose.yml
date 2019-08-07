@@ -1,4 +1,4 @@
-version: "2.3"
+version: "3.7"
 services:
     rabbit:
         hostname: rabbit
@@ -14,7 +14,7 @@ services:
         image: "redis:alpine"
         volumes:
             - ./redis_data:/data
-        restart: always
+        #restart: always
         ports:
             - "6379:6379"
         command:
@@ -23,6 +23,9 @@ services:
         build: 
             context: .
             dockerfile: Dockerfile
+        image: localhost:5000/my_worker
+        deploy: 
+            replicas: 2
         entrypoint: celery
         command: -A workerA worker --loglevel=info
         links:
@@ -34,6 +37,7 @@ services:
 
     flask:
         build: .
+        image: localhost:5000/my_flask
         ipc: host
         command: "flask run --host=0.0.0.0 --port=5003"
         environment:
@@ -41,7 +45,7 @@ services:
             - FLASK_ENV=development
         ports:
             - 5003:5003
-        restart: always
+        #restart: always
 
 networks:
     defualt:
