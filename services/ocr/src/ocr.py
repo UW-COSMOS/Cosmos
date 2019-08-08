@@ -23,7 +23,7 @@ def load_pages(db, buffer_size):
     """
     """
     current_docs = []
-    for doc in db.detect_pages.find().batch_size(buffer_size):
+    for doc in db.propose_pages.find({'ocr': None}, no_cursor_timeout=True):
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs
@@ -44,9 +44,13 @@ def process_page(page):
     tess_df['bottom'] = tess_df['top'] + tess_df['height']
     tess_df['right'] = tess_df['left'] + tess_df['width']
     if 'detected_objs' not in page:
-        return (None, f'This page has not had detected or has no detected objects: {page["_id"]}')
+        page['ocr_df'] = None
+        page['ocr_detected_objs'] = None
+        return (page, f'This page has not had detected or has no detected objects: {page["_id"]}')
     if len(page['detected_objs']) == 0:
-        return (None, f'This page has no detected objs: {page["_id"]}')
+        page['ocr_df'] = None
+        page['ocr_detected_objs'] = None
+        return (page, f'This page has no detected objs: {page["_id"]}')
     detect_objs = page['detected_objs']
     obj_str_list = []
     for obj in detect_objs:
@@ -84,10 +88,6 @@ def ocr_scan(db_insert_fn, num_processes, skip):
     logging.info(f'Connected to client: {client}')
     db = client.pdfs
     for batch in load_pages(db, num_processes):
-        if skip:
-            batch = [page for page in batch if not do_skip(page, client)]
-            if len(batch) == 0:
-                continue
         #pages = [process_page(page, db) for page in batch]
         pages = Parallel(n_jobs=num_processes)(delayed(process_page)(page) for page in batch)
         pages, errs = zip(*pages)
@@ -99,6 +99,8 @@ def ocr_scan(db_insert_fn, num_processes, skip):
         pages = [page for page in pages if page is not None]
         #objs = [o for p in pages for o in p]
         db_insert_fn(pages, client)
+    end_time = time.time()
+    logging.info(f'Finished OCR stage. Total time: {end_time - start_time}')
 
 
 def mongo_insert_fn(objs, client):
@@ -106,8 +108,20 @@ def mongo_insert_fn(objs, client):
     if len(objs) == 0:
         logging.info("Batch has no ocr pages")
         return
-    result = db.ocr_pages.insert_many(objs)
-    logging.info(f"Inserted results: {result}")
+
+    for obj in objs:
+        try:
+            result = db.propose_pages.update_one({'_id': obj['_id']},
+                                             {'$set':
+                                                {
+                                                    'ocr_detected_objs': obj['ocr_detected_objs'],
+                                                    'ocr_df': obj['ocr_df'],
+                                                    'ocr': True
+                                                }
+                                             }, upsert=False)
+            logging.info(f'Updated result: {result}')
+        except pymongo.errors.WriterError as e:
+            logging.error(f'Document write error: {e}\n Document id: obj["_id"]'
 
 
 @click.command()
