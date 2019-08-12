@@ -24,7 +24,7 @@ function compute_tile(zip){
     isNotTable = false;
   }
 
-  return (<GridListTile key={obj.id}>
+  return (<GridListTile key={obj._id}>
             <ObjectCard object={obj} doi={doi} show={isNotTable}></ObjectCard>
           </GridListTile>)
 }
