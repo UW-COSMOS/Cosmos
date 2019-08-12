@@ -13,6 +13,7 @@ RUN yarn add react-scripts@3.0.1
 
 RUN yarn add @material-ui/core
 RUN yarn add @material-ui/icons
+RUN yarn add react-vis
 
 
 

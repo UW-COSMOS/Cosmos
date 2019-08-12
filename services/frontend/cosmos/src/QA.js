@@ -40,9 +40,12 @@ function QA() {
   const classes = useStyles();
   return (
     <div className={classes.root}>
+    <Typography variant="h3" component="h1" style={{margin: 20}}>
+        Question Answering and Query Refinement
+    </Typography>
     <SearchBar></SearchBar>
     <Typography variant="h4" component="h4" style={{margin: 20}}>
-        Definition
+        Answer
     </Typography>
     <Paper className={classes.container}>
       <Typography variant="p" component="h3">
