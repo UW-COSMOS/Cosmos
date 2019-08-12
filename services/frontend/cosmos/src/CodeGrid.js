@@ -7,7 +7,7 @@ import CodeCard from './CodeCard.js'
 const useStyles = makeStyles(theme => ({
   gridList: {
     width: "100%",
-    height: 450,
+    height: "70%",
     margin: 20
   }
 }));

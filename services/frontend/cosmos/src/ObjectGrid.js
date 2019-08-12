@@ -7,7 +7,7 @@ import ObjectCard from './ObjectCard.js'
 const useStyles = makeStyles(theme => ({
   gridList: {
     width: "100%",
-    height: 450,
+    height: "70%",
     marginLeft: 20
   }
 }));
@@ -27,7 +27,7 @@ function compute_grid(data){
 export default function ObjectGrid(){
     const classes = useStyles();
     
-    return (<GridList cellHeight={300} className={classes.gridList} cols={3} spacing={20}>
+    return (<GridList cellHeight={300} className={classes.gridList} cols={4} spacing={20}>
       {compute_grid(data)}
     </GridList>
     )
