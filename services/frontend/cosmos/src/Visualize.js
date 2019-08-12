@@ -3,6 +3,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import SearchBar from './SearchBar.js'
 import Histogram from './Histogram.js'
+import ObjectGrid from './ObjectGrid.js'
 
 
 const useStyles = makeStyles(theme => ({
@@ -36,6 +37,7 @@ function Visualize() {
     <Typography variant="h4" component="h4" className={classes.text}>
       Extracted items
     </Typography>
+    <ObjectGrid></ObjectGrid>
     </div>
   );
 }
