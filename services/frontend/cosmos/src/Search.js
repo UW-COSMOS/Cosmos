@@ -2,6 +2,7 @@ import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import SearchBar from './SearchBar.js'
+import ObjectGrid from './ObjectGrid.js'
 
 
 const useStyles = makeStyles(theme => ({
@@ -17,6 +18,7 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
+
 function Search() {
   const classes = useStyles();
   return (
@@ -25,6 +27,9 @@ function Search() {
         Knowledge Search
     </Typography>
     <SearchBar></SearchBar>
+    <div className={classes.container}>
+    <ObjectGrid></ObjectGrid>
+    </div>
     </div>
   );
 }

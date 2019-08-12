@@ -2,6 +2,7 @@ import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import SearchBar from './SearchBar.js'
+import CodeGrid from './CodeGrid.js'
 
 
 const useStyles = makeStyles(theme => ({
@@ -25,6 +26,7 @@ function ModelSearch() {
         Model Search
     </Typography>
     <SearchBar></SearchBar>
+    <CodeGrid></CodeGrid>
     </div>
   );
 }
