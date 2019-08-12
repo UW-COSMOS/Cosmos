@@ -42,7 +42,7 @@ function Histogram(){
             <VerticalGridLines />
             <HorizontalGridLines />
             <XAxis title='TOC Values'/>
-            <YAxis title='Frequency'/>
+            <YAxis title='F2'/>
             <VerticalRectSeries data={DATA} style={{stroke: '#fff'}}/>
         </XYPlot>
       </Paper>

@@ -4,7 +4,7 @@ import SearchIcon from '@material-ui/icons/Search';
 //import MenuIcon from '@material-ui/icons/Menu';
 import InputAdornment from '@material-ui/core/InputAdornment';
 
-export default function SearchBar(){
+export default function SearchBar(props){
   return (
     <TextField
       id="outlined-full-width"
@@ -15,6 +15,11 @@ export default function SearchBar(){
       helperText="Ask a question"
       margin="normal"
       variant="outlined"
+      onKeyPress={(ev) => {
+        if(ev.key === 'Enter') {
+          props.enter_fn()
+        }
+      }}
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">
