@@ -36,6 +36,10 @@ function generate_list(){
   return (<List>{mapped}</List>)
 }
 
+function onEnter(){
+    alert('Enter pressed!');
+}
+
 function QA() {
   const classes = useStyles();
   return (
@@ -43,7 +47,7 @@ function QA() {
     <Typography variant="h3" component="h1" style={{margin: 20}}>
         Question Answering and Query Refinement
     </Typography>
-    <SearchBar></SearchBar>
+    <SearchBar enter_fn={onEnter}></SearchBar>
     <Typography variant="h4" component="h4" style={{margin: 20}}>
         Answer
     </Typography>
