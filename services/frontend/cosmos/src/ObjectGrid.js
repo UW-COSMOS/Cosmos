@@ -19,9 +19,13 @@ function compute_tile(zip){
   if (typeof doi === "undefined") {
     return (<div></div>)
   }
+  var isNotTable = true;
+  if(obj.class == 'Table'){
+    isNotTable = false;
+  }
 
   return (<GridListTile key={obj.id}>
-            <ObjectCard object={obj} doi={doi}></ObjectCard>
+            <ObjectCard object={obj} doi={doi} show={isNotTable}></ObjectCard>
           </GridListTile>)
 }
 
