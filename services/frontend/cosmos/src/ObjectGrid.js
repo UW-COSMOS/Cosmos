@@ -12,23 +12,41 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-const data = [0, 1, 2, 3, 4, 5]
 
-function compute_tile(tile){
-  return (<GridListTile key={tile}>
-            <ObjectCard></ObjectCard>
+function compute_tile(zip){
+  var obj = zip[0]
+  var doi = zip[1]
+  if (typeof doi === "undefined") {
+    return (<div></div>)
+  }
+
+  return (<GridListTile key={obj.id}>
+            <ObjectCard object={obj} doi={doi}></ObjectCard>
           </GridListTile>)
 }
 
-function compute_grid(data){
-  return data.map(compute_tile)
+function compute_grid(objects, dois){
+  console.log(dois)
+  if (typeof(objects) === "undefined"){
+    return (<div></div>)
+  }
+  var zipped = objects.map(function(o, i){
+    for(var j = 0; j < dois.length; j++){
+      let pdf_id = o.pdf_name.slice(0, -4)
+      if(dois[j].pdf_id == pdf_id){
+        return [o, dois[j]]
+      }
+    }
+    return [o, dois[i]]
+  })
+  return zipped.map(compute_tile)
 }
 
-export default function ObjectGrid(){
+export default function ObjectGrid(props){
     const classes = useStyles();
     
-    return (<GridList cellHeight={300} className={classes.gridList} cols={4} spacing={20}>
-      {compute_grid(data)}
+    return (<GridList cellHeight={700} className={classes.gridList} cols={2} spacing={20}>
+      {compute_grid(props.objects, props.dois)}
     </GridList>
     )
 }

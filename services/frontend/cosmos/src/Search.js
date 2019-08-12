@@ -34,6 +34,8 @@ function Search() {
     type: 'Body text',
     query: '',
   });
+  const [results, setResults] = React.useState([])
+  const [doiResults, setDoi] = React.useState([])
   function handleChange(event) {
     setValues(oldValues => ({
       ...oldValues,
@@ -41,7 +43,25 @@ function Search() {
     }));
   }
   function onEnter(query){
-    alert(query)
+    setValues({...values, ['query']: query})
+    setResults([])
+    setDoi([])
+    fetch(`http://localhost:5001/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(values.type)}`)
+    .then(response => response.json())
+    .then(data => {
+      setResults(data.results)
+      for(var i = 0; i < data.results.length; i++){
+        let pdf_id = data.results[i].pdf_name.slice(0, -4)
+        fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)
+          .then(response => response.json())
+          .then(doi_res => {
+            let id = doi_res.success.data[0]._gddid
+            let title = doi_res.success.data[0].title
+            let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
+            setDoi(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
+          })
+      }
+    })
   }
   return (
     <div className={classes.root}>
@@ -58,14 +78,14 @@ function Search() {
         }}
     >
       <MenuItem value={'Body text'}>Text</MenuItem>
-      <MenuItem value={'Equation'}>Equations</MenuItem>
-      <MenuItem value={'Table'}>Tables</MenuItem>
-      <MenuItem value={'Figure'}>Figures</MenuItem>
+      <MenuItem value={'equation'}>Equations</MenuItem>
+      <MenuItem value={'table'}>Tables</MenuItem>
+      <MenuItem value={'figure'}>Figures</MenuItem>
     </Select>
     </FormControl>
     <SearchBar enter_fn={onEnter}></SearchBar>
     <div className={classes.container}>
-    <ObjectGrid></ObjectGrid>
+    <ObjectGrid objects={results} dois={doiResults}></ObjectGrid>
     </div>
     </div>
   );

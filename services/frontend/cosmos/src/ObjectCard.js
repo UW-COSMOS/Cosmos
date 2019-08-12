@@ -15,15 +15,12 @@ import FavoriteIcon from '@material-ui/icons/Favorite';
 import ShareIcon from '@material-ui/icons/Share';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
+import CardImage from './CardImage';
 
 const useStyles = makeStyles(theme => ({
   card: {
-    maxWidth: 500,
+    maxWidth: 1000,
     backgroundColor: "#f1f1f1"
-  },
-  media: {
-    height: 0,
-    paddingTop: '56.25%', // 16:9
   },
   expand: {
     transform: 'rotate(0deg)',
@@ -38,15 +35,23 @@ const useStyles = makeStyles(theme => ({
   avatar: {
     backgroundColor: red[500],
   },
+  media: {
+    height: 'auto',
+    margin: 10,
+  },
 }));
 
-export default function ObjectCard() {
+
+export default function ObjectCard(props) {
   const classes = useStyles();
   const [expanded, setExpanded] = React.useState(false);
 
   function handleExpandClick() {
     setExpanded(!expanded);
   }
+  var object = props.object
+  var doi = props.doi
+
 
   return (
     <Card className={classes.card}>
@@ -56,12 +61,15 @@ export default function ObjectCard() {
             <MoreVertIcon />
           </IconButton>
         }
-        title="PLACEHOLDER OBJ"
-        subheader="PLACEHOLDER SUBHEADER"
+        title={doi.title}
+        subheader={doi.url}
       />
+      <CardMedia
+        className={classes.media}
+      ><CardImage bstring={object.bytes}></CardImage></CardMedia>
       <CardContent>
         <Typography variant="body2" color="textSecondary" component="p">
-            PLACEHOLDER INFORMATION
+            {object.content}
         </Typography>
       </CardContent>
       <CardActions disableSpacing>
