@@ -36,8 +36,8 @@ function generate_list(){
   return (<List>{mapped}</List>)
 }
 
-function onEnter(){
-    alert('Enter pressed!');
+function onEnter(query){
+    alert(query);
 }
 
 function QA() {

@@ -5,6 +5,13 @@ import SearchIcon from '@material-ui/icons/Search';
 import InputAdornment from '@material-ui/core/InputAdornment';
 
 export default function SearchBar(props){
+  const [values, setValues] = React.useState({
+    query: '',
+  });
+  const handleChange = name => event => {
+    setValues({ ...values, [name]: event.target.value });
+  };
+
   return (
     <TextField
       id="outlined-full-width"
@@ -14,10 +21,11 @@ export default function SearchBar(props){
       placeholder=""
       helperText="Ask a question"
       margin="normal"
+      onChange={handleChange('query')}
       variant="outlined"
       onKeyPress={(ev) => {
         if(ev.key === 'Enter') {
-          props.enter_fn()
+          props.enter_fn(values.query)
         }
       }}
       InputProps={{
