@@ -1,0 +1,16 @@
+version: "2.3"
+services:
+    search_backend:
+        build: .
+        ipc: host
+        command: "flask run --host=0.0.0.0 --port=5002"
+        #volumes:
+        #    - .:/develop/
+        #command: "tail -F /dev/null"
+        environment:
+            - DBCONNECT
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
+        ports:
+            - 5002:5002
+
