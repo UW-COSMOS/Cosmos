@@ -16,7 +16,7 @@ import json
 from flask import jsonify
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, connections
-
+import requests
 connections.create_connection(hosts=['es01'], timeout=20)
 
 app = Flask(__name__)
@@ -41,6 +41,47 @@ def search():
             else:
                 res = db.ocr_objs.find_one({'_id': obj_id})
             result_list.append(res)
+
+        for result in result_list:
+            result['_id'] = str(result['_id'])
+            if 'bytes' in result:
+                encoded = base64.encodebytes(result['bytes'])
+                result['bytes'] = encoded.decode('ascii')
+                del result['page_ocr_df']
+        results_obj = {'results': result_list}
+        return jsonify(results_obj) 
+    except TypeError:
+        abort(400)
+
+qa_URL = 'http://qa:4000/query'
+@app.route('/qa1')
+def qa1():
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    try:
+        obj_type = 'Body Text'
+        query = request.args.get('q', '')
+        s = Search().query('match', content=query).query('match', cls=obj_type)[:20]#.filter('term', cls=obj_type)[:20]
+        response = s.execute()
+        logging.info(str(response))
+        result_list = []
+        
+        for result in response:
+            id = result.meta.id
+            obj_id = ObjectId(id)
+            res = None
+            if result['cls'] == 'code':
+                res = db.code_objs.find_one({'_id': obj_id})
+            else:
+                res = db.ocr_objs.find_one({'_id': obj_id})
+            candidate = res['content']
+            logging.debug(candidate)
+            answer_l = list(requests.get(qa_URL, {'query':query, 'candidate':candidate}).json().values())
+            logging.debug("qa answer ready")
+            if len(answer_l) > 0:
+                res['answer'] = str(answer_l[0])
+            result_list.append(res)
+            break
 
         for result in result_list:
             result['_id'] = str(result['_id'])
