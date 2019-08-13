@@ -13,8 +13,6 @@ const useStyles = makeStyles(theme => ({
 }));
 
 
-
-
 export default function CodeGrid(props){
     const classes = useStyles();
     function compute_tile(tile, i){
@@ -27,7 +25,7 @@ export default function CodeGrid(props){
       return data.map(compute_tile)
     }
     return (<div>
-    <Hidden xlDown={props.data.length != 0}>
+    <Hidden xlDown={props.data.length !== 0}>
       <CircularProgress color="secondary" />
     </Hidden>
     <Grid container className={classes.grid} justify="center" align="center" spacing={2}>
