@@ -16,10 +16,37 @@ import json
 from flask import jsonify
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, connections
+import re
+import spacy
 
 connections.create_connection(hosts=['es01'], timeout=20)
 
 app = Flask(__name__)
+
+nlp = spacy.load('en_core_web_lg')
+
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    try:
+        file_content = request.get_json().get('file', '')
+    except Exception as e:
+        logging.info(f'{e}')
+
+    comment_reg = re.compile('.*(::|REAL|real|logical|=|LOGICAL|integer|INTEGER).*!(.*)')
+    loc = []
+    for i, line in enumerate(file_content.split('\n')):
+        m = comment_reg.search(line)
+        if m is not None:
+            comment = m.group(2)
+            doc = nlp(comment)
+            chunks = [chunk.text for chunk in doc.noun_chunks]
+            for chunk in chunks:
+                loc.append({'phrase': chunk, 'line': line, 'line_number': i})
+    final_obj = {'results': loc}
+    return jsonify(final_obj) 
+
+
+            
 
 @app.route('/search')
 def search():
@@ -44,13 +71,18 @@ def search():
 
         for result in result_list:
             result['_id'] = str(result['_id'])
-            if 'bytes' in result:
+            if 'bytes' in result and result['bytes'] is not None:
                 encoded = base64.encodebytes(result['bytes'])
                 result['bytes'] = encoded.decode('ascii')
                 del result['page_ocr_df']
+            if 'table_df' in result and result['table_df'] is not None:
+                encoded = base64.encodebytes(result['table_df'])
+                result['table_df'] = encoded.decode('ascii')
+
         results_obj = {'results': result_list}
         return jsonify(results_obj) 
-    except TypeError:
+    except TypeError as e:
+        logging.info(f'{e}')
         abort(400)
 
 
