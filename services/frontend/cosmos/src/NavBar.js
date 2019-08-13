@@ -29,7 +29,7 @@ class NavBar extends Component {
                 <Button color="inherit" onClick={this.props.qa_fn}>QA</Button>
                 <Button color="inherit" onClick={this.props.search_fn}>Search</Button>
                 <Button color="inherit" onClick={this.props.visualize_fn}>Visualize</Button>
-                <Button color="inherit" onClick={this.props.model_search_fn}>Model Search</Button>
+                <Button color="inherit" onClick={this.props.model_analysis_fn}>Model Analysis</Button>
               </Toolbar>
             </AppBar>
           </div>
