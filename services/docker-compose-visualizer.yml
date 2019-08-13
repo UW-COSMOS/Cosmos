@@ -63,21 +63,32 @@ services:
 
   visualizer:
     build: visualizer/frontend
-    ports:
-      - "5080:80"
     environment:
       # Public URL is settable from the
       # local environment
       - DEBUG=1
       - APPMODE=PREDICTION
     volumes:
-      - ./visualizer/:/user
+      - ./visualizer/frontend:/user
       - /user/node_modules
       - /user/ui-components/node_modules
       - /user/.cache
       - ./logs:/logs
     depends_on:
       - search_backend
+    networks:
+      - esnet
+
+  gateway:
+    image: nginx
+    ports:
+      - "5080:80"
+    depends_on:
+      - visualizer
+    volumes:
+      - ./visualizer/frontend/logs:/logs
+      - ./visualizer/frontend/dist:/frontend:ro
+      - ./visualizer/frontend/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - esnet
 
