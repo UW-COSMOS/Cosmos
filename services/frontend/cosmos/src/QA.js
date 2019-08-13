@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Paper from '@material-ui/core/Paper';
@@ -23,27 +23,29 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-function populate_related_term(term){
+function listitem(term){
   return (<ListItem>
             <ListItemText
-              primary={"- " + term}
+              primary={"- " + term[0]}
             />
           </ListItem>)
 }
 
-function generate_list(){
-  let related_terms = ['term1', 'term2', 'term3']
-  let mapped = related_terms.map(populate_related_term)
-  return (<List>{mapped}</List>)
-}
-
-function onEnter(query){
-    alert(query);
-}
-
 function QA() {
-  const classes = useStyles();
-  return (
+    const classes = useStyles();
+    const [relatedTerms, setRelatedTerms] = useState([])
+
+    function onEnter(query){
+        let proxyUrl = 'https://cors-anywhere.herokuapp.com/'
+        let targetUrl = `http://teststrata.geology.wisc.edu/xdd_v1/word2vec?word=${encodeURIComponent(query)}&n=10`
+        let res = fetch(proxyUrl + targetUrl)
+            .then(res => res.json())
+            .then(res => {
+                setRelatedTerms(res.data.map(listitem))
+            }
+            )
+    }
+    return (
     <div className={classes.root}>
     <Typography variant="h3" component="h1" style={{margin: 20}}>
         Question Answering and Query Refinement
@@ -58,7 +60,7 @@ function QA() {
             Related Terms
           </Typography>
           <div className={classes.demo}>
-          {generate_list()}
+          {relatedTerms}
           </div>
         </Grid>
     </div>
