@@ -5,9 +5,14 @@ import GridListTile from '@material-ui/core/GridListTile';
 import ObjectCard from './ObjectCard.js'
 
 const useStyles = makeStyles(theme => ({
+  root: {
+    display: 'flex',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
   gridList: {
-    width: "100%",
-    height: "70%",
+    width: "90%",
+    height: 700,
     marginLeft: 20
   }
 }));
@@ -49,8 +54,9 @@ function compute_grid(objects, dois){
 export default function ObjectGrid(props){
     const classes = useStyles();
     
-    return (<GridList cellHeight={700} className={classes.gridList} cols={2} spacing={20}>
+    return (<div><GridList cellHeight={700} className={classes.gridList} cols={2} spacing={20}>
       {compute_grid(props.objects, props.dois)}
     </GridList>
+    </div>
     )
 }
