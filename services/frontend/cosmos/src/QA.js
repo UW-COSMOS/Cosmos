@@ -7,6 +7,7 @@ import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 import SearchBar from './SearchBar.js'
+import QAAnswer from './QAAnswer.js'
 
 
 const useStyles = makeStyles(theme => ({
@@ -51,14 +52,7 @@ function QA() {
     <Typography variant="h4" component="h4" style={{margin: 20}}>
         Answer
     </Typography>
-    <Paper className={classes.container}>
-      <Typography variant="p" component="h3">
-        Placeholder answer to the question.
-      </Typography>
-      <Typography component="p">
-        DOI: myref.com
-      </Typography>
-    </Paper>
+    <QAAnswer answer='PLACEHOLDER ANSWER' doi='https://example.com'></QAAnswer>
     <Grid item xs={12} md={6} style={{margin: 20}}>
           <Typography variant="h4" component="h4">
             Related Terms

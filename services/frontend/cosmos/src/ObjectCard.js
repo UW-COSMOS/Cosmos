@@ -58,7 +58,7 @@ export default function ObjectCard(props) {
     <Card className={classes.card}>
       <CardHeader
         action={
-          <IconButton aria-label="settings">
+          <IconButton aria-label="settings" >
             <MoreVertIcon />
           </IconButton>
         }

@@ -4,14 +4,14 @@ import QA from './QA.js'
 import Search from './Search.js'
 import NavBar from './NavBar.js'
 import Visualize from './Visualize.js'
-import ModelSearch from './ModelSearch.js'
+import ModelAnalysis from './ModelAnalysis.js'
 
 
 const view_states = {
   QA: 'qa',
   SEARCH: 'search',
   VISUALIZE: 'visualize',
-  MODEL_SEARCH: 'model_search'
+  MODEL_ANALYSIS: 'model_analysis'
 }
 
 
@@ -45,7 +45,7 @@ class App extends Component{
 
   set_ms_state(){
     this.setState({
-      view: view_states.MODEL_SEARCH
+      view: view_states.MODEL_ANALYSIS
     })
   }
 
@@ -57,8 +57,8 @@ class App extends Component{
         return (<Search></Search>)
       case view_states.VISUALIZE:
         return (<Visualize></Visualize>)
-      case view_states.MODEL_SEARCH:
-        return (<ModelSearch></ModelSearch>)
+      case view_states.MODEL_ANALYSIS:
+        return (<ModelAnalysis></ModelAnalysis>)
       default:
         return (<p>Invalid view state</p>)
     }
@@ -79,7 +79,7 @@ class App extends Component{
     }));
     return (
       <div className={classes.root}>
-      <NavBar qa_fn={this.set_qa_state} search_fn={this.set_search_state} visualize_fn={this.set_visualize_state} model_search_fn={this.set_ms_state}></NavBar>
+      <NavBar qa_fn={this.set_qa_state} search_fn={this.set_search_state} visualize_fn={this.set_visualize_state} model_analysis_fn={this.set_ms_state}></NavBar>
       {this.show_state()}
       </div>
     );
