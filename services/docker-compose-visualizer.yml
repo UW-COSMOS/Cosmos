@@ -69,10 +69,8 @@ services:
       - DEBUG=1
       - APPMODE=PREDICTION
     volumes:
-      - ./visualizer/frontend:/user
-      - /user/node_modules
-      - /user/ui-components/node_modules
-      - /user/.cache
+      - visualizer_dist:/user/dist
+      - ./visualizer/frontend/src:/user/src
       - ./logs:/logs
     depends_on:
       - search_backend
@@ -87,7 +85,7 @@ services:
       - visualizer
     volumes:
       - ./visualizer/frontend/logs:/logs
-      - ./visualizer/frontend/dist:/frontend:ro
+      - visualizer_dist:/frontend:ro
       - ./visualizer/frontend/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - esnet
@@ -114,7 +112,7 @@ services:
       - esnet
 
 
-       
+
 volumes:
   esdata01:
     driver: local
@@ -122,6 +120,7 @@ volumes:
     driver: local
   mongodata:
     driver: local
+  visualizer_dist:
 
 networks:
   esnet:
