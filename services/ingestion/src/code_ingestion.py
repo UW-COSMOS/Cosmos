@@ -28,7 +28,7 @@ def code_ingestion(code_dir, db_insert_fn, num_processes):
                 m = comment_reg.search(line)
                 if m is not None:
                     comment = m.group(1)
-                    comments.append({'class': 'code', 'content': comment, 'line_number':line_number, 'full_content': full_content, 'filename': os.path.basename(code)})
+                    comments.append({'class': 'code', 'line': line, 'content': comment, 'line_number':line_number, 'full_content': full_content, 'filename': os.path.basename(code)})
     db_insert_fn(comments)
 
 

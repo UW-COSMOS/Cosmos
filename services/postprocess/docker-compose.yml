@@ -3,9 +3,9 @@ services:
     postprocess:
         build: .
         ipc: host
-        #command: "python3 postprocess.py 30 pp_model_weights.pth"
-        volumes:
-             - .:/develop/
+        command: "python3 postprocess.py 30 pp_model_weights.pth --skip"
+        #volumes:
+        #     - .:/develop/
         #    - .:/cosmos/
         command: "tail -F /dev/null"
         #    - ${INPUT_DIR}:/input/

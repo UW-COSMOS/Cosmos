@@ -4,3 +4,4 @@ pillow
 joblib
 click
 flask
+requests

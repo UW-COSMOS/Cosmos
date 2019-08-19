@@ -8,7 +8,7 @@ import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 from joblib import Parallel, delayed
 import click
-from xgboost_model.inference import run_inference
+from xgboost_model.inference import run_inference, PostprocessException
 import os
 
 def load_detected_pages(db, buffer_size):
@@ -36,8 +36,13 @@ def postprocess(db_insert_fn, num_processes, weights_pth, skip):
     db = client.pdfs
     for batch in load_detected_pages(db, 100):
         logging.info('Loaded next batch. Running postprocessing')
-        pages = Parallel(n_jobs=num_processes)(delayed(run_inference)(page, weights_pth) for page in batch)
-        #logging.info(pages) 			
+        try:
+            pages = Parallel(n_jobs=num_processes)(delayed(run_inference)(page, weights_pth) for page in batch)
+        except PostprocessException as e:
+            logging.error(f'Postprocessing error in referenced page: {e.page}')
+            logging.error(f'Original Exception: {e.original_exception}')
+            continue
+
         db_insert_fn(pages, client)
     end_time = time.time()
     logging.info(f'Exiting post-processing. Time up: {end_time - start_time}')
