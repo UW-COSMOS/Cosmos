@@ -60,7 +60,7 @@ def mongo_insert_fn(objs, client):
                                              }, upsert=False)
             logging.info(f'Updated result: {result}')
         except pymongo.errors.WriterError as e:
-            logging.error(f'Document write error: {e}\n Document id: obj["_id"]'
+            logging.error(f'Document write error: {e}\n Document id: obj["_id"]')
 
 @click.command()
 @click.argument("num_processes")
