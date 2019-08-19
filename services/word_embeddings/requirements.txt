@@ -1,0 +1,3 @@
+gensim
+flask
+flask_cors
