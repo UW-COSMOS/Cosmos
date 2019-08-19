@@ -4,13 +4,13 @@ services:
         build: .
         ipc: host
         container_name: word2vec_endpoint
-        command: "flask run --host=0.0.0.0 --port=5002"
+        command: "flask run --host=0.0.0.0 --port=5003"
         environment:
             - DBCONNECT
             - FLASK_APP=app.py
             - FLASK_ENV=development
         ports:
-            - 5002:5002
+            - 5003:5003
         volumes:
             - ./data:/app/data
 #networks:
