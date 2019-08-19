@@ -1,6 +1,6 @@
 version: "2.3"
 services:
-    search_backend:
+    s_backend:
         build: .
         ipc: host
         command: "flask run --host=0.0.0.0 --port=5001"
