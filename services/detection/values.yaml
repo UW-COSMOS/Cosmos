@@ -1,0 +1,25 @@
+# Default values for detection.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: ankurgos/detection
+  tag: test
+  pullPolicy: Always
+
+imageGpu:
+  repository: ankurgos/detection-gpu
+  tag: test
+  pullPolicy: Always
+
+gpu: false
+ 
+
+mongouser: root
+mongopwd: password
+mongourl: cosmos-mongodb.default.svc.cluster.local
+mongoport: 27017
+
+nameOverride: ""
+fullnameOverride: ""
+
