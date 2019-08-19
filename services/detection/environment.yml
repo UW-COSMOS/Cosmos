@@ -1,0 +1,33 @@
+name: detection
+channels:
+    - pytorch
+dependencies:
+    - pytorch-cpu
+    - torchvision-cpu
+    - pymongo
+    - pytest
+    # Click isn't necessarily needed, but if someone wants to bash in and use the inference script, this is needed, so I kept it around
+    - click
+    - cython
+    - tqdm
+    - numpy
+    - scipy
+    - pandas
+    - PyYAML
+    - matplotlib
+    - pip:
+        - numpy==1.15.4
+        - pyyaml
+        - hyperyaml
+        - scikit-image
+        - bitmath
+        - tensorboardX
+        - tensorboard
+        - tqdm
+        - opencv-python
+        - pascal-voc-writer
+        - imgaug
+        - Pillow
+        - redis
+        - sqlalchemy
+

@@ -1,0 +1,98 @@
+<annotation>
+  <folder>COSMOS_annotated</folder>
+  <filename>0047596d-4ba1-44c9-ba74-ae3fb785e218.png</filename>
+  <size>
+    <width>1396</width>
+    <height>1920</height>
+  </size>
+  <object>
+    <name>Equation</name>
+    <bndbox>
+      <xmin>726</xmin>
+      <ymin>922</ymin>
+      <xmax>899</xmax>
+      <ymax>999</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Equation</name>
+    <bndbox>
+      <xmin>718</xmin>
+      <ymin>1318</ymin>
+      <xmax>947</xmax>
+      <ymax>1397</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Equation label</name>
+    <bndbox>
+      <xmin>1237</xmin>
+      <ymin>948</ymin>
+      <xmax>1291</xmax>
+      <ymax>988</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Equation label</name>
+    <bndbox>
+      <xmin>1240</xmin>
+      <ymin>1342</ymin>
+      <xmax>1286</xmax>
+      <ymax>1375</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Page Header</name>
+    <bndbox>
+      <xmin>97</xmin>
+      <ymin>101</ymin>
+      <xmax>636</xmax>
+      <ymax>137</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Page Header</name>
+    <bndbox>
+      <xmin>1254</xmin>
+      <ymin>111</ymin>
+      <xmax>1289</xmax>
+      <ymax>139</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>93</xmin>
+      <ymin>160</ymin>
+      <xmax>665</xmax>
+      <ymax>1733</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>716</xmin>
+      <ymin>1403</ymin>
+      <xmax>1285</xmax>
+      <ymax>1727</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>718</xmin>
+      <ymin>1009</ymin>
+      <xmax>1291</xmax>
+      <ymax>1307</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <bndbox>
+      <xmin>722</xmin>
+      <ymin>166</ymin>
+      <xmax>1289</xmax>
+      <ymax>911</ymax>
+    </bndbox>
+  </object>
+</annotation>

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata :
+  name: {{ include "proposals.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "proposals.name" . }}
+    helm.sh/chart: {{ include "proposals.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+      matchLabels:
+        app.kubernetes.io/name: {{ include "proposals.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "proposals.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Hacky but whatever
+          # This issue needs to be resolved: https://github.com/kubernetes/kubernetes/issues/30427
+          command: ["python3", "propose.py"]
+          env:
+              - name: DBCONNECT
+                value: "mongodb://{{ .Values.mongouser }}:{{ .Values.mongopwd }}@{{ .Values.mongourl }}:{{ .Values.mongoport }}"
+              - name: REPLICA_COUNT
+                value: "{{ .Values.replicaCount }}"
+              - name: POD_NAME
+                valueFrom:
+                    fieldRef:
+                        fieldPath: metadata.name

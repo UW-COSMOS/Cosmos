@@ -1,0 +1,10 @@
+version: "2.3"
+services:
+    table_extractions:
+        build: .
+        ipc: host
+        volumes:
+            - .:/develop/
+        command: tail -F anything
+        
+
