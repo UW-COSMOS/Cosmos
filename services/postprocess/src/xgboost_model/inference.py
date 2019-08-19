@@ -16,7 +16,7 @@ def run_inference(page_objs, weights_pth):
     if 'ocr_detected_objs' not in page_objs:
         logging.info('This page has not had ocr or has no ocr_detected objects: {page_objs["_id"]}')
         page_objs["pp_detected_objs"] = []
-    elif len(page_objs['ocr_detected_objs']) == 0:
+    elif page_objs['ocr_dected_objs'] is None or len(page_objs['ocr_detected_objs']) == 0:
         logging.info('This page has no ocr_detected objects: {page_objs["_id"]}')
         page_objs["pp_detected_objs"] = []
     else:    
