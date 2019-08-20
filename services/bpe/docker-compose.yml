@@ -1,0 +1,12 @@
+version: "2.3"
+services:
+    construct_corpus:
+        build: .
+        ipc: host
+        volumes:
+            - .:/develop/
+        command: tail -F anything
+        environment:
+            - DBCONNECT
+        
+
