@@ -3,10 +3,22 @@ services:
     construct_corpus:
         build: .
         ipc: host
+        # Mount the current directory so we can write to it
         volumes:
-            - .:/develop/
-        command: tail -F anything
+            - .:/app/corpus
+        command: 'python3 construct_corpus.py'
         environment:
             - DBCONNECT
+
+    run_bpe:
+        build: .
+        ipc: host
+        # Mount the current directory so we can write to it
+        volumes:
+            - .:/app/corpus
+        command: './construct_bpe_vocab.sh /app/corpus/corpus.txt'
+        environment:
+            - DBCONNECT
+
         
 

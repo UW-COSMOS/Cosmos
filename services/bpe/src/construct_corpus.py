@@ -16,7 +16,7 @@ def create_corpus():
     client = MongoClient(os.environ["DBCONNECT"])
     logging.info(f'Connected to client: {client}.')
     db = client.pdfs
-    with open('corpus.txt', 'w') as wf:
+    with open(os.path.join('corpus', 'corpus.txt'), 'w') as wf:
         for doc in db.partialSections.find(no_cursor_timeout=True):
             content = doc['content']
             wf.write(f'{content}\n')
