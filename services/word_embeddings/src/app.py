@@ -6,6 +6,9 @@ from flask import Flask, Response, request
 from flask_cors import CORS, cross_origin
 
 from gensim.models import Word2Vec
+from nltk import word_tokenize
+from nltk.corpus import stopwords
+stop_words = stopwords.words('english')
 
 import json
 import sys
@@ -27,6 +30,13 @@ except:
     sys.exit(2)
 
 
+def preprocess(line):
+    line = word_tokenize(line)  # Split into words.
+    line = [w.lower() for w in line]  # Lower the text.
+    line = [w for w in line if not w in stop_words]  # Remove stopwords
+    line = [w for w in line if w.isalpha()] # Remove numbers and punctuation
+    return line
+
 sys.stdout.write("done.\n")
 
 app = Flask(__name__)
@@ -42,7 +52,7 @@ def hello_world():
 @app.route('/word2vec', methods=['GET', 'POST'])
 def word2vec():
     """Data service operation: execute a vector query on the specified word."""
-    query_word=request.values.get('word')
+    query_word=preprocess(request.values.get('word'))
     n_responses=int(request.values.get('n', '10'))
     if query_word:
         try:
