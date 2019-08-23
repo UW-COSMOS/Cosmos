@@ -2,10 +2,17 @@
 Aggregate text blobs into coherent sections
 """
 
+import logging
+import time
+import os
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 import pymongo
 from pymongo import MongoClient
 from collections import defaultdict
 from joblib import Parallel, delayed
+import click
+
+MIN_SECTION_LEN = 30
 
 
 def load_pages(db, buffer_size):
@@ -18,6 +25,10 @@ def load_pages(db, buffer_size):
             del obj['bytes']
             obj_list.append(obj)
         current_docs.append(obj_list)
+        if len(current_docs) == buffer_size:
+            yield current_docs
+            current_docs = []
+    yield current_docs
 
 
 def groups(pobjs):
@@ -33,7 +44,7 @@ def groups(pobjs):
                 inserted = True
                 break
         if not inserted:
-            groups.append([x1, [pobjs]])
+            groups.append([x1, [p]])
     for g in groups:
         # sort internally by y
         g[1].sort(key=lambda x: x['bounding_box'][1])
@@ -44,13 +55,17 @@ def groups(pobjs):
 
 def aggregate_sections(objs):
     def filter_fn(obj):
-        return obj['class'] in ['Body text', 'Section Header']
+        return obj['class'] in ['Body Text', 'Section Header']
 
     fobjs = [o for o in objs if filter_fn(o)]
-    pages = defaultdict([])
+    pages = defaultdict(list)
     for obj in fobjs:
         pages[obj['page_num']].append(obj)
-    max_len = max(pages.keys())
+    keys = pages.keys()
+    if len(keys) == 0:
+        # Probably should log something here
+        return []
+    max_len = max(keys)
     sections = []
     for i in range(max_len):
         if i not in pages:
@@ -74,13 +89,22 @@ def aggregate_sections(objs):
     for section in sections:
         header, objs = section
         aggregated_context = ''
+        pdf_name = ''
         if header is not None:
-            aggregated_context = header['content']
+            aggregated_context = f'{header["content"]}\n'
+            pdf_name = header['pdf_name']
+        else:
+            pdf_name = objs[0]['pdf_name']
         for obj in objs:
-            aggregated_context += f'\nobj['content']\n'
+            aggregated_context += f'\n{obj["content"]}\n'
+        if aggregated_context.strip() == '' or len(aggregated_context.strip()) < MIN_SECTION_LEN:
+            continue
+        objs = [{'_id': obj['_id']} for obj in objs]
         final_obj = {'header': header,
                      'objects': objs,
-                     'content': aggregated_context}
+                     'content': aggregated_context,
+                     'class': 'Section'
+                     'pdf_name': pdf_name}
         final_objs.append(final_obj)
     return final_objs
 
@@ -92,7 +116,9 @@ def section_scan(db_insert_fn, num_processes):
     logging.info(f'Connected to client: {client}')
     db = client.pdfs
     for batch in load_pages(db, num_processes):
-        objs = Parallel(n_jobs=num_processes)(delated(aggregate_sections)(os) for os in batch)
+        logging.info('Batch constructed. Running section aggregation')
+        objs = Parallel(n_jobs=num_processes)(delayed(aggregate_sections)(o) for o in batch)
+        objs = [o for p in objs for o in p]
         if len(objs) == 0:
             continue
         db_insert_fn(objs, client)
@@ -100,6 +126,9 @@ def section_scan(db_insert_fn, num_processes):
 
 def mongo_insert_fn(objs, client):
     db = client.pdfs
+    for obj in objs:
+        print(obj['content'])
+        print('-----------------------------------------')
     result = db.sections.insert_many(objs)
     logging.info(f'Inserted result: {result}')
 
