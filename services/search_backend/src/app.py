@@ -87,7 +87,7 @@ def search():
         abort(400)
 
 qa_URL = 'http://qa:4000/query'
-@app.route('/qa1')
+@app.route('/qa')
 def qa1():
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
@@ -124,17 +124,6 @@ def qa1():
                 del result['page_ocr_df']
         results_obj = {'results': result_list}
         return jsonify(results_obj) 
-    except TypeError:
-        abort(400)
-
-
-@app.route('/qa')
-def qa():
-    try:
-        query = request.args.get('q', '')
-        query = query.lower()
-        if query == 'toc' or query == 'total organic carbon':
-            return jsonify({'definition': 'Total organic carbon (TOC) is the amount of carbon found in an organic compound and is often used as a non-specific indicator of water quality or cleanliness of pharmaceutical manufacturing equipment. TOC may also refer to the amount of organic carbon in soil, or in a geological formation, particularly the source rock for a petroleum play; 2% is a rough minimum.[1] For marine surface sediments, average TOC content is 0.5% in the deep ocean, and 2% along the eastern margins.'})
     except TypeError:
         abort(400)
 
