@@ -36,30 +36,40 @@ function listitem(term){
 
 function QA() {
     const classes = useStyles();
+    const [values, setValues] = React.useState({
+                query: '',
+          });
     const [relatedTerms, setRelatedTerms] = useState([])
     const [hide, setHide] = useState(true)
     const [answer, setAnswer] = useState('')
-    const [answerDOI, setAnswerDOI] = useState('')
-
-    function onEnter(query){
-        if (query == 'What is TOC?'){
-            setAnswer('Total Organic Carbon - The amount of carbon bound in organic compounds in sample. Because all organic compounds include carbon as the common element, total organic carbon measurements provide a fundamental means of assessing the degree of organic pollution.')
-            setAnswerDOI('http://www.sciencedirect.com/science/article/pii/B9780750675079500103')
-            query = 'TOC'
-        } else if (query == 'What is THAA?'){
-            setAnswer('total hydrolyzable amino acids (THAA)')
-            setAnswerDOI('http://doi.wiley.com/10.1111/j.1745-6584.2008.00493.x')
-            query = 'THAA'
+    const [answerDOI, setAnswerDOI] = useState({})
+    function handleChange(event) {
+          setValues(oldValues => ({
+                    ...oldValues,
+                    [event.target.name]: event.target.value,
+                  }));
         }
-        let proxyUrl = 'https://cors-anywhere.herokuapp.com/'
-        let targetUrl = `http://teststrata.geology.wisc.edu/xdd_v1/word2vec?word=${encodeURIComponent(query)}&n=10`
-        console.log(proxyUrl + targetUrl)
-        fetch(proxyUrl + targetUrl)
-            .then(res => res.json())
-            .then(res => {
-                setRelatedTerms(res.data.map(listitem))
-                setHide(false)
+    function onEnter(query){
+        setValues({...values, ['query']: query})
+        setAnswer()
+        setAnswerDOI({})
+        fetch(`http://localhost:5001/qa?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log(data.results[0].answer)
+          setAnswer(data.results[0].answer)    
+          let pdf_id = data.results[0].pdf_name.slice(0, -4)
+          fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)  
+            .then(response => response.json())
+            .then(doi_res => {
+              let id = doi_res.success.data[0]._gddid
+              let title = doi_res.success.data[0].title
+              let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
+              setAnswerDOI(oldValues => ({...oldValues, title:title, url:url}))
+            console.log(answerDOI)
             })
+        })
+        setHide(false)
     }
     return (
     <div className={classes.root}>
