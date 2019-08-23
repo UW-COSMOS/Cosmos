@@ -6,7 +6,7 @@ FROM python:3.7
 # Pillow requirements
 #run apt install build-base jpeg-dev zlib-dev
 
-RUN pip install elasticsearch_dsl pymongo
+RUN pip install elasticsearch_dsl pymongo click
 
 COPY src/ /app
 WORKDIR /app
