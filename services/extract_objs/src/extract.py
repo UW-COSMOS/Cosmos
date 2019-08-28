@@ -10,7 +10,7 @@ import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 import time
 import io
-from PIL import Image as img
+from PIL import Image
 import re
 from joblib import Parallel, delayed
 import click
@@ -35,7 +35,7 @@ def load_pages(db, buffer_size):
 def extract_objs(page):
     if 'pp_detected_objs' not in page:
         return (None, f'This page has not had postprocessing done on it')
-    if len(page['pp_detected_objs']) == 0:
+    if page['pp_detected_objs'] is None or len(page['pp_detected_objs']) == 0:
         return (None, f'No detected objs on page: {page["_id"]}')
     detected_objs = page['pp_detected_objs']
     # Sanity check that filters objects not of length 3
@@ -46,6 +46,9 @@ def extract_objs(page):
     objs = []
     strip_regx = re.compile('[^a-zA-Z]') # Strip all non alphabet characters
     tess_df = pd.DataFrame(page['ocr_df'])
+    img = io.BytesIO(page['resize_bytes'])
+    img = Image.open(img)
+
     for obj in detected_objs:
         bb, cls, score = obj
 
@@ -63,10 +66,10 @@ def extract_objs(page):
         feathered_bb = [max(bb[0]-2, 0), max(bb[1]-2, 0),
                         min(bb[2]+2, 1920), min(bb[3]+2, 1920)]
         
-        #cropped_img = img.crop(feathered_bb)
-        #bytes_stream = io.BytesIO()
-        #cropped_img.save(bytes_stream, format='PNG')
-        #bstring = bytes_stream.getvalue()
+        cropped_img = img.crop(feathered_bb)
+        bytes_stream = io.BytesIO()
+        cropped_img.save(bytes_stream, format='PNG')
+        bstring = bytes_stream.getvalue()
         
         words = obj_ocr['text']
         word_list = []
@@ -81,7 +84,7 @@ def extract_objs(page):
         obj_ocr = obj_ocr.to_dict()
         obj_ocr = json.dumps(obj_ocr)
         obj_ocr = json.loads(obj_ocr)
-        final_obj = {'bounding_box': bb,                                   #'bytes': bstring,
+        final_obj = {'bounding_box': bb, 'bytes': bstring,
                      'page_ocr_df': obj_ocr, 'class': cls, 'score': score,
                      'pdf_name': page['pdf_name'], 'page_num': page['page_num'], 'content': word_dump, 'table_df': table_df}
         objs.append(final_obj)
@@ -96,27 +99,35 @@ def extract_scan(db_insert_fn, num_processes):
     db = client.pdfs
     for batch in load_pages(db, num_processes):
         #print(batch[0]['detected_objs'])
-        if skip:
-            batch = [page for page in batch if not do_skip(page, client)]
-            if len(batch) == 0:
-                continue
         #pages = [process_page(page, db) for page in batch]
         pages = Parallel(n_jobs=num_processes)(delayed(extract_objs)(page) for page in batch)
         pages, errs = zip(*pages)
         for err in errs:
             if err is None:
                 continue
-            logging.debug(err)
+            logging.error(err)
 
         pages = [page for page in pages if page is not None]
         objs = [o for p in pages for o in p]
-        db_insert_fn(objs, client)
+        if len(objs) == 0:
+            logging.info('This batch has no objects')
+            continue
+        db_insert_fn(objs, batch, client)
 
 
-def mongo_insert_fn(objs, client):
+def mongo_insert_fn(objs, pages, client):
     db = client.pdfs
     result = db.objects.insert_many(objs)
     logging.info(f"Inserted results: {result}")
+    for page in pages:
+        result = db.propose_pages.update_one({'_id': page['_id']},
+                                             {'$set':
+                                                {
+                                                    'extract': True
+                                                }
+                                             }, upsert=False)
+        logging.info(f'Updated result: {result}')
+
 
 
 @click.command()
