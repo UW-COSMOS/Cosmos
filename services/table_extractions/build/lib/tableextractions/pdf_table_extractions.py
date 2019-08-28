@@ -22,7 +22,7 @@ from joblib import Parallel, delayed
 from pymongo import MongoClient
 
 import camelot
-from utils import grouper
+from tableextractions.utils import grouper
 
 # Logging config
 logging.basicConfig(
@@ -134,7 +134,7 @@ def table_extraction(insert_tables: Callable, table_metadata: list, skip: bool) 
                 logs.append('Document previously extracted. Skipping')
             else:
                 # Extract the tables
-                df, flavor, extract_tables_logs = extract_tables(pdf_loc[pdf_name], table_coords2, table_page)
+                df, flavor, extract_tables_logs = extract_tables(pdf_loc[pdf_name], table_coords2, table_page, "camelot_lattice_params.txt", "camelot_stream_params.txt")
 
                 prepare_table_data(table, df, flavor)
 
@@ -166,7 +166,7 @@ def prepare_table_data(table: dict, df: bytes, flavor: str) -> list:
     return table
 
 
-def extract_tables(pdf_name: str, table_coords: str, table_page: str) -> list:
+def extract_tables(pdf_name: str, table_coords: str, table_page: str, lattice_params: str, stream_params: str) -> list:
     """
     Extract each table using both Lattice and Stream. Compare and choose the best one.
     """
@@ -175,14 +175,14 @@ def extract_tables(pdf_name: str, table_coords: str, table_page: str) -> list:
     logs.append('Extracting tables')
 
     try:
-        stream_params = json.load(open(os.path.join(sys.path[0], "camelot_stream_params.txt")))
+        stream_params = json.load(open(stream_params))
         tables_stream = camelot.read_pdf(pdf_name,
                                          pages=table_page,
                                          table_areas=[table_coords],
                                          **stream_params
                                          )
 
-        lattice_params = json.load(open(os.path.join(sys.path[0], "camelot_stream_params.txt")))
+        lattice_params = json.load(open(lattice_params))
         tables_lattice = camelot.read_pdf(pdf_name,
                                           pages=table_page,
                                           table_areas=[table_coords],
