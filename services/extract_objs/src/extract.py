@@ -23,17 +23,13 @@ def load_pages(db, buffer_size):
     """
     current_docs = []
     
-    for doc in db.propose_pages.find({'postprocess': True, 'extract': None}, no_cursor_timeout=True):
+    for doc in db.propose_pages.find({'postprocess': True, 'extract': False}, no_cursor_timeout=True):
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs
             current_docs = []
     yield current_docs
 
-
-def do_skip(page, client):
-    # TODO
-    return False
 
 
 def extract_objs(page):
@@ -95,7 +91,7 @@ def extract_objs(page):
     return (objs, None)
 
 
-def extract_scan(db_insert_fn, num_processes, skip):
+def extract_scan(db_insert_fn, num_processes):
     logging.info('Starting object extraction over pages')
     start_time = time.time()
     client = MongoClient(os.environ['DBCONNECT'])
@@ -121,7 +117,7 @@ def extract_scan(db_insert_fn, num_processes, skip):
 
 def mongo_insert_fn(objs, pages, client):
     db = client.pdfs
-    result = db.ocr_objs.insert_many(objs)
+    result = db.objects.insert_many(objs)
     logging.info(f"Inserted results: {result}")
     for page in pages:
         result = db.propose_pages.update_one({'_id': page['_id']},
@@ -136,9 +132,8 @@ def mongo_insert_fn(objs, pages, client):
 
 @click.command()
 @click.argument('num_processes')
-@click.option('--skip/--no-skip')
-def click_wrapper(num_processes, skip):
-    extract_scan(mongo_insert_fn, int(num_processes), skip)
+def click_wrapper(num_processes):
+    extract_scan(mongo_insert_fn, int(num_processes))
 
 
 if __name__ == '__main__':
