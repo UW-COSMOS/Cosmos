@@ -3,9 +3,9 @@ services:
     aggregate_sections:
         build: .
         ipc: host
-        volumes:
-            - .:/develop/
-        command: "tail -F /dev/null"
+        #volumes:
+        #    - .:/develop/
+        command: "python3 aggregate.py 30"
         environment:
             - DBCONNECT
         

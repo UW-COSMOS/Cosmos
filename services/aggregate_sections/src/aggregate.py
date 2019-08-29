@@ -21,9 +21,11 @@ def load_pages(db, buffer_size):
         # Find all objects
         pdf_name = doc['pdf_name']
         obj_list = []
-        for obj in db.ocr_objs.find({'pdf_name': pdf_name}, no_cursor_timeout=True):
+        for obj in db.objects.find({'pdf_name': pdf_name}, no_cursor_timeout=True):
             del obj['bytes']
+            del obj['page_ocr_df']
             obj_list.append(obj)
+
         current_docs.append(obj_list)
         if len(current_docs) == buffer_size:
             yield current_docs
@@ -103,7 +105,7 @@ def aggregate_sections(objs):
         final_obj = {'header': header,
                      'objects': objs,
                      'content': aggregated_context,
-                     'class': 'Section'
+                     'class': 'Section',
                      'pdf_name': pdf_name}
         final_objs.append(final_obj)
     return final_objs
