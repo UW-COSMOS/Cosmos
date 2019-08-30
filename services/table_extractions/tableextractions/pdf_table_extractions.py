@@ -174,42 +174,21 @@ def extract_tables(pdf_name: str, table_coords: str, table_page: str, lattice_pa
 
     logs.append('Extracting tables')
 
-    try:
-        stream_params = json.load(open(stream_params))
-        tables_stream = camelot.read_pdf(pdf_name,
-                                         pages=table_page,
-                                         table_areas=[table_coords],
-                                         **stream_params
-                                         )
+    stream_params = json.load(open(stream_params))
+    tables_stream = camelot.read_pdf(pdf_name,
+                                     pages=table_page,
+                                     table_regions=[table_coords],
+                                     **stream_params
+                                     )
 
-        lattice_params = json.load(open(lattice_params))
-        tables_lattice = camelot.read_pdf(pdf_name,
-                                          pages=table_page,
-                                          table_areas=[table_coords],
-                                          **lattice_params
-                                          )
-
-        if tables_lattice.n == 0 and tables_stream.n == 0:
-            raise Exception('Table not detected')
-
-        elif tables_lattice.n == 0 or tables_lattice[0].accuracy < tables_stream[0].accuracy:
-            logs.append('Extracted table')
-            table_df = tables_stream[0].df
-            flavor = "Stream"
-
-        else:
-            logs.append('Extracted table')
-            table_df = tables_lattice[0].df
-            flavor = "Lattice"
-
-    except Exception as e:
-        logs.append(f'An error occurred: {e}')
-        table_df = None
-        flavor = "NA"
+    logs.append('Extracted table')
+    table_df = tables_stream[0].df
+    acc = tables_stream[0].parsing_report['accuracy']
+    flavor = "Stream"
 
     pkld_df = pickle.dumps(table_df)
 
-    return [pkld_df, flavor, logs]
+    return [pkld_df, flavor, logs, acc]
 
 
 def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, tables_per_job: int = 10) -> list:

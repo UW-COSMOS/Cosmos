@@ -5,3 +5,9 @@ joblib
 click
 flask
 requests
+pdfminer.six
+chardet
+cosmostables
+PyPDF2
+opencv-python
+camelot-py[cv]
