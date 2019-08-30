@@ -115,6 +115,7 @@ def qa():
                 result['answer'] = "No answer"
             result['content'] = res['content']
             result_list.append(result)
+        result_list = sorted(result_list, key = lambda i : i['probability'], reverse=True)
         logging.info(result_list)
 
         results_obj = {'results': result_list}
