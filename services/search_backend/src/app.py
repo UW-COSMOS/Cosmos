@@ -2,6 +2,7 @@
 Some endpoints 
 """
 
+import pickle
 import pymongo
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -19,6 +20,8 @@ from elasticsearch_dsl import Search, connections
 import re
 import spacy
 import requests
+import pandas as pd
+from .values_query import values_query
 
 connections.create_connection(hosts=['es01'], timeout=20)
 
@@ -86,6 +89,19 @@ def search():
         logging.info(f'{e}')
         abort(400)
 
+
+
+@app.route('/values')
+def values():
+    client = MongoClient(os.environ['DBCONNECT'])
+    db = client.pdfs
+    try:
+        query = request.args.get('q', '')
+        return values_query(query)
+    except TypeError:
+        abort(400)
+
+
 qa_URL = 'http://qa:4000/query'
 @app.route('/qa1')
 def qa1():
@@ -102,7 +118,6 @@ def qa1():
         for result in response:
             id = result.meta.id
             obj_id = ObjectId(id)
-            res = None
             if result['cls'] == 'code':
                 res = db.code_objs.find_one({'_id': obj_id})
             else:

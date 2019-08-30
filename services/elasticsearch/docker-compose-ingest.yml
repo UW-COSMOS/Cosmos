@@ -3,7 +3,7 @@ services:
   ingest_elastic:
       build: .
       ipc: host
-      command: "python ingest_elastic.py"
+      command: "python ingest_elastic.py --no-objects --no-sections --no-code --tables --no-figures --no-equations"
       #volumes:
       #    - .:/develop/
       #command: "tail -F /dev/null"
