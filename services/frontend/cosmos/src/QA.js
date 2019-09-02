@@ -10,7 +10,7 @@ import SearchBar from './SearchBar.js'
 import QAAnswer from './QAAnswer.js'
 import RelatedTerms from './RelatedTerms.js'
 import Hidden from '@material-ui/core/Hidden';
-
+import AnswerGrid from './AnswerGrid.js'
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -40,9 +40,8 @@ function QA() {
                 query: '',
           });
     const [relatedTerms, setRelatedTerms] = useState([])
-    const [hide, setHide] = useState(true)
-    const [answer, setAnswer] = useState('')
-    const [answerDOI, setAnswerDOI] = useState({})
+    const [answer, setAnswer] = useState([])
+    const [answerDOI, setAnswerDOI] = useState([])
     function handleChange(event) {
           setValues(oldValues => ({
                     ...oldValues,
@@ -51,25 +50,26 @@ function QA() {
         }
     function onEnter(query){
         setValues({...values, ['query']: query})
-        setAnswer()
-        setAnswerDOI({})
+        setAnswer([])
+        setAnswerDOI([])
         fetch(`http://localhost:5001/qa?q=${encodeURIComponent(query)}`)
         .then(response => response.json())
         .then(data => {
-            console.log(data.results[0].answer)
-          setAnswer(data.results[0].answer)    
-          let pdf_id = data.results[0].pdf_name.slice(0, -4)
-          fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)  
-            .then(response => response.json())
-            .then(doi_res => {
-              let id = doi_res.success.data[0]._gddid
-              let title = doi_res.success.data[0].title
-              let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
-              setAnswerDOI(oldValues => ({...oldValues, title:title, url:url}))
-            console.log(answerDOI)
+          console.log(data.results)
+          setAnswer(data.results)
+          for(var i = 0; i < data.results.length; i++){ 
+            let pdf_id = data.results[0].pdf_name.slice(0, -4)
+            fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)  
+              .then(response => response.json())
+              .then(doi_res => {
+                let id = doi_res.success.data[0]._gddid
+                let title = doi_res.success.data[0].title
+                let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
+                setAnswerDOI(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
+                console.log(answerDOI)
             })
+          }
         })
-        setHide(false)
     }
     return (
     <div className={classes.root}>
@@ -77,13 +77,10 @@ function QA() {
         Question Answering and Query Refinement
     </Typography>
     <SearchBar enter_fn={onEnter}></SearchBar>
-    <Hidden xlDown={hide}>
-    <Typography variant="h4" component="h4">
-        Answer
-    </Typography>
-    <QAAnswer answer={answer} doi={answerDOI}></QAAnswer>
+    <div className={classes.container}>
+    <AnswerGrid objects={answer} dois={answerDOI}></AnswerGrid>
     <RelatedTerms relatedTerms={relatedTerms} hideProgress={true}></RelatedTerms>
-    </Hidden>
+    </div>
     </div>
   );
 }
