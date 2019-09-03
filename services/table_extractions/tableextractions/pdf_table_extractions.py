@@ -28,8 +28,8 @@ from tableextractions.utils import grouper
 logging.basicConfig(
 #                    filename = 'mylogs.log', filemode = 'w',
                     format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
-logging.getLogger("pdfminer").setLevel(logging.WARNING)
-logging.getLogger("camelot").setLevel(logging.DEBUG)
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
+logging.getLogger("camelot").setLevel(logging.ERROR)
 T = TypeVar('T')
 
 IMG_HEIGHT = IMG_WIDTH = 1920
