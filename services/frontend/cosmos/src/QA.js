@@ -39,6 +39,7 @@ function QA() {
     const [values, setValues] = React.useState({
                 query: '',
           });
+    const [hide, setHide] = useState(true)
     const [relatedTerms, setRelatedTerms] = useState([])
     const [answer, setAnswer] = useState([])
     const [answerDOI, setAnswerDOI] = useState([])
@@ -56,19 +57,28 @@ function QA() {
         .then(response => response.json())
         .then(data => {
           console.log(data.results)
-          setAnswer(data.results)
-          for(var i = 0; i < data.results.length; i++){ 
-            let pdf_id = data.results[0].pdf_name.slice(0, -4)
-            fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)  
-              .then(response => response.json())
-              .then(doi_res => {
-                let id = doi_res.success.data[0]._gddid
-                let title = doi_res.success.data[0].title
-                let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
-                setAnswerDOI(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
-                console.log(answerDOI)
-            })
+          if(data.results.length > 0)
+          {
+            setHide(true)
+            setAnswer(data.results)
+            for(var i = 0; i < data.results.length; i++){ 
+              let pdf_id = data.results[0].pdf_name.slice(0, -4)
+              fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)  
+                .then(response => response.json())
+                .then(doi_res => {
+                  let id = doi_res.success.data[0]._gddid
+                  let title = doi_res.success.data[0].title
+                  let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
+                  setAnswerDOI(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
+                  console.log(answerDOI)
+              })
+            }
+           
           }
+          else
+          {
+            setHide(false)
+          } 
         })
     }
     return (
@@ -78,6 +88,9 @@ function QA() {
     </Typography>
     <SearchBar enter_fn={onEnter}></SearchBar>
     <div className={classes.container}>
+    <Hidden xlDown={hide}>
+        <h2> No answers found. </h2>
+    </Hidden>
     <AnswerGrid objects={answer} dois={answerDOI}></AnswerGrid>
     <RelatedTerms relatedTerms={relatedTerms} hideProgress={true}></RelatedTerms>
     </div>
