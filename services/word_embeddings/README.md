@@ -12,5 +12,5 @@ Download the model files, then build + run via the docker-compose file:
 docker-compose up --build
 
 # test it
-curl -X GET localhost:5002/word2vec?word=whale
+curl -X GET localhost:5003/word2vec?word=femur
 ```
