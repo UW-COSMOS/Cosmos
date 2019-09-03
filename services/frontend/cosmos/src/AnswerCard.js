@@ -64,7 +64,7 @@ export default function AnswerCard(props) {
           </IconButton>
         }
         title={"Answer : " + object.answer}
-        subheader={"Confidence : " + object.probability}
+        subheader={"Confidence : " + object.probability.toFixed(2) * 100 + "%"}
       />
       <CardContent>
         <Typography variant="body2" color="textSecondary" component="h3">
