@@ -6,6 +6,8 @@ import RelatedTerms from './RelatedTerms.js'
 import Histogram from './Histogram.js'
 import ObjectGrid from './ObjectGrid.js'
 import Grid from '@material-ui/core/Grid'
+import Hidden from '@material-ui/core/Hidden';
+import AnswerGrid from './AnswerGrid.js'
 
 const useStyles = makeStyles(theme => ({
     root:{
@@ -49,7 +51,10 @@ export default function PhraseAnalysis(props){
         </Grid>
 
         <Grid item xs={10}>
-        <QAAnswer answer={props.answer} doi={props.answerDOI}></QAAnswer>
+        <Hidden xlDown={props.hide}>
+            <h2> No answers found. </h2>
+        </Hidden>
+        <AnswerGrid objects={props.answer} dois={props.answerDOI}></AnswerGrid>
         </Grid>
 
         <Grid item xs={10}>
@@ -63,7 +68,7 @@ export default function PhraseAnalysis(props){
         </Grid>
 
         <Grid item xs={10}>
-        <Histogram data={DATA} xdomain={[0,1]} ydomain={[0,10]}></Histogram>
+        <Histogram data={props.data} maxY={props.maxY}></Histogram>
         </Grid>
 
         <Grid item xs={10}>
