@@ -21,7 +21,7 @@ class Snippet(Document):
         }
 
 
-def ingest_elasticsearch(objects, code, sections):
+def ingest_elasticsearch(objects, code, sections, tableContexts, figureContexts, equationContexts):
     """
     Ingest some mongo collections to elasticsearch
     """
@@ -30,20 +30,33 @@ def ingest_elasticsearch(objects, code, sections):
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
     if objects:
-        for batch in load_pages(db.ocr_objs, 100):
+        for batch in load_pages(db.objects, 100):
             for obj in batch:
                 Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
+
     if code:
         for batch in load_pages(db.code_objs, 100):
             for obj in batch:
                 Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
+
     if sections:
-        # TODO switch to actual sections collection
-        for batch in load_pages(db.partialSections, 100):
+        for batch in load_pages(db.sections, 100):
             for obj in batch:
-                # TODO: Delete later
-                if 'class' not in obj:
-                    obj['class'] = 'Section'
+                Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
+
+    if tableContexts:
+        for batch in load_pages(db.tableContexts, 100):
+            for obj in batch:
+                Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
+
+    if figureContexts:
+        for batch in load_pages(db.figureContexts, 100):
+            for obj in batch:
+                Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
+
+    if equationContexts:
+        for batch in load_pages(db.equationContexts, 100):
+            for obj in batch:
                 Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
 
     Snippet._index.refresh()
@@ -65,9 +78,12 @@ def load_pages(coll, buffer_size):
 @click.option('--objects/--no-objects')
 @click.option('--code/--no-code')
 @click.option('--sections/--no-sections')
-def ingest(objects, code, sections):
+@click.option('--tables/--no-tables')
+@click.option('--figures/--no-figures')
+@click.option('--equations/--no-equations')
+def ingest(objects, code, sections, tables, figures, equations):
     logging.info('Starting ingestion to elasticsearch')
-    ingest_elasticsearch(objects, code, sections)
+    ingest_elasticsearch(objects, code, sections, tables, figures, equations)
     logging.info('Ending ingestion to elasticsearch')
 
 
