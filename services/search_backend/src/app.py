@@ -87,6 +87,7 @@ def search():
         logging.info(f'{e}')
         abort(400)
 
+threshold_qa = 0.85
 qa_URL = 'http://qa:4000/query'
 @app.route('/qa')
 def qa():
@@ -94,35 +95,34 @@ def qa():
     db = client.pdfs
     try:
         query = request.args.get('q', '')
-        s = Search().query('match', content=query)
+        s = Search().query('match', content=query)[:25]
         response = s.execute()
-        logging.info(len(response))
+        logging.info(response)
         result_list = []
         for obj in response:
             id = obj.meta.id
             obj_id = ObjectId(id)
             res = None
-            res = db.partialSections.find_one({'_id': obj_id})
-            logging.info(len(res['content']))
+            res = db.sections.find_one({'_id': obj_id})
+            logging.info(id)
             candidate = res['content']
             answer = requests.get(qa_URL, {'query':query, 'candidate':candidate}).json()
             logging.info(answer)
             result = {}
-            if len(answer) > 0:
+            if len(answer) > 0 and answer['probability'] > threshold_qa:
                 result['answer'] = str(answer['answer'])
                 result['probability'] = answer['probability']
-            else:
-                result['answer'] = "No answer"
-            result['content'] = res['content']
-            result_list.append(result)
+                result['content'] = res['content']
+                result['pdf_name'] = res['pdf_name']
+                result_list.append(result)
         result_list = sorted(result_list, key = lambda i : i['probability'], reverse=True)
-        logging.info(result_list)
-
         results_obj = {'results': result_list}
         return jsonify(results_obj) 
     except TypeError as e:
         logging.info(f'{e}')
         abort(400)
+    except Exception as e:
+        logging.info(e)
 
 @app.route('/data')
 def data():
