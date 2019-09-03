@@ -1,6 +1,3 @@
 {
     "flavor": "stream",
-    "flag_size": true,
-    "strip_text": " .\n",
-    "edge_tol": 25
 }
