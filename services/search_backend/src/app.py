@@ -138,7 +138,7 @@ def values():
         abort(400)
 
 
-threshold_qa = 0.85
+threshold_qa = 0.5
 qa_URL = 'http://qa:4000/query'
 @app.route('/qa')
 def qa():
