@@ -5,7 +5,7 @@ joblib
 pandas
 pdfminer.six
 chardet
-tableextractions
+cosmostables
 PyPDF2
 opencv-python
 camelot-py[cv]
