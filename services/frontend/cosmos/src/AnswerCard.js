@@ -17,6 +17,7 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import CardImage from './CardImage';
 import Hidden from '@material-ui/core/Hidden';
+import Link from '@material-ui/core/Link';
 
 const useStyles = makeStyles(theme => ({
   card: {
@@ -62,17 +63,17 @@ export default function AnswerCard(props) {
             <MoreVertIcon />
           </IconButton>
         }
-        title={doi.title}
-        subheader={doi.url}
+        title={"Answer : " + object.answer}
       />
       <CardContent>
-        <Typography variant="body2" color="textSecondary" component="p">
-            {object.answer}
+        <Typography variant="body2" color="textSecondary" component="h3">
+         <b>Doc Title : {doi.title}</b>
         </Typography>
-      </CardContent>
-      <CardContent>
+        <Typography variant="body2" color="textSecondary" component="h3">
+         <b>Doc Link :</b> {doi.url}
+        </Typography>
         <Typography variant="body2" color="textSecondary" component="p">
-            {object.content}
+         <b>Context :</b> {object.content}
         </Typography>
       </CardContent>
     </Card>
