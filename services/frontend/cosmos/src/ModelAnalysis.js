@@ -10,6 +10,9 @@ import PhraseAnalysis from './PhraseAnalysis.js'
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 
+
+const NUMBER_OF_BINS = 20
+
 const useStyles = makeStyles(theme => ({
   root: {
     width: '90%',
@@ -67,18 +70,32 @@ function Upload(props){
 }
 
 
-const DATA = [
-    {x0: 0.0, x: 0.1, y: 4},
-    {x0: 0.1, x: 0.2, y: 7},
-    {x0: 0.3, x: 0.4, y: 9},
-    {x0: 0.4, x: 0.5, y: 7},
-    {x0: 0.5, x: 0.6, y: 7},
-    {x0: 0.6, x: 0.7, y: 3},
-    {x0: 0.7, x: 0.8, y: 2},
-    {x0: 0.8, x: 0.9, y: 1},
-    {x0: 0.9, x: 1.0, y: 2},
-  ];
+function handleValues(values){
+    values = values.sort()
+    var min = values[0]
+    var max = values[values.length-1]
+    var num_elements = values.length
+    var bin_width = (max - min) / NUMBER_OF_BINS
+    var bins = []
+    for(var i = 0; i < bin_width * NUMBER_OF_BINS; i += bin_width){
+        bins.push({
+            x0: i,
+            x: i + bin_width,
+            y: 0
+        })
+    }
 
+    for(var i = 0; i < values.length; i++){
+        var item = values[i]
+        for (var j = 0; j < bins.length; j++){
+            var bin = bins[j]
+            if(item > bin.x0 && item <= bin.x){
+                bin.y++;
+            }
+        }
+    }
+    return bins
+}
 
 export default function ModelAnalysis() {
   const classes = useStyles();
@@ -97,8 +114,11 @@ export default function ModelAnalysis() {
   const [tableDOIs, setTableDOIs] = React.useState([])
   const [equationObjects, setEquationObjects] = React.useState([])
   const [equationDOIs, setEquationDOIs] = React.useState([])
-  const [answer, setAnswer] = React.useState('')
-  const [answerDOI, setAnswerDOI] = React.useState('')
+  const [answer, setAnswer] = React.useState([])
+  const [answerDOI, setAnswerDOI] = React.useState([])
+  const [maxY, setMaxY] = React.useState(0)
+  const [data, setData] = React.useState([])
+  const [hide, setHide] = React.useState(true)
 
   function handleUpload(target){
     var myFile = target.target.files[0];
@@ -120,28 +140,51 @@ export default function ModelAnalysis() {
   function handleAnalyzeClick(target){
     var t = target.split(" ")
     var internal_target = target
-    if(t.indexOf('TOC') != -1){
-      internal_target = 'TOC'
-      setAnswer('Total Organic Carbon - The amount of carbon bound in organic compounds in sample. Because all organic compounds include carbon as the common element, total organic carbon measurements provide a fundamental means of assessing the degree of organic pollution.')
-      setAnswerDOI('http://www.sciencedirect.com/science/article/pii/B9780750675079500103')
-    } else if(t.length > 1){
-      internal_target = t[0]
-    }
     window.scrollTo(0,0)
     
     setPhrase(target)
-    console.log(target)
-    let proxyUrl = 'https://cors-anywhere.herokuapp.com/'
-    let targetUrl = `http://teststrata.geology.wisc.edu/xdd_v1/word2vec?word=${encodeURIComponent(internal_target)}&n=10`
-    console.log(proxyUrl + targetUrl)
-    fetch(proxyUrl + targetUrl)
-        .then(res => res.json())
-        .then(res => {
-            console.log(res)
-            setRelatedTerms(res.data.map(listitem))
-        })
+    fetch(`http://localhost:5001/qa?q=${encodeURIComponent(target)}`)
+    .then(response => response.json())
+    .then(data => {
+      console.log(data.results)
+      if(data.results.length > 0)
+      {
+        setHide(true)
+        setAnswer(data.results)
+        for(var i = 0; i < data.results.length; i++){ 
+          let pdf_id = data.results[0].pdf_name.slice(0, -4)
+          fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)  
+            .then(response => response.json())
+            .then(doi_res => {
+              let id = doi_res.success.data[0]._gddid
+              let title = doi_res.success.data[0].title
+              let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
+              setAnswerDOI(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
+              console.log(answerDOI)
+          })
+        }
+       
+      }
+      else
+      {
+        setHide(false)
+      } 
+    })
+    
 
-    fetch(`http://localhost:5001/search?q=${encodeURIComponent(internal_target)}&type=${encodeURIComponent('Body text')}`)
+    fetch(`http://localhost:5003/word2vec?word=${encodeURIComponent(target)}&n=25`) .then(response => response.json())
+    .then(data => {
+        console.log('-----')
+        console.log(data)
+        var d = data.data
+        var l = []
+        for(var i = 0; i < d.length; i++){
+            l.push(d[i])
+        }
+
+        setRelatedTerms(l.map(listitem))
+    })
+    fetch(`http://localhost:5001/search?q=${encodeURIComponent(internal_target)}&type=${encodeURIComponent('Section')}`)
     .then(response => response.json())
     .then(data => {
       setTextObjects(data.results)
@@ -158,7 +201,7 @@ export default function ModelAnalysis() {
       }
     })
 
-    fetch(`http://localhost:5001/search?q=${encodeURIComponent(internal_target)}&type=${encodeURIComponent('equation')}`)
+    fetch(`http://localhost:5001/search?q=${encodeURIComponent(internal_target)}&type=${encodeURIComponent('EquationContext')}`)
     .then(response => response.json())
     .then(data => {
       setEquationObjects(data.results)
@@ -175,7 +218,7 @@ export default function ModelAnalysis() {
       }
     })
 
-    fetch(`http://localhost:5001/search?q=${encodeURIComponent(internal_target)}&type=${encodeURIComponent('figure')}`)
+    fetch(`http://localhost:5001/search?q=${encodeURIComponent(internal_target)}&type=${encodeURIComponent('FigureContext')}`)
     .then(response => response.json())
     .then(data => {
       setFigureObjects(data.results)
@@ -192,10 +235,18 @@ export default function ModelAnalysis() {
       }
     })
 
-    fetch(`http://localhost:5001/search?q=${encodeURIComponent(internal_target)}&type=${encodeURIComponent('table')}`)
+    fetch(`http://localhost:5001/values?q=${encodeURIComponent(target)}`)
     .then(response => response.json())
     .then(data => {
       setTableObjects(data.results)
+      var bins = handleValues(data.values)
+      var y = 0
+      for(var i = 0; i < bins.length; i++){
+          if(bins[i].y > y)
+              y = bins[i].y
+      }
+      setMaxY(y)
+      setData(bins)
       for(var i = 0; i < data.results.length; i++){
         let pdf_id = data.results[i].pdf_name.slice(0, -4)
         fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)
@@ -219,6 +270,9 @@ export default function ModelAnalysis() {
         return (<CodeGrid data={results} handleClick={handleAnalyzeClick}></CodeGrid>)//(<div><SyntaxHighlighter language='fortran' styles={{margin: 20}}>{fileContent}</SyntaxHighlighter></div>);
       case 2:
         return <PhraseAnalysis 
+                  maxY={maxY}
+                  hide={hide}
+                  data={data}
                   answer={answer}
                   answerDOI={answerDOI}
                   phrase={phrase} 

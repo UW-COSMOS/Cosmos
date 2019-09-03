@@ -1,6 +1,7 @@
 exp/data/*
 output/
 exp/weights/*
+.cache/
 html_tmp/
 xml/
 *.pyc

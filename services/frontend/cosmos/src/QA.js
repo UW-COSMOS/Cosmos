@@ -53,6 +53,20 @@ function QA() {
         setValues({...values, ['query']: query})
         setAnswer([])
         setAnswerDOI([])
+
+        fetch(`http://localhost:5003/word2vec?word=${encodeURIComponent(query)}&n=25`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('-----')
+            console.log(data)
+            var d = data.data
+            var l = []
+            for(var i = 0; i < d.length; i++){
+                l.push(d[i])
+            }
+
+            setRelatedTerms(l.map(listitem))
+        })
         fetch(`http://localhost:5001/qa?q=${encodeURIComponent(query)}`)
         .then(response => response.json())
         .then(data => {

@@ -23,11 +23,18 @@ const useStyles = makeStyles(theme => ({
 
 function Histogram(props){
     const r = useStyles()
+    var data = props.data
+    var xdom = [0, 0]
+    var ydom = [0, 0]
+    if(data.length > 0){
+        xdom = [data[0].x0, data[data.length-1].x]
+        ydom = [0, props.maxY]
+    }
     return (
       <Paper classNames={r.root}>
         <XYPlot
-            xDomain={props.xdomain}
-            yDomain={props.ydomain}
+            xDomain={xdom}
+            yDomain={ydom}
             width={1000}
             height={400} >
             <VerticalGridLines />
