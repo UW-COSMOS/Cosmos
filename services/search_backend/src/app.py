@@ -56,20 +56,21 @@ def search():
     try:
         obj_type = request.args.get('type', '')
         query = request.args.get('q', '')
-        s = Search().query('match', content=query).query('match', cls=obj_type)[:20]#.filter('term', cls=obj_type)[:20]
+        s = Search().query('match', content=query)#.query('match', cls=obj_type)[:20]#.filter('term', cls=obj_type)[:20]
         response = s.execute()
         logging.info(str(response))
         result_list = []
         for result in response:
+            logging.info(result)
             id = result.meta.id
             obj_id = ObjectId(id)
+            logging.info(obj_id)
             res = None
             if result['cls'] == 'code':
                 res = db.code_objs.find_one({'_id': obj_id})
             else:
                 res = db.ocr_objs.find_one({'_id': obj_id})
             result_list.append(res)
-
         for result in result_list:
             result['_id'] = str(result['_id'])
             if 'bytes' in result and result['bytes'] is not None:
@@ -87,55 +88,40 @@ def search():
         abort(400)
 
 qa_URL = 'http://qa:4000/query'
-@app.route('/qa1')
-def qa1():
+@app.route('/qa')
+def qa():
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
     try:
-        obj_type = 'Body Text'
         query = request.args.get('q', '')
-        s = Search().query('match', content=query).query('match', cls=obj_type)[:20]#.filter('term', cls=obj_type)[:20]
+        s = Search().query('match', content=query)
         response = s.execute()
-        logging.info(str(response))
+        logging.info(len(response))
         result_list = []
-        
-        for result in response:
-            id = result.meta.id
+        for obj in response:
+            id = obj.meta.id
             obj_id = ObjectId(id)
             res = None
-            if result['cls'] == 'code':
-                res = db.code_objs.find_one({'_id': obj_id})
-            else:
-                res = db.ocr_objs.find_one({'_id': obj_id})
+            res = db.partialSections.find_one({'_id': obj_id})
+            logging.info(len(res['content']))
             candidate = res['content']
-            logging.debug(candidate)
-            answer_l = list(requests.get(qa_URL, {'query':query, 'candidate':candidate}).json().values())
-            logging.debug("qa answer ready")
-            if len(answer_l) > 0:
-                res['answer'] = str(answer_l[0])
-            result_list.append(res)
-            break
+            answer = requests.get(qa_URL, {'query':query, 'candidate':candidate}).json()
+            logging.info(answer)
+            result = {}
+            if len(answer) > 0:
+                result['answer'] = str(answer['answer'])
+                result['probability'] = answer['probability']
+            else:
+                result['answer'] = "No answer"
+            result['content'] = res['content']
+            result_list.append(result)
+        result_list = sorted(result_list, key = lambda i : i['probability'], reverse=True)
+        logging.info(result_list)
 
-        for result in result_list:
-            result['_id'] = str(result['_id'])
-            if 'bytes' in result:
-                encoded = base64.encodebytes(result['bytes'])
-                result['bytes'] = encoded.decode('ascii')
-                del result['page_ocr_df']
         results_obj = {'results': result_list}
         return jsonify(results_obj) 
-    except TypeError:
-        abort(400)
-
-
-@app.route('/qa')
-def qa():
-    try:
-        query = request.args.get('q', '')
-        query = query.lower()
-        if query == 'toc' or query == 'total organic carbon':
-            return jsonify({'definition': 'Total organic carbon (TOC) is the amount of carbon found in an organic compound and is often used as a non-specific indicator of water quality or cleanliness of pharmaceutical manufacturing equipment. TOC may also refer to the amount of organic carbon in soil, or in a geological formation, particularly the source rock for a petroleum play; 2% is a rough minimum.[1] For marine surface sediments, average TOC content is 0.5% in the deep ocean, and 2% along the eastern margins.'})
-    except TypeError:
+    except TypeError as e:
+        logging.info(f'{e}')
         abort(400)
 
 @app.route('/data')

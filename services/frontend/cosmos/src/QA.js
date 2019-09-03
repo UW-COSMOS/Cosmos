@@ -10,7 +10,7 @@ import SearchBar from './SearchBar.js'
 import QAAnswer from './QAAnswer.js'
 import RelatedTerms from './RelatedTerms.js'
 import Hidden from '@material-ui/core/Hidden';
-
+import AnswerGrid from './AnswerGrid.js'
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -36,30 +36,40 @@ function listitem(term){
 
 function QA() {
     const classes = useStyles();
+    const [values, setValues] = React.useState({
+                query: '',
+          });
     const [relatedTerms, setRelatedTerms] = useState([])
-    const [hide, setHide] = useState(true)
-    const [answer, setAnswer] = useState('')
-    const [answerDOI, setAnswerDOI] = useState('')
-
-    function onEnter(query){
-        if (query == 'What is TOC?'){
-            setAnswer('Total Organic Carbon - The amount of carbon bound in organic compounds in sample. Because all organic compounds include carbon as the common element, total organic carbon measurements provide a fundamental means of assessing the degree of organic pollution.')
-            setAnswerDOI('http://www.sciencedirect.com/science/article/pii/B9780750675079500103')
-            query = 'TOC'
-        } else if (query == 'What is THAA?'){
-            setAnswer('total hydrolyzable amino acids (THAA)')
-            setAnswerDOI('http://doi.wiley.com/10.1111/j.1745-6584.2008.00493.x')
-            query = 'THAA'
+    const [answer, setAnswer] = useState([])
+    const [answerDOI, setAnswerDOI] = useState([])
+    function handleChange(event) {
+          setValues(oldValues => ({
+                    ...oldValues,
+                    [event.target.name]: event.target.value,
+                  }));
         }
-        let proxyUrl = 'https://cors-anywhere.herokuapp.com/'
-        let targetUrl = `http://teststrata.geology.wisc.edu/xdd_v1/word2vec?word=${encodeURIComponent(query)}&n=10`
-        console.log(proxyUrl + targetUrl)
-        fetch(proxyUrl + targetUrl)
-            .then(res => res.json())
-            .then(res => {
-                setRelatedTerms(res.data.map(listitem))
-                setHide(false)
+    function onEnter(query){
+        setValues({...values, ['query']: query})
+        setAnswer([])
+        setAnswerDOI([])
+        fetch(`http://localhost:5001/qa?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+          console.log(data.results)
+          setAnswer(data.results)
+          for(var i = 0; i < data.results.length; i++){ 
+            let pdf_id = data.results[0].pdf_name.slice(0, -4)
+            fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)  
+              .then(response => response.json())
+              .then(doi_res => {
+                let id = doi_res.success.data[0]._gddid
+                let title = doi_res.success.data[0].title
+                let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
+                setAnswerDOI(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
+                console.log(answerDOI)
             })
+          }
+        })
     }
     return (
     <div className={classes.root}>
@@ -67,13 +77,10 @@ function QA() {
         Question Answering and Query Refinement
     </Typography>
     <SearchBar enter_fn={onEnter}></SearchBar>
-    <Hidden xlDown={hide}>
-    <Typography variant="h4" component="h4">
-        Answer
-    </Typography>
-    <QAAnswer answer={answer} doi={answerDOI}></QAAnswer>
+    <div className={classes.container}>
+    <AnswerGrid objects={answer} dois={answerDOI}></AnswerGrid>
     <RelatedTerms relatedTerms={relatedTerms} hideProgress={true}></RelatedTerms>
-    </Hidden>
+    </div>
     </div>
   );
 }

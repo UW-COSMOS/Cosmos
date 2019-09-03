@@ -3,8 +3,11 @@ services:
     extract_objects:
         build: .
         ipc: host
-        volumes:
-            - .:/develop/
-        command: tail -F anything
+        command: "python3 extract.py 30"
+        environment:
+            - DBCONNECT
+        #volumes:
+        #    - .:/develop/
+        #command: tail -F anything
         
 

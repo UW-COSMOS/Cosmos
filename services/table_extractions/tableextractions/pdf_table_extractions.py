@@ -22,7 +22,7 @@ from joblib import Parallel, delayed
 from pymongo import MongoClient
 
 import camelot
-from utils import grouper
+from tableextractions.utils import grouper
 
 # Logging config
 logging.basicConfig(

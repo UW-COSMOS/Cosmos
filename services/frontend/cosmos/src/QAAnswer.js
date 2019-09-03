@@ -22,11 +22,14 @@ export default function QAAnswer(props){
     const classes = useStyles();
     return (
         <Paper className={classes.container}>
-            <Typography variant="p" component="h3">
+            <Typography variant="p" component="h4">
                 {props.answer}
             </Typography>
+            <Typography variant="p" component="h4">
+              {props.doi.title}
+            </Typography>
             <Typography component="p">
-              DOI: {props.doi}
+              {props.doi.url}
             </Typography>
         </Paper>
     )
