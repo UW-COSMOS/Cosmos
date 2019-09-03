@@ -68,7 +68,7 @@ def search():
     try:
         obj_type = request.args.get('type', '')
         query = request.args.get('q', '')
-        s = Search().query('match', content=query)#.query('match', cls=obj_type)[:20]#.filter('term', cls=obj_type)[:20]
+        s = Search().query('match', content=query).query('match', cls=obj_type)[:20]#.filter('term', cls=obj_type)[:20]
         response = s.execute()
         logging.info(str(response))
         result_list = []
@@ -146,10 +146,11 @@ def qa():
     db = client.pdfs
     try:
         query = request.args.get('q', '')
-        s = Search().query('match', content=query)[:25]
+        s = Search().query('match', content=query).query('match', cls='Section')[:25]
         response = s.execute()
         logging.info(response)
         result_list = []
+        content_set = set()
         for obj in response:
             id = obj.meta.id
             obj_id = ObjectId(id)
@@ -158,6 +159,9 @@ def qa():
             logging.info(id)
             res = db.sections.find_one({'_id': obj_id})
             if res is not None:
+                if res['content'] in content_set:
+                    continue
+                content_set.add(res['content'])
                 logging.info(res['pdf_name'])
                 candidate = res['content']
                 answer = requests.get(qa_URL, {'query':query, 'candidate':candidate}).json()
@@ -179,56 +183,6 @@ def qa():
     except Exception as e:
         logging.info(e)
 
-@app.route('/data')
-def data():
-    try:
-        query = request.args.get('q', '')
-        query = query.lower()
-        if query == 'toc' or query == 'total organic carbon':
-            return_obj = {'data': [
-                                    {
-                                        'doi': 'https://doi.org/10.1109/5.771073', 
-                                        'value': '10'
-                                    },
-                                    {
-                                        'doi': 'https://doi.org/10.1109/5.771073', 
-                                        'value': '10'
-                                    },
-                                    {
-                                        'doi': 'https://doi.org/10.1109/5.771073', 
-                                        'value': '10'
-                                    },
-                                    {
-                                        'doi': 'https://doi.org/10.1109/5.771073', 
-                                        'value': '10'
-                                    },
-                                    {
-                                        'doi': 'https://doi.org/10.1109/5.771073', 
-                                        'value': '10'
-                                    },
-                                    {
-                                        'doi': 'https://doi.org/10.1109/5.771073', 
-                                        'value': '10'
-                                    },
-                                    {
-                                        'doi': 'https://doi.org/10.1109/5.771073', 
-                                        'value': '10'
-                                    },
-                                    {
-                                        'doi': 'https://doi.org/10.1109/5.771073', 
-                                        'value': '10'
-                                    },
-                                    {
-                                        'doi': 'https://doi.org/10.1109/5.771073', 
-                                        'value': '10'
-                                    },
-                                    {
-                                        'doi': 'https://doi.org/10.1109/5.771073', 
-                                        'value': '10'
-                                    }]}
-            return jsonify(return_obj)
-    except TypeError:
-        abort(400)
 
 
     
