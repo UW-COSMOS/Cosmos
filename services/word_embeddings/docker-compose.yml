@@ -1,0 +1,20 @@
+version: "2.3"
+services:
+    word2vec_endpoint:
+        build: .
+        ipc: host
+        container_name: word2vec_endpoint
+        command: "flask run --host=0.0.0.0 --port=5003"
+        environment:
+            - DBCONNECT
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
+        ports:
+            - 5003:5003
+        volumes:
+            - ./data:/app/data
+#networks:
+#  default:
+#    external:
+#      name: esnet
+#
