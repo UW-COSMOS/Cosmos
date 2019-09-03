@@ -21,7 +21,7 @@ import re
 import spacy
 import requests
 import pandas as pd
-from .values_query import values_query
+from values_query import values_query
 
 connections.create_connection(hosts=['es01'], timeout=20)
 
@@ -72,14 +72,36 @@ def search():
         response = s.execute()
         logging.info(str(response))
         result_list = []
+        content_set = set()
         for result in response:
             id = result.meta.id
             obj_id = ObjectId(id)
             res = None
             if result['cls'] == 'code':
                 res = db.code_objs.find_one({'_id': obj_id})
+            elif result['cls'] == 'Section':
+                sc = db.sections.find_one({'_id': obj_id})
+                if len(sc['objects']) == 0:
+                    continue
+                bt = sc['objects'][0]['_id']
+                res = db.objects.find_one({'_id': bt})
+            elif result['cls'] == 'FigureContext':
+                fc = db.figureContexts.find_one({'_id': obj_id})
+                figure = fc['figure']['_id']
+                res = db.objects.find_one({'_id': figure})
+            elif result['cls'] == 'EquationContext':
+                ec = db.equationContexts.find_one({'_id': obj_id})
+                eq = ec['equation']['_id']
+                res = db.objects.find_one({'_id': eq})
+            elif result['cls'] == 'TableContext':
+                tc = db.tableContexts.find_one({'_id': obj_id})
+                table = tc['table']['_id']
+                res = db.objects.find_one({'_id': table})
             else:
-                res = db.ocr_objs.find_one({'_id': obj_id})
+                res = db.objects.find_one({'_id': obj_id})
+            if res['content'] in content_set:
+                continue
+            content_set.add(res['content'])
             result_list.append(res)
 
         result_list = [postprocess_result(r) for r in result_list]
@@ -97,6 +119,7 @@ def values():
     db = client.pdfs
     try:
         query = request.args.get('q', '')
+        print(values_query)
         values, oids = values_query(query)
         result_list = []
         for oid in oids:
@@ -105,7 +128,8 @@ def values():
 
         result_list = [postprocess_result(r) for r in result_list]
         return jsonify({'results': result_list, 'values': values})
-    except TypeError:
+    except Exception as e:
+        logging.error(e)
         abort(400)
 
 

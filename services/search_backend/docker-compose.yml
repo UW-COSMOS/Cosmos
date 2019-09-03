@@ -3,10 +3,10 @@ services:
     s_backend:
         build: .
         ipc: host
-        #command: "flask run --host=0.0.0.0 --port=5001"
-        volumes:
-            - .:/develop/
-        command: "tail -F /dev/null"
+        command: "flask run --host=0.0.0.0 --port=5001"
+        #volumes:
+        #    - .:/develop/
+        #command: "tail -F /dev/null"
         environment:
             - DBCONNECT
             - FLASK_APP=app.py
