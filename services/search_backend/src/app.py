@@ -105,6 +105,7 @@ def qa():
             res = None
             res = db.sections.find_one({'_id': obj_id})
             logging.info(id)
+            logging.info(res['pdf_name'])
             candidate = res['content']
             answer = requests.get(qa_URL, {'query':query, 'candidate':candidate}).json()
             logging.info(answer)
@@ -116,6 +117,7 @@ def qa():
                 result['pdf_name'] = res['pdf_name']
                 result_list.append(result)
         result_list = sorted(result_list, key = lambda i : i['probability'], reverse=True)
+        logging.info(result_list)
         results_obj = {'results': result_list}
         return jsonify(results_obj) 
     except TypeError as e:
