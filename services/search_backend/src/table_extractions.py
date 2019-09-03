@@ -2,6 +2,7 @@
 Auxiliary script for taking out tables from extracted objects
 """
 
+import pandas as pd
 import os
 import tempfile
 from io import BytesIO
@@ -82,14 +83,15 @@ def extract_table_from_obj(pdf_name: str, page_num: str, coords: list):
         temp_file = create_pdf(pdf_name, pdf_bytes)
         file_loc = temp_file.name
         coords_camelot = convert_coords(file_loc, coords)
-        table_df, _, logs, acc = extract_tables(file_loc, coords_camelot, page_num, "camelot_lattice_params.txt", "camelot_stream_params.txt")
+        table_df, _, logs, acc, whitespace = extract_tables(file_loc, coords_camelot, page_num, "camelot_lattice_params.txt", "camelot_stream_params.txt", pkl=False)
+        logging.info(whitespace)
         logging.info(acc)
         for log in logs:
             logging.warning(log)
         os.remove(temp_file.name)
-        return table_df, acc
     else:
         table_df = None
         acc = None
+        whitespace = None
 
-    return table_df, acc
+    return table_df, acc, whitespace

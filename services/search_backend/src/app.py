@@ -50,7 +50,16 @@ def analyze():
     return jsonify(final_obj) 
 
 
-            
+def postprocess_result(result):
+    result['_id'] = str(result['_id'])
+    if 'bytes' in result and result['bytes'] is not None:
+        encoded = base64.encodebytes(result['bytes'])
+        result['bytes'] = encoded.decode('ascii')
+        del result['page_ocr_df']
+    if 'table_df' in result and result['table_df'] is not None:
+        encoded = base64.encodebytes(result['table_df'])
+        result['table_df'] = encoded.decode('ascii')
+    return result
 
 @app.route('/search')
 def search():
@@ -73,15 +82,7 @@ def search():
                 res = db.ocr_objs.find_one({'_id': obj_id})
             result_list.append(res)
 
-        for result in result_list:
-            result['_id'] = str(result['_id'])
-            if 'bytes' in result and result['bytes'] is not None:
-                encoded = base64.encodebytes(result['bytes'])
-                result['bytes'] = encoded.decode('ascii')
-                del result['page_ocr_df']
-            if 'table_df' in result and result['table_df'] is not None:
-                encoded = base64.encodebytes(result['table_df'])
-                result['table_df'] = encoded.decode('ascii')
+        result_list = [postprocess_result(r) for r in result_list]
 
         results_obj = {'results': result_list}
         return jsonify(results_obj) 
@@ -90,14 +91,20 @@ def search():
         abort(400)
 
 
-
 @app.route('/values')
 def values():
     client = MongoClient(os.environ['DBCONNECT'])
     db = client.pdfs
     try:
         query = request.args.get('q', '')
-        return values_query(query)
+        values, oids = values_query(query)
+        result_list = []
+        for oid in oids:
+            r = db.objects.find_one({'_id': oid})
+            result_list.append(r)
+
+        result_list = [postprocess_result(r) for r in result_list]
+        return jsonify({'results': result_list, 'values': values})
     except TypeError:
         abort(400)
 
