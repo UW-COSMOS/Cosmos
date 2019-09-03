@@ -103,19 +103,20 @@ def qa():
             id = obj.meta.id
             obj_id = ObjectId(id)
             res = None
-            res = db.sections.find_one({'_id': obj_id})
             logging.info(id)
-            logging.info(res['pdf_name'])
-            candidate = res['content']
-            answer = requests.get(qa_URL, {'query':query, 'candidate':candidate}).json()
-            logging.info(answer)
-            result = {}
-            if len(answer) > 0 and answer['probability'] > threshold_qa:
-                result['answer'] = str(answer['answer'])
-                result['probability'] = answer['probability']
-                result['content'] = res['content']
-                result['pdf_name'] = res['pdf_name']
-                result_list.append(result)
+            res = db.sections.find_one({'_id': obj_id})
+            if res is not None:
+                logging.info(res['pdf_name'])
+                candidate = res['content']
+                answer = requests.get(qa_URL, {'query':query, 'candidate':candidate}).json()
+                logging.info(answer)
+                result = {}
+                if len(answer) > 0 and answer['probability'] > threshold_qa:
+                    result['answer'] = str(answer['answer'])
+                    result['probability'] = answer['probability']
+                    result['content'] = res['content']
+                    result['pdf_name'] = res['pdf_name']
+                    result_list.append(result)
         result_list = sorted(result_list, key = lambda i : i['probability'], reverse=True)
         logging.info(result_list)
         results_obj = {'results': result_list}
