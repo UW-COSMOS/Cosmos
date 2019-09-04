@@ -40,7 +40,6 @@ def preprocess(line):
     line = word_tokenize(line)  # Split into words.
     line = [w.lower() for w in line]  # Lower the text.
     line = [w for w in line if not w in stop_words]  # Remove stopwords
-    line = [w for w in line if w.isalpha()] # Remove numbers and punctuation
     return line
 
 sys.stdout.write("done.\n")
