@@ -141,9 +141,10 @@ export default function ModelAnalysis() {
     var t = target.split(" ")
     var internal_target = target
     window.scrollTo(0,0)
+    var target_q = "What is " + target + "?"
     
     setPhrase(target)
-    fetch(`http://localhost:5001/qa?q=${encodeURIComponent(target)}`)
+    fetch(`http://localhost:5001/qa?q=${encodeURIComponent(target_q)}`)
     .then(response => response.json())
     .then(data => {
       console.log(data.results)
