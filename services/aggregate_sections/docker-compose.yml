@@ -5,7 +5,7 @@ services:
         ipc: host
         #volumes:
         #    - .:/develop/
-        command: "python3 aggregate.py 30 --no-section --no-equation --figure --table"
+        command: "python3 aggregate.py 30 --section --equation --figure --table"
         environment:
             - DBCONNECT
         
