@@ -22,30 +22,49 @@ class App extends Component{
     this.set_search_state = this.set_search_state.bind(this)
     this.set_visualize_state = this.set_visualize_state.bind(this)
     this.set_ms_state = this.set_ms_state.bind(this)
-    this.state = {view: view_states.QA}
+    this.set_histogram_cache = this.set_histogram_cache.bind(this)
+    this.state = {view: view_states.QA, histogramCache: []}
+  }
+
+  set_histogram_cache(cache){
+      this.setState((state, props) => {
+          return {view: state.view, histogramCache: cache}
+      })
   }
 
   set_qa_state(){
-    this.setState({
-      view: view_states.QA
+    this.setState((state, props) => {
+      return {
+          view: view_states.QA,
+          histogramCache: state.histogramCache
+      }
     })
   }
 
   set_search_state(){
-    this.setState({
-      view: view_states.SEARCH
+    this.setState((state, props) => {
+      return {
+          view: view_states.SEARCH,
+          histogramCache: state.histogramCache
+      }
     })
   }
 
   set_visualize_state(){
-    this.setState({
-      view: view_states.VISUALIZE
+    this.setState((state, props) => {
+      return {
+          view: view_states.VISUALIZE,
+          histogramCache: state.histogramCache
+      }
     })
   }
 
   set_ms_state(){
-    this.setState({
-      view: view_states.MODEL_ANALYSIS
+    this.setState((state, props) => {
+      return {
+         view: view_states.MODEL_ANALYSIS,
+         histogramCache: state.histogramCache
+      }
     })
   }
 
@@ -56,9 +75,9 @@ class App extends Component{
       case view_states.SEARCH:
         return (<Search></Search>)
       case view_states.VISUALIZE:
-        return (<Visualize></Visualize>)
+        return (<Visualize histogramCache={this.state.histogramCache} setHistogramCache={this.set_histogram_cache} max_cache_len={30}></Visualize>)
       case view_states.MODEL_ANALYSIS:
-        return (<ModelAnalysis></ModelAnalysis>)
+        return (<ModelAnalysis histogramCache={this.state.histogramCache} setHistogramCache={this.set_histogram_cache} max_cache_len={30}></ModelAnalysis>)
       default:
         return (<p>Invalid view state</p>)
     }

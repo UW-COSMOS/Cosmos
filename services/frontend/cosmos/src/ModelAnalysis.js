@@ -97,7 +97,7 @@ function handleValues(values){
     return bins
 }
 
-export default function ModelAnalysis() {
+export default function ModelAnalysis(props) {
   const classes = useStyles();
   const [activeStep, setActiveStep] = React.useState(0);
   const steps = getSteps();
@@ -119,6 +119,9 @@ export default function ModelAnalysis() {
   const [maxY, setMaxY] = React.useState(0)
   const [data, setData] = React.useState([])
   const [hide, setHide] = React.useState(true)
+
+  // histogram cache length
+  const MAX_CACHE_LEN = 30
 
   function handleUpload(target){
     var myFile = target.target.files[0];
@@ -235,31 +238,72 @@ export default function ModelAnalysis() {
           })
       }
     })
+    // Check the cache
+    var cacheHit = false
+    for(var i = 0; i < props.histogramCache.length; i++){
+        if(props.histogramCache[i].target === target){
+            var objects = props.histogramCache[i].tableObjects
+            setTableObjects(objects)
+            setMaxY(props.histogramCache[i].y)
+            var bins = props.histogramCache[i].bins
+            setData(bins)
+            for(var i = 0; i < objects.length; i++){
+              let pdf_id = objects[i].pdf_name.slice(0, -4)
+              fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)
+                .then(response => response.json())
+                .then(doi_res => {
+                  let id = doi_res.success.data[0]._gddid
+                  let title = doi_res.success.data[0].title
+                  let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
+                  setTableDOIs(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
+                })
+            cacheHit = true
+        }
+    }
+    }
 
-    fetch(`http://localhost:5001/values?q=${encodeURIComponent(target)}`)
-    .then(response => response.json())
-    .then(data => {
-      setTableObjects(data.results)
-      var bins = handleValues(data.values)
-      var y = 0
-      for(var i = 0; i < bins.length; i++){
-          if(bins[i].y > y)
-              y = bins[i].y
-      }
-      setMaxY(y)
-      setData(bins)
-      for(var i = 0; i < data.results.length; i++){
-        let pdf_id = data.results[i].pdf_name.slice(0, -4)
-        fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)
-          .then(response => response.json())
-          .then(doi_res => {
-            let id = doi_res.success.data[0]._gddid
-            let title = doi_res.success.data[0].title
-            let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
-            setTableDOIs(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
-          })
-      }
-    })
+    if(cacheHit == false){
+        fetch(`http://localhost:5001/values?q=${encodeURIComponent(target)}`)
+        .then(response => response.json())
+        .then(data => {
+          setTableObjects(data.results)
+          var bins = handleValues(data.values)
+          var y = 0
+          for(var i = 0; i < bins.length; i++){
+              if(bins[i].y > y)
+                  y = bins[i].y
+          }
+          setMaxY(y)
+          setData(bins)
+          var obj = {
+                    target: target,
+                    bins: bins,
+                    y: y,
+                    tableObjects: data.results
+                }
+          if(props.histogramCache.length < props.max_cache_len){
+              var c = props.histogramCache.slice()
+              c.push(obj)
+              props.setHistogramCache(c)
+          } else{
+              var c = props.histogramCache.slice()
+              c.pop()
+              c.push(obj)
+              props.setHistogramCache(c)
+          }
+          for(var i = 0; i < data.results.length; i++){
+            let pdf_id = data.results[i].pdf_name.slice(0, -4)
+            fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)
+              .then(response => response.json())
+              .then(doi_res => {
+                let id = doi_res.success.data[0]._gddid
+                let title = doi_res.success.data[0].title
+                let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
+                setTableDOIs(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
+              })
+          }
+        })
+    }
     handleNext()
   }
 

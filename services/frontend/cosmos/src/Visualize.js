@@ -24,16 +24,6 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-const DATA = [
-    {x0: 0, x: 1, y: 2},
-    {x0: 1, x: 2, y: 2},
-    {x0: 2, x: 3, y: 3},
-    {x0: 3, x: 4, y: 1},
-    {x0: 4, x: 5, y: 0},
-    {x0: 5, x: 6, y: 2},
-    {x0: 6, x: 7, y: 1},
-    {x0: 7, x: 8, y: 1},
-  ];
 
 const NUMBER_OF_BINS = 20
 
@@ -63,7 +53,7 @@ function handleValues(values){
     }
     return bins
 }
-function Visualize() {
+function Visualize(props) {
   const classes = useStyles();
   const [hide, setHide] = useState(true)
   const [results, setResults] = React.useState([])
@@ -81,37 +71,84 @@ function Visualize() {
       setDoi([])
       setProcessing(false)
       setNoResults(true)
-      fetch(`http://localhost:5001/values?q=${encodeURIComponent(query)}`)
-      .then(response => response.json())
-      .then(data => {
-        setResults(data.results)
-        var bins = handleValues(data.values)
-        var y = 0
-        for(var i = 0; i < bins.length; i++){
-            if(bins[i].y > y)
-                y = bins[i].y
-        }
-        setMaxY(y)
-        setData(bins)
-        console.log(bins)
-        if(bins.length == 0){
-            setProcessing(true)
-            setNoResults(false)
-        }
-        for(var i = 0; i < data.results.length; i++){
-          let pdf_id = data.results[i].pdf_name.slice(0, -4)
-          fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)
-            .then(response => response.json())
-            .then(doi_res => {
-              let id = doi_res.success.data[0]._gddid
-              let title = doi_res.success.data[0].title
-              let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
-              setDoi(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
-              setHide(false)
-              setProcessing(true)
-            })
-        }
-      })
+      // Check the cache
+      var cacheHit = false
+      console.log(props.histogramCache)
+      for(var i = 0; i < props.histogramCache.length; i++){
+          if(props.histogramCache[i].target === query){
+              var objects = props.histogramCache[i].tableObjects
+              setResults(objects)
+              setMaxY(props.histogramCache[i].y)
+              var bins = props.histogramCache[i].bins
+              setData(bins)
+             if(bins.length == 0){
+                 setProcessing(true)
+                 setNoResults(false)
+             }
+              for(var i = 0; i < objects.length; i++){
+                let pdf_id = objects[i].pdf_name.slice(0, -4)
+                fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)
+                  .then(response => response.json())
+                  .then(doi_res => {
+                    let id = doi_res.success.data[0]._gddid
+                    let title = doi_res.success.data[0].title
+                    let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
+                    setDoi(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
+                    setHide(false)
+                    setProcessing(true)
+                  })
+              cacheHit = true
+          }
+      }
+      }
+      if (!cacheHit){
+          fetch(`http://localhost:5001/values?q=${encodeURIComponent(query)}`)
+          .then(response => response.json())
+          .then(data => {
+            setResults(data.results)
+            var bins = handleValues(data.values)
+            var y = 0
+            for(var i = 0; i < bins.length; i++){
+                if(bins[i].y > y)
+                    y = bins[i].y
+            }
+            setMaxY(y)
+            setData(bins)
+            var obj = {
+                      target: query,
+                      bins: bins,
+                      y: y,
+                      tableObjects: data.results
+                  }
+            if(props.histogramCache.length < props.max_cache_len){
+                var c = props.histogramCache.slice()
+                c.push(obj)
+                props.setHistogramCache(c)
+            } else{
+                var c = props.histogramCache.slice()
+                c.pop()
+                c.push(obj)
+                props.setHistogramCache(c)
+            }
+            if(bins.length == 0){
+                setProcessing(true)
+                setNoResults(false)
+            }
+            for(var i = 0; i < data.results.length; i++){
+              let pdf_id = data.results[i].pdf_name.slice(0, -4)
+              fetch(`https://geodeepdive.org/api/articles?docid=${encodeURIComponent(pdf_id)}`)
+                .then(response => response.json())
+                .then(doi_res => {
+                  let id = doi_res.success.data[0]._gddid
+                  let title = doi_res.success.data[0].title
+                  let url = doi_res.success.data[0].link[0].url //`https.doi.org/${doi_res.success.data[0].identifier[0].id}`
+                  setDoi(oldValues => [...oldValues, {pdf_id: id, title: title, url: url}])
+                  setHide(false)
+                  setProcessing(true)
+                })
+            }
+          })
+      }
   }
   return (
     <div className={classes.root}>
