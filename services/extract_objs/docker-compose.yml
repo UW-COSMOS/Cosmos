@@ -9,5 +9,11 @@ services:
         #volumes:
         #    - .:/develop/
         #command: tail -F anything
+        networks:
+          - cosmosnet
+
+networks:
+  cosmosnet:
+      name: cosmosnet
         
 

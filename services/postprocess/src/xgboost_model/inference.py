@@ -3,7 +3,7 @@ import yaml
 import joblib
 import xgboost
 import numpy as np
-import logging 
+import logging
 with open("classes.yaml") as stream:
     classes  = yaml.load(stream)["classes"]
 
@@ -13,18 +13,18 @@ class PostprocessException(Exception):
         self.original_exception = original_exception
 
 def run_inference(page_objs, weights_pth):
-    if 'ocr_detected_objs' not in page_objs:
+    if 'ocr_detected_objs' not in page_objs or page_objs["ocr_detected_objs"] is None:
         logging.info('This page has not had ocr or has no ocr_detected objects: {page_objs["_id"]}')
         page_objs["pp_detected_objs"] = []
     elif len(page_objs['ocr_detected_objs']) == 0:
         logging.info('This page has no ocr_detected objects: {page_objs["_id"]}')
         page_objs["pp_detected_objs"] = []
-    else:    
+    else:
         predict_list = page_objs['ocr_detected_objs']
         p_bb, _, _ = zip(*predict_list)
 
         objs = load_data_objs(page_objs, classes)
-        
+
         model = joblib.load(weights_pth)
         try:
             prob = model.predict_proba(objs)

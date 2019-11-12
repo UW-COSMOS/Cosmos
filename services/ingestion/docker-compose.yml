@@ -6,4 +6,12 @@ services:
         volumes:
             - ${INPUT_DIR}:/input/
         command: "python3 pdf_ingestion.py /input 30 --skip"
+#        command: "tail -f /dev/null"
+        environment:
+            - DBCONNECT
+        networks:
+          - cosmosnet
 
+networks:
+  cosmosnet:
+      name: cosmosnet

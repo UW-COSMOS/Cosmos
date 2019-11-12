@@ -90,7 +90,11 @@ def ocr_scan(db_insert_fn, num_processes, skip):
     for batch in load_pages(db, num_processes):
         #pages = [process_page(page, db) for page in batch]
         pages = Parallel(n_jobs=num_processes)(delayed(process_page)(page) for page in batch)
-        pages, errs = zip(*pages)
+        try:
+            pages, errs = zip(*pages)
+        except:
+            logging.warning("Exception in unpacking while processing pages! Maybe we finished all of them?")
+            break
         for err in errs:
             if err is None:
                 continue

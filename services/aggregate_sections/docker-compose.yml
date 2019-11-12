@@ -8,6 +8,13 @@ services:
         command: "python3 aggregate.py 30 --section --equation --figure --table"
         environment:
             - DBCONNECT
+        networks:
+          - cosmosnet
+
+networks:
+  cosmosnet:
+      name: cosmosnet
+        
         
         
 

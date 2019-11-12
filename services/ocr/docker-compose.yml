@@ -3,9 +3,15 @@ services:
     ocr:
         build: .
         ipc: host
-        #command: "python3 ocr.py 10 --skip"
+        command: "python3 ocr.py 30 --skip"
         volumes:
             - .:/develop/
-        command: "tail -F /dev/null"
+#        command: "tail -F /dev/null"
         environment:
             - DBCONNECT
+        networks:
+          - cosmosnet
+
+networks:
+  cosmosnet:
+      name: cosmosnet

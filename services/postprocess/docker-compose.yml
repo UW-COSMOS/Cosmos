@@ -7,8 +7,14 @@ services:
         #volumes:
         #     - .:/develop/
         #    - .:/cosmos/
-        command: "tail -F /dev/null"
+#        command: "tail -F /dev/null"
         #    - ${INPUT_DIR}:/input/
         #    - ${OUTPUT_DIR}:/output/
         environment:
             - DBCONNECT
+        networks:
+          - cosmosnet
+
+networks:
+  cosmosnet:
+      name: cosmosnet

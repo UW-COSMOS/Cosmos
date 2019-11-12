@@ -318,6 +318,8 @@ def section_scan(db_section_insert_fn, db_equation_insert_fn, db_figure_insert_f
             if len(objs) == 0:
                 continue
             db_table_insert_fn(objs, client)
+    end_time = time.time()
+    logging.info(f'Exiting section aggregation. Time up: {end_time - start_time}')
 
 def section_insert_fn(objs, client):
     db = client.pdfs

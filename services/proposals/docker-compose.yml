@@ -9,3 +9,9 @@ services:
         #command: "tail -F /dev/null"
         environment:
             - DBCONNECT
+        networks:
+          - cosmosnet
+
+networks:
+  cosmosnet:
+      name: cosmosnet

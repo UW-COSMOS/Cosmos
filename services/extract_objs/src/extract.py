@@ -22,8 +22,8 @@ def load_pages(db, buffer_size):
     """
     """
     current_docs = []
-    
-    for doc in db.propose_pages.find({'postprocess': True, 'extract': False}, no_cursor_timeout=True):
+
+    for doc in db.propose_pages.find({'postprocess': True, "$or" : [{'extract': False}, {"extract" : {"$exists" : False}}]}, no_cursor_timeout=True):
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs
@@ -58,19 +58,23 @@ def extract_objs(page):
             page_num = str(page['page_num'])
             coords = bb
             logging.info(f'Found a table: {pdf_name}, {page_num}')
-            table_df = extract_table_from_obj(pdf_name, page_num, coords)
+            try:
+                table_df = extract_table_from_obj(pdf_name, page_num, coords)
+            except:
+                logging.warning(f"Issue extracting a table from {pdf_name}! Skipping.")
+
 
         tl_x, tl_y, br_x, br_y = bb
         obj_ocr = tess_df.loc[(tess_df['bottom'] <= br_y) & (tess_df['top'] >= tl_y) &
                           (tess_df['left'] >= tl_x) & (tess_df['right'] <= br_x)]
         feathered_bb = [max(bb[0]-2, 0), max(bb[1]-2, 0),
                         min(bb[2]+2, 1920), min(bb[3]+2, 1920)]
-        
+
         cropped_img = img.crop(feathered_bb)
         bytes_stream = io.BytesIO()
         cropped_img.save(bytes_stream, format='PNG')
         bstring = bytes_stream.getvalue()
-        
+
         words = obj_ocr['text']
         word_list = []
         for ind, word in words.iteritems():
@@ -113,6 +117,8 @@ def extract_scan(db_insert_fn, num_processes):
             logging.info('This batch has no objects')
             continue
         db_insert_fn(objs, batch, client)
+    end_time = time.time()
+    logging.info(f'Exiting object extraction. Total time: {end_time - start_time}')
 
 
 def mongo_insert_fn(objs, pages, client):

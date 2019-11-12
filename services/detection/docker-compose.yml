@@ -17,3 +17,9 @@ services:
         environment:
             - DBCONNECT
             - DEVICE
+        networks:
+          - cosmosnet
+
+networks:
+  cosmosnet:
+      name: cosmosnet
