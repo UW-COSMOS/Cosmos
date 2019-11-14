@@ -28,12 +28,11 @@ def is_picklable(obj):
       return False
     return True
 
-
 def load_docs(db, buffer_size):
     """
     """
     current_docs = []
-    for doc in db.pages.find():
+    for doc in db.pages.find({"proposal": None}):
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs
@@ -108,11 +107,23 @@ def propose(db_insert_fn):
     logging.info(f'Exiting proposal generation. Time up: {end_time - start_time}')
 
 def mongo_insert_fn(objs, client):
+    if len(objs) == 0:
+        logging.info("No new pages found.")
+        return
     db = client.pdfs
-    pages = db.propose_pages
+    pages = db.pages
+    propose_pages = db.propose_pages
     #result = pages.replace_one({'_id':ObjectId(record['_id'])}, obj, upsert=True)
-    result = pages.insert_many(objs)
-    logging.info(f"Inserted result: {result}")
+    try:
+        result = propose_pages.insert_many(objs)
+        logging.info(f"Inserted result: {result}")
+        update_result = pages.update_many({"_id": {"$in" : [i["_id"] for i in objs]}}, {"$set" : {"proposal" : True}}, upsert=False)
+        logging.info(f"Marking pages as proposed in pages collection result: {result}")
+    except pymongo.errors.BulkWriteError:
+        logging.warning("Error inserting objects! Maybe these propose_pages already exist?")
+
+
+
 
 
 @click.command()
