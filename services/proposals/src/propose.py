@@ -53,7 +53,7 @@ def run_page(page, db_insert_fn):
 
 #print(f"Pickle run_page: {is_picklable(run_page)}")
 
-def propose_doc(db_insert_fn, num_processes, multimachine=False, replica_count=1, pod_id=1):
+def propose_doc(db_insert_fn, num_processes, clean, multimachine=False, replica_count=1, pod_id=1):
     """
     """
     logging.info('Starting proposal generation process')
@@ -69,7 +69,7 @@ def propose_doc(db_insert_fn, num_processes, multimachine=False, replica_count=1
     for batch in load_docs(db, 100):
         logging.info('Loaded next batch. Running proposals')
         pages = Parallel(n_jobs=num_processes)(delayed(run_page)(page, db_insert_fn) for page in batch)
-        db_insert_fn(pages, client)
+        db_insert_fn(pages, client, clean)
 
     end_time = time.time()
     logging.info(f'Exiting proposal generation. Time up: {end_time - start_time}')
@@ -106,7 +106,7 @@ def propose(db_insert_fn):
     end_time = time.time()
     logging.info(f'Exiting proposal generation. Time up: {end_time - start_time}')
 
-def mongo_insert_fn(objs, client):
+def mongo_insert_fn(objs, client, clean):
     if len(objs) == 0:
         logging.info("No new pages found.")
         return
@@ -117,7 +117,10 @@ def mongo_insert_fn(objs, client):
     try:
         result = propose_pages.insert_many(objs)
         logging.info(f"Inserted result: {result}")
-        update_result = pages.update_many({"_id": {"$in" : [i["_id"] for i in objs]}}, {"$set" : {"proposal" : True}}, upsert=False)
+        if clean:
+            update_result = pages.update_many({"_id": {"$in" : [i["_id"] for i in objs]}}, {"$set" : {"proposal" : True, "bytes" : "", "resize_bytes" : ""}}, upsert=False)
+        else:
+            update_result = pages.update_many({"_id": {"$in" : [i["_id"] for i in objs]}}, {"$set" : {"proposal" : True}}, upsert=False)
         logging.info(f"Marking pages as proposed in pages collection result: {result}")
     except pymongo.errors.BulkWriteError:
         logging.warning("Error inserting objects! Maybe these propose_pages already exist?")
@@ -128,8 +131,9 @@ def mongo_insert_fn(objs, client):
 
 @click.command()
 @click.argument('num_processes')
-def click_wrapper(num_processes):
-    propose_doc(mongo_insert_fn, int(num_processes))
+@click.option('--clean/--no-clean', default=False)
+def click_wrapper(num_processes, clean):
+    propose_doc(mongo_insert_fn, int(num_processes), clean)
 
 
 if __name__ == '__main__':

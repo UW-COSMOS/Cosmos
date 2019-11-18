@@ -24,3 +24,5 @@ python3 propose.py 60
 ```
 
 `60` : Number of threads to use
+`--clean` : if included, then delete the page-level `bytes` and `resize_bytes`
+objects from the `pages` collection to save space
