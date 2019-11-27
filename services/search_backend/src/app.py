@@ -15,6 +15,7 @@ import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 from bson import json_util
 import base64
+import html
 import json
 from flask import jsonify, send_file
 from elasticsearch import Elasticsearch
@@ -65,6 +66,22 @@ def postprocess_result(result):
         result['table_df_tabulate'] = tabulate(pickle.loads(result['table_df']), headers='keys', tablefmt='psql')
         result['table_df'] = encoded.decode('ascii')
     return result
+
+@app.route('/search/preview')
+def download():
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    try:
+        _id = request.args.get('id', '')
+        obj_id = ObjectId(_id)
+        res = db.objects.find_one({'_id': obj_id})
+        table = tabulate(pickle.loads(res['table_df']), tablefmt='psql')
+        table = html.escape(table)
+        return f"<div><pre>{table}</pre></div>"
+
+    except TypeError as e:
+        logging.info(f'{e}')
+        abort(400)
 
 @app.route('/search/get_dataframe')
 def get_dataframe():
