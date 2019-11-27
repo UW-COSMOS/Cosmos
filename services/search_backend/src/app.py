@@ -9,12 +9,14 @@ from bson.objectid import ObjectId
 from flask import Flask, request, abort
 from flask.json import JSONEncoder
 import os
+from tabulate import tabulate
+from io import BytesIO
 import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 from bson import json_util
 import base64
 import json
-from flask import jsonify
+from flask import jsonify, send_file
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, connections, Q
 import re
@@ -58,8 +60,27 @@ def postprocess_result(result):
         del result['page_ocr_df']
     if 'table_df' in result and result['table_df'] is not None:
         encoded = base64.encodebytes(result['table_df'])
+        result['table_df_str'] = pickle.loads(result['table_df']).to_string()
+        result['table_df_csv'] = pickle.loads(result['table_df']).to_csv()
+        result['table_df_tabulate'] = tabulate(pickle.loads(result['table_df']), headers='keys', tablefmt='psql')
         result['table_df'] = encoded.decode('ascii')
     return result
+
+@app.route('/search/get_dataframe')
+def get_dataframe():
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    try:
+        _id = request.args.get('id', '')
+        obj_id = ObjectId(_id)
+        res = db.objects.find_one({'_id': obj_id})
+        buffer = BytesIO()
+        buffer.write(res["table_df"])
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, attachment_filename=f"{_id}.pickle")
+    except TypeError as e:
+        logging.info(f'{e}')
+        abort(400)
 
 @app.route('/search')
 def search():
