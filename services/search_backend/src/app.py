@@ -10,6 +10,7 @@ from flask import Flask, request, abort
 from flask.json import JSONEncoder
 import os
 from tabulate import tabulate
+from ast import literal_eval as make_tuple
 from io import BytesIO
 import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
@@ -264,6 +265,9 @@ def qa():
 
 PAGE_SIZE = 1
 
+# TODO: add POST to accept an object id and sets {good_box: bool, good_classification: bool}
+
+
 @app.route('/search/image/next_prediction')
 def pages():
     '''
@@ -271,7 +275,10 @@ def pages():
     client = MongoClient(os.environ["DBCONNECT"])
     db = client.pdfs
     page_num = int(request.args.get('pageNumber', 0))
-    curs = db.postprocess_pages.find().sort('_id').skip(PAGE_SIZE * page_num).limit(PAGE_SIZE)
+#    curs = db.propose_pages.find().sort('_id').skip(PAGE_SIZE * page_num).limit(PAGE_SIZE)
+    curs = db.propose_pages.aggregate([
+        {"$match" : {}},
+        {"$sample" : {"size" : 1}}])
     result_list = []
     for result in curs:
         result['_id'] = str(result['_id'])
@@ -284,6 +291,39 @@ def pages():
     results_obj = {'results': result_list}
     return jsonify(results_obj)
 
+@app.route('/search/object/lookup')
+def object_lookup():
+    '''
+    Look up object by pdf_name, page_num, and bbox
+    # TODO: could extend this to just accept a point if I get clever with the mongo query.
+
+    page_num
+    pdf_name
+    "bounding_box" : [
+        x1,
+        y1,
+        x2,
+        y2
+        ]
+
+    '''
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    pdf_name = request.args.get("pdf_name")
+    page_num = int(request.args.get('page_num'))
+    x, y = make_tuple(request.args.get("coords"))
+    result = db.objects.find_one({
+        "pdf_name" : pdf_name,
+        "page_num" : page_num,
+        "bounding_box.0": {"$lte" : x},
+        "bounding_box.1": {"$lte" : y},
+        "bounding_box.2": {"$gte" : x},
+        "bounding_box.3": {"$gte" : y}
+        })
+    result = postprocess_result(result)
+    return jsonify(result)
+
+# TODO: probably shouldn't hardcode these.
 @app.route('/search/tags/all')
 def tags():
     '''
