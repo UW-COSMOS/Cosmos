@@ -22,13 +22,14 @@ from joblib import Parallel, delayed
 from pymongo import MongoClient
 
 import camelot
-from utils import grouper
+from tableextractions.utils import grouper
 
 # Logging config
 logging.basicConfig(
 #                    filename = 'mylogs.log', filemode = 'w',
                     format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
-logging.getLogger("pdfminer").setLevel(logging.WARNING)
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
+logging.getLogger("camelot").setLevel(logging.ERROR)
 T = TypeVar('T')
 
 IMG_HEIGHT = IMG_WIDTH = 1920
@@ -166,7 +167,7 @@ def prepare_table_data(table: dict, df: bytes, flavor: str) -> list:
     return table
 
 
-def extract_tables(pdf_name: str, table_coords: str, table_page: str, lattice_params: str, stream_params: str) -> list:
+def extract_tables(pdf_name: str, table_coords: str, table_page: str, lattice_params: str, stream_params: str, pkl=True) -> list:
     """
     Extract each table using both Lattice and Stream. Compare and choose the best one.
     """
@@ -174,42 +175,26 @@ def extract_tables(pdf_name: str, table_coords: str, table_page: str, lattice_pa
 
     logs.append('Extracting tables')
 
-    try:
-        stream_params = json.load(open(stream_params))
-        tables_stream = camelot.read_pdf(pdf_name,
-                                         pages=table_page,
-                                         table_areas=[table_coords],
-                                         **stream_params
-                                         )
+    stream_params = json.load(open(stream_params))
+    tables = camelot.read_pdf(pdf_name,
+                                     pages=table_page,
+                                     table_regions=[table_coords],
+                                     **stream_params
+                                     )
 
-        lattice_params = json.load(open(lattice_params))
-        tables_lattice = camelot.read_pdf(pdf_name,
-                                          pages=table_page,
-                                          table_areas=[table_coords],
-                                          **lattice_params
-                                          )
+    if len(tables) == 0:
+        logs.append('No tables found')
+        return [None, None, logs, None, None]
+    logs.append('Extracted table')
+    table_df = tables[0].df
+    acc = tables[0].parsing_report['accuracy']
+    whitespace = tables[0].parsing_report['whitespace']
+    flavor = "Stream"
 
-        if tables_lattice.n == 0 and tables_stream.n == 0:
-            raise Exception('Table not detected')
+    if pkl:
+        table_df = pickle.dumps(table_df)
 
-        elif tables_lattice.n == 0 or tables_lattice[0].accuracy < tables_stream[0].accuracy:
-            logs.append('Extracted table')
-            table_df = tables_stream[0].df
-            flavor = "Stream"
-
-        else:
-            logs.append('Extracted table')
-            table_df = tables_lattice[0].df
-            flavor = "Lattice"
-
-    except Exception as e:
-        logs.append(f'An error occurred: {e}')
-        table_df = None
-        flavor = "NA"
-
-    pkld_df = pickle.dumps(table_df)
-
-    return [pkld_df, flavor, logs]
+    return [table_df, flavor, logs, acc, whitespace]
 
 
 def load_table_metadata(db: pymongo.database.Database, buffer_size: int = 50, tables_per_job: int = 10) -> list:

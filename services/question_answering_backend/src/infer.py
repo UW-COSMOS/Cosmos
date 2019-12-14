@@ -4,6 +4,7 @@ import glob
 import torch
 import uuid
 import json
+import logging
 
 module_path = os.path.abspath(os.path.join('pytorch-transformers'))
 if module_path not in sys.path:
@@ -38,6 +39,10 @@ tokenizer = tokenizer_class.from_pretrained(model_name_or_path, do_lower_case=Tr
 model = model_class.from_pretrained(model_path)
 model.to(device)
 
+verbose_logging = False
+
+output_prediction_file = "prediction"
+output_nbest_file = "nbest"
 
 def convert_to_squad_example(question, paragraph):
     return {'data':[{'title': 'custom_question', 'paragraphs': [{'context': paragraph, 'qas': [{'answers': [], 'question': question, 'id': str(uuid.uuid4())}]}]}]}
@@ -58,12 +63,10 @@ def load_example(question, paragraph):
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
     all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)
     all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)
-    all_cls_index = torch.tensor([f.cls_index for f in features], dtype=torch.long)
-    all_p_mask = torch.tensor([f.p_mask for f in features], dtype=torch.float)
     all_example_index = torch.arange(all_input_ids.size(0), dtype=torch.long)
     
     dataset = (all_input_ids, all_input_mask, all_segment_ids,
-                                all_example_index, all_cls_index, all_p_mask)
+                                all_example_index)
 
     return dataset, formatted_examples, features
 
@@ -72,35 +75,40 @@ def infer_qa(question, paragraph):
     #dataloader = DataLoader(dataset)
 
     #batch = iter(dataloader).next()
-    input_ids, input_mask, segment_ids, start_positions, end_positions, example_index = dataset
+    all_input_ids, all_input_mask, all_segment_ids, all_example_index = dataset
     model.eval()
-    input_ids = input_ids.to(device)
-    input_mask = input_mask.to(device)
-    segment_ids = segment_ids.to(device)
-    start_positions = start_positions.to(device)
-    end_positions = end_positions.to(device)
+    all_input_ids = all_input_ids.to(device)
+    all_input_mask = all_input_mask.to(device)
+    all_segment_ids = all_segment_ids.to(device)
 
-    batch_start_logits, batch_end_logits = model(input_ids, segment_ids, input_mask)
+    inputs = {'input_ids': all_input_ids, 'attention_mask' : all_input_mask, 'token_type_ids': all_segment_ids}
+    outputs = model(**inputs)
+    
+    all_results = []
+    for i, example_index in enumerate(all_example_index):
+        feature = features[example_index.item()]
+        unique_id = int(feature.unique_id)
+        all_results.append(RawResult(unique_id=unique_id,
+                                     start_logits=outputs[0][i].detach().cpu().tolist(),
+                                     end_logits=outputs[1][i].detach().cpu().tolist()))
 
-    start_logits = batch_start_logits[0].detach().cpu().tolist()
-    end_logits = batch_end_logits[0].detach().cpu().tolist()
-    eval_feature = features[0]
-    unique_id = int(eval_feature.unique_id)
-    all_results =[]
-    all_results.append(RawResult(unique_id=unique_id,
-                                 start_logits=start_logits,
-                                 end_logits=end_logits))
-
-    return write_predictions(
+    predictions = write_predictions(
         examples,
         features,
         all_results,
         n_best_size,
         max_answer_length,
         do_lower_case,
-        "temp1",
-        "temp2",
+        output_prediction_file,
+        output_nbest_file,
         "temp3",
-        False,
+        verbose_logging,
         version_2_with_negative,
         0.0)
+    
+    with open(output_nbest_file, "r") as reader:
+        probabilities = next(iter(json.load(reader).values()))[0]['probability']
+
+    logging.info(predictions)
+    
+    return list(predictions.values())[0], probabilities

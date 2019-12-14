@@ -31,7 +31,7 @@ const useStyles = makeStyles(theme => ({
 function Search() {
   const classes = useStyles();
   const [values, setValues] = React.useState({
-    type: 'Body text',
+    type: 'Section',
     query: '',
   });
   const [results, setResults] = React.useState([])
@@ -77,10 +77,10 @@ function Search() {
           id: 'type-inp'
         }}
     >
-      <MenuItem value={'Body text'}>Text</MenuItem>
-      <MenuItem value={'equation'}>Equations</MenuItem>
-      <MenuItem value={'table'}>Tables</MenuItem>
-      <MenuItem value={'figure'}>Figures</MenuItem>
+      <MenuItem value={'Section'}>Text</MenuItem>
+      <MenuItem value={'EquationContext'}>Equations</MenuItem>
+      <MenuItem value={'TableContext'}>Tables</MenuItem>
+      <MenuItem value={'FigureContext'}>Figures</MenuItem>
     </Select>
     </FormControl>
     <SearchBar enter_fn={onEnter}></SearchBar>
