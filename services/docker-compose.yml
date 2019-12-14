@@ -1,0 +1,118 @@
+version: '2.3'
+services:
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+    container_name: es01
+    environment:
+      - node.name=es01
+      - discovery.seed_hosts=es02
+      - cluster.initial_master_nodes=es01,es02
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata01:/ssd/ankur/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - esnet
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+
+  es02:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+    container_name: es02
+    environment:
+      - node.name=es02
+      - discovery.seed_hosts=es01
+      - cluster.initial_master_nodes=es01,es02
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata02:/ssd/ankur/elasticsearch/data
+    networks:
+      - esnet
+
+  ingest_elastic:
+      image: ankurgos/ingest_elastic:latest
+      ipc: host
+      command: "/scripts/wait_for_elastic.sh python ingest_elastic.py --no-objects --sections --no-code --tables --figures --equations" 
+      networks:
+        - esnet
+      volumes:
+        - ./scripts:/scripts/
+      environment:
+          - DBCONNECT
+  qa:
+      image: ankurgos/qa:latest
+      ipc: host
+      runtime: nvidia
+      networks:
+        - esnet
+      command: 
+          - /bin/bash
+          - -c
+          - |
+            /scripts/wait_for_elastic.sh
+            export LC_ALL=C.UTF-8
+            export LANG=C.UTF-8
+            flask run --host=0.0.0.0 --port=4000
+      environment:
+          - SQUAD_DIR=../squad
+          - FLASK_APP=app.py
+          - FLASK_ENV=development
+      ports:
+          - 4000:4000
+
+  search_backend:
+      image: ankurgos/search_backend:latest
+      ipc: host
+      command: "/scripts/wait_for_elastic.sh flask run --host=0.0.0.0 --port=5001"
+      networks:
+        - esnet
+      volumes:
+        - ./scripts:/scripts
+      environment:
+          - DBCONNECT
+          - FLASK_APP=app.py
+          - FLASK_ENV=development
+      ports:
+          - 5001:5001
+
+  word2vec_endpoint:
+      image: ankurgos/word2vec_endpoints:latest
+      ipc: host
+      container_name: word2vec_endpoint
+      command: "flask run --host=0.0.0.0 --port=5003"
+      networks:
+        - esnet
+      environment:
+          - DBCONNECT
+          - FLASK_APP=app.py
+          - FLASK_ENV=development
+      ports:
+          - 5003:5003
+      volumes:
+          - ./word_embeddings/data:/app/data
+
+volumes:
+  esdata01:
+    driver: local
+  esdata02:
+    driver: local
+
+networks:
+  esnet:

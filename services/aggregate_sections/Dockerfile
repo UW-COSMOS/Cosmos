@@ -6,7 +6,12 @@ FROM python:3.7
 # Pillow requirements
 #run apt install build-base jpeg-dev zlib-dev
 
-RUN pip install elasticsearch_dsl pymongo click
+COPY requirements.txt /
+
+#For Debugging purpose
+RUN apt-get update && apt-get -y install vim
+
+RUN pip install -r /requirements.txt
 
 COPY src/ /app
 WORKDIR /app

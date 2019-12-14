@@ -1,6 +1,7 @@
 exp/data/*
 output/
 exp/weights/*
+.cache/
 html_tmp/
 xml/
 *.pyc
@@ -20,3 +21,7 @@ redis_data/
 weights/
 runs
 final_data
+build/
+dist/
+*.egg-info/
+services/tableextractions/build/

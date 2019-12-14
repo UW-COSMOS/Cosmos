@@ -10,8 +10,8 @@ def query():
     try:
         query = request.args.get('query', '')
         candidate = request.args.get('candidate','')
-        logging.debug(query, candidate)	
-        answer = infer_qa(query, candidate)
-        return answer
-    except:
+        answer, probability = infer_qa(query, candidate)
+        return {"answer":answer, "probability":probability}
+    except Exception as e:
+        logging.debug(e)
         abort(400)
