@@ -33,7 +33,7 @@ def ingest_pdf(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_f
         pdf_obj = {}
         logs = []
         pdf_obj, err = load_pdf_metadata(pdf_path, pdf_obj)
-        if not err: 
+        if not err:
             logs.append(err)
         pdf_name = pdf_obj['pdf_name']
         pdf_path = os.path.abspath("%s/%s" % (pdf_dir, pdf_name))
@@ -177,13 +177,15 @@ def load_pdf_metadata(pdf_path, current_obj):
     df = limit = None
     err = ''
     try:
-        df, limit = parse_pdf(pdf_path)
+        df, limit, content = parse_pdf(pdf_path)
     except TypeError as e:
         err += f'{e}\n'
         df = limit = None
+        content = ''
     except AttributeError as e:
         err += f'{e}\n'
         df = limit = None
+        content = ''
     if df is not None:
         df = df.to_dict()
         # Hack here: throw this df into json and back
@@ -196,6 +198,7 @@ def load_pdf_metadata(pdf_path, current_obj):
         seq = rf.read()
         current_obj['bytes'] = seq
     current_obj['metadata'] = df
+    current_obj['unicode'] = content
     current_obj['metadata_dimension'] = limit
     current_obj['pdf_name'] = pdf_name
     current_obj['event_stream'] = ['metadata']

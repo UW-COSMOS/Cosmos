@@ -5,7 +5,8 @@ from pdfminer.layout import LTTextBox, LTText, LTTextLine, LTChar
 from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.layout import LAParams
-from pdfminer.converter import PDFPageAggregator
+from pdfminer.converter import PDFPageAggregator, TextConverter
+import io
 
 import pandas as pd
 
@@ -35,6 +36,9 @@ def parse_pdf(fp):
         rsrcmgr = PDFResourceManager()
         device = PDFPageAggregator(rsrcmgr=rsrcmgr, laparams=laparams)
         interpreter = PDFPageInterpreter(rsrcmgr, device)
+        unicode_extraction = io.StringIO()
+        unicode_device = TextConverter(rsrcmgr=rsrcmgr, outfp=unicode_extraction, laparams=laparams, imagewriter=None)
+        unicode_interpreter = PDFPageInterpreter(rsrcmgr, unicode_device)
         texts = []
         text = ''
         positions = []
@@ -42,6 +46,7 @@ def parse_pdf(fp):
         pages = []
         for idx, page in enumerate(PDFPage.create_pages(doc)):
             interpreter.process_page(page)
+            unicode_interpreter.process_page(page)
             layout = device.get_result()
             for child in layout:
                 if isinstance(child, LTTextBox):
@@ -58,7 +63,7 @@ def parse_pdf(fp):
                                 text = ''
                                 pos = (10000,10000,-1,-1)
     if len(positions) == 0:
-        return None, None                      
+        return None, None, ''
     x1, y1, x2, y2 = list(zip(*positions))
     df = pd.DataFrame({
         "text": texts,
@@ -68,4 +73,4 @@ def parse_pdf(fp):
         "y2":y2,
         "page": pages
                        })
-    return df, layout.bbox
+    return df, layout.bbox, unicode_extraction.getvalue()
