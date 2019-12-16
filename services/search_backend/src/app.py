@@ -331,3 +331,68 @@ def tags():
     '''
     resp = {"v":1,"license":"MIT","data":[{"tag_id":1,"name":"Body Text","description":"The primary text of an article","color":"#aaaaaa","created":"2019-04-02T20:04:30.849Z"},{"tag_id":2,"name":"Figure","description":"A chart, graph, or other graphical display","color":"#a15231","created":"2019-04-02T20:04:30.849Z"},{"tag_id":3,"name":"Figure Note","description":"A footnote explanation of specific content in a figure","color":"#801515","created":"2019-04-02T20:04:30.849Z"},{"tag_id":4,"name":"Figure Caption","description":"A text description associated with an entire figure","color":"#c45778","created":"2019-04-02T20:04:30.849Z"},{"tag_id":5,"name":"Table","description":"A tabular representation of information","color":"#432F75","created":"2019-04-02T20:04:30.849Z"},{"tag_id":6,"name":"Table Note","description":"A footnote to explain a subset of table content","color":"#162c57","created":"2019-04-02T20:04:30.849Z"},{"tag_id":7,"name":"Table Caption","description":"A text description associated with an entire table","color":"#73548f","created":"2019-04-02T20:04:30.849Z"},{"tag_id":8,"name":"Page Header","description":"Document-wide summary information, including page no., at top of page","color":"#2a7534","created":"2019-04-02T20:04:30.849Z"},{"tag_id":9,"name":"Page Footer","description":"Document-wide summary information, including page no., at bottom of page","color":"#345455","created":"2019-04-02T20:04:30.849Z"},{"tag_id":10,"name":"Section Header","description":"Text identifying section within text of document","color":"#1aa778","created":"2019-04-02T20:04:30.849Z"},{"tag_id":11,"name":"Equation","description":"An equation","color":"#2C4770","created":"2019-04-02T20:04:30.849Z"},{"tag_id":12,"name":"Equation label","description":"An identifier for an equation","color":"#4D658D","created":"2019-04-02T20:04:30.849Z"},{"tag_id":13,"name":"Abstract","description":"Abstract of paper","color":"#D4A26A","created":"2019-04-02T20:04:30.849Z"},{"tag_id":14,"name":"Reference text","description":"References to other works","color":"#804D15","created":"2019-04-02T20:04:30.849Z"},{"tag_id":15,"name":"Other","description":"Textual metadata and image content that is not semantically meaningful","color":"#96990c","created":"2019-04-02T20:04:30.849Z"},{"tag_id":16,"name":"Equation definition","description":"An equation definition","color":"#23477e","created":"2019-04-02T20:04:30.849Z"},{"tag_id":17,"name":"Symbol","description":"A symbol","color":"#4c2c70","created":"2019-04-02T20:04:30.849Z"},{"tag_id":18,"name":"Symbol definition","description":"A symbol definition","color":"#ff0000","created":"2019-04-02T20:04:30.849Z"}]}
     return jsonify(resp)
+
+@app.route('/search/page/<xdd_docid>/<page_num>')
+def page(xdd_docid, page_num):
+    '''
+    '''
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    curs = db.propose_pages.find({"pdf_name": f"{xdd_docid}.pdf", "page_num": int(page_num)})
+    result_list = []
+    for result in curs:
+        result['_id'] = str(result['_id'])
+        result['pdf_id'] = str(result['pdf_id'])
+        del result['bytes']
+        encoded = base64.encodebytes(result['resize_bytes'])
+        result['resize_bytes'] = encoded.decode('ascii')
+        del result['ocr_df']
+        result_list.append(result)
+    results_obj = {'results': result_list}
+    return jsonify(results_obj)
+
+@app.route('/search/objects/<xdd_docid>/<page_num>')
+def objects(xdd_docid, page_num):
+    '''
+    '''
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    curs = db.objects.find({"pdf_name": f"{xdd_docid}.pdf", "page_num": int(page_num)})
+    result_list = []
+    for result in curs:
+        result_list.append(postprocess_result(result))
+    results_obj = {'results': result_list}
+    return jsonify(results_obj)
+
+@app.route('/search/object/annotate', methods=['POST'])
+def object_annotate():
+    '''
+    '''
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    object_id = request.args.get("object_id", None)
+    note = request.args.get("note", None)
+    proposal_success = request.args.get("proposal_success", None)
+    classification_success = request.args.get("classification_success", None)
+    if object_id is None:
+        abort(400)
+    if note is None and proposal_success is None and classification_success is None:
+        abort(400)
+
+    if proposal_success is not None:
+        if proposal_success.lower()=="true":
+            proposal_success = True
+        elif proposal_success.lower()=="false":
+            proposal_success = False
+
+    if classification_success is not None:
+        if classification_success.lower()=="true":
+            classification_success = True
+        elif classification_success.lower()=="false":
+            classification_success = False
+
+    db.objects.update({"_id": ObjectId(object_id)},
+            {"$set" : {"note" : note, "classification_success": classification_success, "proposal_success" : proposal_success}})
+
+    return json.dumps({'success':True}), 200, {'ContentType':'application/json'}
+
