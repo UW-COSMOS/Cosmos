@@ -1,6 +1,6 @@
 version: "2.3"
 services:
-    search_backend:
+    s_backend:
         build: .
         ipc: host
         container_name: search_backend

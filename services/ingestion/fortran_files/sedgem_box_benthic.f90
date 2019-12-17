@@ -11,29 +11,38 @@ MODULE sedgem_box_benthic
     USE sedgem_lib
     IMPLICIT NONE
     
+    real NC1                                    ! TOC || first N/C(mol/mol)
+    real dum_THAA                               ! THAA 
+    real dum_swiconc_SO4                    ! SO4 at SWI (mol/cm3)
+    real dum_swiconc_H2S                    ! H2S at SWI (mol/cm3)
+    real dum_swiconc_NO3                    ! NO3 at SWI (mol/cm3)
+    real dum_swiconc_NH4                    ! NH4 at SWI (mol/cm3)
+    real dum_swiconc_PO4                    ! PO4 at SWI (mol/cm3)
+    real irrigationFactor                       !irrigation factor (-)
+    real dispFactor                             !dispersion factor (-)
+    real zbio                                   ! bioturbation depth (cm)
+    real w                                      ! burial velocity  (cm/yr)
+    real por                                    ! porosity (-)
+    real tort                                   ! tortuosity (-)
+    real NC2                                    ! TOC || second N/C(mol/mol)
+    real PC1                                    ! TOC || first P/C(mol/mol)
+    real PC2                                    ! TOC || second P/C(mol/mol)
+    real dum_swiconc_O2                     ! O2  at SWI (mol/cm3)
+
+
     !sediment characteristics
     real rho_sed                                ! sediment density (g/cm3)
     real wdepth                                 ! water depth (m)
-    real w                                      ! burial velocity  (cm/yr)
     real z0, zox                                ! surface
-    real zbio                                   ! bioturbation depth (cm)
 
     real zinf                                   !Inifinity (cm)
     real Dbio                                   !bioturbation coefficient (cm2/yr)
     real Dunbio                                 ! 2nd diffusion coefficient in case used for 2nd Layer
-    real por                                    !porosity (-)
-    real tort                                   !tortuosity (-)
-    real irrigationFactor                       !irrigation factor (-)
-    real dispFactor                             !dispersion factor (-)
 
     !stoichiometric factors
     real X_C, Y_N, Z_P
     real SD                                     !volume factor solid->dissolved phase
     real OC                                     !O2/C (mol/mol)
-    real NC1                                    !N/C first TOC fraction (mol/mol)
-    real NC2                                    !N/C second TOC fraction (mol/mol)
-    real PC1                                    !P/C first TOC fraction (mol/mol)
-    real PC2                                    !P/C second TOC fraction (mol/mol)
     real SO4C                                   !SO4/C (mol/mol)
     real O2H2S                                  !O2/H2S O2 needed to oxidize H2S (mol/mol) 
     real DICC1                                  !DIC/C until zSO4 (mol/mol)
@@ -62,12 +71,6 @@ MODULE sedgem_box_benthic
     real dum_POC1_conc_swi_nonbio           !TOC flux at SWI (mol/(cm2 yr)) -> (mol/cm3 bulk phase) not taking into account biodiffusion loss
     real dum_POC2_conc_swi_nonbio           !TOC flux at SWI (mol/(cm2 yr)) -> (mol/cm3 bulk phase) not taking into account biodiffusion loss
     real dum_POC_total_flux_zinf             !total TOC flux at SWI (mol/(cm2 yr)) -> (mol/cm3 bulk phase)
-    real dum_swiconc_O2                     ! O2 concentration at SWI (mol/cm3)
-    real dum_swiconc_SO4                    ! SO4 concentration at SWI (mol/cm3)
-    real dum_swiconc_H2S                    ! H2S concentration at SWI (mol/cm3)
-    real dum_swiconc_NO3                    ! NO3 concentration at SWI (mol/cm3)
-    real dum_swiconc_NH4                    ! NH4 concentration at SWI (mol/cm3)
-    real dum_swiconc_PO4                    !PO4 concentration at SWI (mol/cm3)
     real dum_swiflux_M                      ! flux of M to the sediment (mol/(cm2*yr)) -> is converted into concentration (mol/cm3)
     real dum_swiconc_DIC                    ! DIC concentration at SWI (mol/cm3)
     real dum_swiconc_ALK                    ! ALK concentration at SWI (mol/cm3)

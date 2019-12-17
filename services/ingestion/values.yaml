@@ -3,13 +3,14 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: ankurgos/ingestion
-  tag: test
+  repository: sverma25/ingestion
+  tag: v1.0
   pullPolicy: Always
 
 # Path to directory to ingest. This will be mounted inside the docker instance at /input
 #pdfDir: /Users/ankur/Projects/Cosmos/cosmos/data/test_docs
-pdfDir: /Users/ankur/Projects/Cosmos/services/ingestion/tests/pdfs
+#pdfDir: /Users/ankur/Projects/Cosmos/services/ingestion/tests/pdfs
+pdfDir: /ssd/sahil/Cosmos/cosmos/data/test_docs/
 
 mongouser: root
 mongopwd: password

@@ -6,6 +6,4 @@ services:
         volumes:
             - ${INPUT_DIR}:/input/
         command: "python3 pdf_ingestion.py /input 30 --skip"
-        environment:
-            - DBCONNECT
 

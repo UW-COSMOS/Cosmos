@@ -1,0 +1,13 @@
+version: "2.3"
+services:
+    extract_objects:
+        build: .
+        ipc: host
+        command: "python3 extract.py 30"
+        environment:
+            - DBCONNECT
+        #volumes:
+        #    - .:/develop/
+        #command: tail -F anything
+        
+

@@ -20,6 +20,7 @@ from pymongo import MongoClient
 import pymongo
 from bson.objectid import ObjectId
 import json
+
 from joblib import Parallel, delayed
 
 
@@ -64,7 +65,6 @@ def do_skip(pdf_name):
     return pdf_collection.count_documents({'pdf_name': pdf_name}, limit=1) != 0
 
 
-
 def run_pdf_ingestion(pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, n_jobs, skip):
     """
     Entry point for ingesting PDF documents
@@ -72,6 +72,7 @@ def run_pdf_ingestion(pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, 
 
     logging.info('Running ingestion')
     start_time = time.time()
+
     pdf_paths = glob.glob(os.path.join(pdf_dir, '*.pdf'))
     logging.info(f'Ingesting {len(pdf_paths)} pdfs')
     logs = Parallel(n_jobs=n_jobs)(delayed(ingest_pdf)(pdf_path, pdf_dir, db_insert_fn, db_insert_pages_fn, subprocess_fn, skip) for pdf_path in pdf_paths)
@@ -107,6 +108,7 @@ def run_ghostscript(pdf_path, img_tmp):
             logging.warning("Ghostscript err: ")
             logging.warning(err)
 
+
 def insert_pages_mongo(pages):
     """
     Insert pdfs into mongodb
@@ -116,6 +118,7 @@ def insert_pages_mongo(pages):
     page_collection = db.pages
     result = page_collection.insert_many(pages)
     return f'Inserted pages: {result}'
+
 
 def insert_pdf_mongo(pdf):
     """
@@ -133,6 +136,7 @@ def insert_pdf_mongo(pdf):
         except pymongo.errors.DocumentTooLarge as e:
             raise e
     return f"Inserted pdf : {result}"
+
 
 def load_page_data(img_dir, current_obj):
     """
@@ -196,6 +200,7 @@ def load_pdf_metadata(pdf_path, current_obj):
     current_obj['pdf_name'] = pdf_name
     current_obj['event_stream'] = ['metadata']
     return current_obj, err
+
 
 @click.command()
 @click.argument('pdf_dir')

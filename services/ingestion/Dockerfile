@@ -19,5 +19,5 @@ RUN pip install -r /requirements.txt
 #COPY tests/pdfs /test
 
 COPY src/ /app
-WORKDIR /app
 
+WORKDIR /app

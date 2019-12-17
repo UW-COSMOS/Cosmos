@@ -8,14 +8,14 @@ import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 from joblib import Parallel, delayed
 import click
-from xgboost_model.inference import run_inference
+from xgboost_model.inference import run_inference, PostprocessException
 import os
 
 def load_detected_pages(db, buffer_size):
     """
     """
     current_docs = []
-    for doc in db.ocr_pages.find():
+    for doc in db.propose_pages.find({'postprocess': None, 'ocr': True}, no_cursor_timeout=True):
         current_docs.append(doc)
         if len(current_docs) == buffer_size:
             yield current_docs
@@ -35,26 +35,32 @@ def postprocess(db_insert_fn, num_processes, weights_pth, skip):
     logging.info(f'Connected to client: {client}.')
     db = client.pdfs
     for batch in load_detected_pages(db, 100):
-        if skip:
-            batch = [page for page in batch if not do_skip(page, client)]
-            if len(batch) == 0:
-                continue
         logging.info('Loaded next batch. Running postprocessing')
-        pages = Parallel(n_jobs=num_processes)(delayed(run_inference)(page, weights_pth) for page in batch)
-        #logging.info(pages) 			
+        try:
+            pages = Parallel(n_jobs=num_processes)(delayed(run_inference)(page, weights_pth) for page in batch)
+        except PostprocessException as e:
+            logging.error(f'Postprocessing error in referenced page: {e.page}')
+            logging.error(f'Original Exception: {e.original_exception}')
+            continue
+
         db_insert_fn(pages, client)
     end_time = time.time()
     logging.info(f'Exiting post-processing. Time up: {end_time - start_time}')
 
 def mongo_insert_fn(objs, client):
     db = client.pdfs
-    try:
-        result = db.postprocess_pages.insert_many(objs)
-        logging.info(f"Inserted result: {result}")
-    except pymongo.errors.BulkWriteError:
-        for obj in objs:
-            result = db.detect_pages.replace_one({'_id': obj['_id']}, obj, upsert=True)
-            logging.info(f"Inserted result: {result}")
+    for obj in objs:
+        try:
+            result = db.propose_pages.update_one({'_id': obj['_id']},
+                                             {'$set':
+                                                {
+                                                    'pp_detected_objs': obj['pp_detected_objs'],
+                                                    'postprocess': True
+                                                }
+                                             }, upsert=False)
+            logging.info(f'Updated result: {result}')
+        except pymongo.errors.WriterError as e:
+            logging.error(f'Document write error: {e}\n Document id: obj["_id"]')
 
 @click.command()
 @click.argument("num_processes")
