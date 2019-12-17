@@ -1,0 +1,31 @@
+version: '3'
+services:
+  ingest_mongo:
+    image: mongo:4.0.11
+    container_name: ingest_mongo
+    volumes:
+      - ${PWD}/cosmos_visualizer_sample.zip:/dump/cosmos_visualizer_sample.zip
+#    ports:
+#      - 27017:27017
+    networks:
+      - esnet
+    environment:
+      - DBCONNECT=mongodb://mongo:27017/pdfs?authSource=admin
+#    command: "sleep 30"
+    command: "sh -c 'mongorestore --uri=$$DBCONNECT --archive=/dump/cosmos_visualizer_sample.zip --gzip;'"
+
+  ingest_elastic:
+    build: elasticsearch
+    depends_on: 
+      - ingest_mongo
+    command: "python ingest_elastic.py" # probably won't work first time, since mongo is getting populated
+    networks:
+      - esnet
+    environment:
+      - DBCONNECT=mongodb://mongo:27017/pdfs?authSource=admin
+#      command: bash -c "while ping -c1 mongo_ingest &>/dev/null; do echo sleep more; sleep 1; done; echo Huzzah && python ingest_elastic.py"
+# command: bash -c "while ping -c1 ingest_mongo; do echo sleep more; sleep 1; done; echo Huzzah && python ingest_elastic.py"
+# command: 
+       
+networks:
+  esnet:

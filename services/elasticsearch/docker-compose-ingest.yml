@@ -13,4 +13,4 @@ services:
 networks:
   default:
     external:
-      name: elasticsearch_esnet
+      name: services_esnet

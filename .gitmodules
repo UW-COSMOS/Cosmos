@@ -1,0 +1,3 @@
+[submodule "services/visualizer"]
+	path = services/visualizer
+	url = https://github.com/UW-COSMOS/cosmos-visualizer/
