@@ -1,66 +1,5 @@
 version: '3'
 services:
-  mongo:
-    image: mongo:4.0.11
-    container_name: mongo
-    volumes:
-      - mongodata:/data/db/
-#    ports:
-#      - 27017:27017
-    networks:
-      - esnet
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:27017"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-
-  es01:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
-    container_name: es01
-    environment:
-      - node.name=es01
-      - discovery.seed_hosts=es02
-      - cluster.initial_master_nodes=es01,es02
-      - cluster.name=docker-cluster
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - esdata01:/ssd/ankur/elasticsearch/data
-#    ports:
-#      - 9200:9200
-    networks:
-      - esnet
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-
-
-  es02:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
-    container_name: es02
-    environment:
-      - node.name=es02
-      - discovery.seed_hosts=es01
-      - cluster.initial_master_nodes=es01,es02
-      - cluster.name=docker-cluster
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - esdata02:/ssd/ankur/elasticsearch/data
-    networks:
-      - esnet
-
   visualizer:
     build: visualizer/frontend
     environment:
@@ -68,6 +7,8 @@ services:
       # local environment
       - DEBUG=1
       - APPMODE=PREDICTION
+      - PUBLIC_URL=./
+      - API_BASE_URL=./search
     volumes:
       - visualizer_dist:/user/dist
       - ./visualizer/frontend/src:/user/src
@@ -75,7 +16,7 @@ services:
     depends_on:
       - search_backend
     networks:
-      - esnet
+      - cosmosnet
 
   gateway:
     image: nginx
@@ -88,39 +29,31 @@ services:
       - visualizer_dist:/frontend:ro
       - ./visualizer/frontend/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
-      - esnet
+      - cosmosnet
 
   search_backend:
     build: search_backend
     ipc: host
     container_name: search_backend
     command: "flask run --host=0.0.0.0 --port=5001"
-    depends_on:
-      - es01
-      - es02
-
-    #volumes:
-    #    - .:/develop/
-    #command: "tail -F /dev/null"
+#    depends_on:
+#      - es01
+#      - es02
     environment:
-        - DBCONNECT=mongodb://mongo:27017/pdfs?authSource=admin
+        - DBCONNECT=mongodb://cosmos:password@mongo-test:27017
         - FLASK_APP=app.py
         - FLASK_ENV=development
 #    ports:
 #        - 5001:5001
     networks:
-      - esnet
+      - cosmosnet
 
 
 
 volumes:
-  esdata01:
-    driver: local
-  esdata02:
-    driver: local
-  mongodata:
-    driver: local
   visualizer_dist:
 
 networks:
-  esnet:
+  cosmosnet:
+    external:
+      name: cosmosnet
