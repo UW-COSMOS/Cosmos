@@ -5,4 +5,10 @@ pdfminer.six
 chardet
 pillow
 joblib
+falcon
+click
+mysqlclient
+sqlalchemy
+gunicorn
+
 
