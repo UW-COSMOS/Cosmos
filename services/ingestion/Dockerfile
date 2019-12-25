@@ -1,16 +1,11 @@
-FROM python:3.7-alpine
+FROM python:3.7
 
-# Install bash and vim
-RUN apk add bash vim
 
+RUN apt-get update
 # Ghostscript
-RUN apk add ghostscript
+RUN apt-get install -y ghostscript gcc default-libmysqlclient-dev
 
-# Pillow requirements
-run apk add build-base jpeg-dev zlib-dev
-
-COPY requirements.txt /
-
+COPY ingestion/requirements.txt /
 RUN pip install -r /requirements.txt
 
 
@@ -18,6 +13,7 @@ RUN pip install -r /requirements.txt
 
 #COPY tests/pdfs /test
 
-COPY src/ /app
+COPY ingestion/src/ /app
+COPY database/schema.py /app
 
-WORKDIR /app
+WORKDIR /

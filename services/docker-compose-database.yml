@@ -7,32 +7,42 @@ networks:
 
 services:
     database:
-        image: mariadb
-        restart: always
-        deploy:
-            mode: replicated
-            replicas: 1
-            placement:
-                constraints:
-                    - node.hostname == cosmos0000.chtc.wisc.edu
+        image: mysql
+        command: mysqld --default-authentication-plugin=mysql_native_password
         environment:
           - MYSQL_ROOT_PASSWORD
           - MYSQL_USER
           - MYSQL_PASSWORD
+          - MYSQL_DATABASE
         networks:
             swarm_network:
+        volumes:
+            - ${DATABASE_DIR}:/var/lib/mysql
 
     adminer:
         image: adminer
-        restart: always
-        deploy:
-            mode: replicated
-            replicas: 1
-            placement:
-                constraints:
-                    - node.hostname == cosmos0000.chtc.wisc.edu
         ports:
             - 8080:8080
 
         networks:
             swarm_network:
+
+    webserver:
+        image: nginx:1.17.6
+        networks:
+            swarm_network:
+        ports:
+            - 8081:80
+
+    ingestion:
+        image: ingestion:latest
+        networks:
+            swarm_network:
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+        command: "gunicorn -b 0.0.0.0:8000 app.app"
+        ports:
+            - 8000:8000
+
+
