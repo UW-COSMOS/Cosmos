@@ -1,0 +1,11 @@
+version: "2.3"
+services:
+    w2v:
+        build: .
+        ipc: host
+        #command: "python3 embeddings.py 30"
+        volumes:
+            - .:/develop/
+        command: "tail -F /dev/null"
+        environment:
+            - DBCONNECT
