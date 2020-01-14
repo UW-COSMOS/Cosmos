@@ -71,7 +71,7 @@ RUN pip install numpy==1.15.4 \
         opencv-python \
         pascal-voc-writer \
         imgaug \
-        Pillow \
+        Pillow==6.1 \
         redis \
         sqlalchemy
 
