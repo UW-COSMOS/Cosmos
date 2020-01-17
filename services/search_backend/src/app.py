@@ -4,6 +4,7 @@ Some endpoints
 
 import pickle
 import pymongo
+import yaml
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from flask import Flask, request, abort
@@ -318,10 +319,26 @@ def object_lookup():
         "bounding_box.0": {"$lte" : x},
         "bounding_box.1": {"$lte" : y},
         "bounding_box.2": {"$gte" : x},
+        "bounding_box.3":  {"$gte" : y}
+        })
+    result = postprocess_result(find_object(pdf_name, page_num, x, y))
+    return jsonify(result)
+
+def find_object(pdf_name, page_num, x, y):
+    client = MongoClient(os.environ["DBCONNECT"])
+    db = client.pdfs
+    pdf_name = request.args.get("pdf_name")
+    page_num = int(request.args.get('page_num'))
+    x, y = make_tuple(request.args.get("coords"))
+    result = db.objects.find_one({
+        "pdf_name" : pdf_name,
+        "page_num" : page_num,
+        "bounding_box.0": {"$lte" : x},
+        "bounding_box.1": {"$lte" : y},
+        "bounding_box.2": {"$gte" : x},
         "bounding_box.3": {"$gte" : y}
         })
-    result = postprocess_result(result)
-    return jsonify(result)
+    return result
 
 # TODO: probably shouldn't hardcode these.
 @app.route('/search/tags/all')
@@ -364,35 +381,52 @@ def objects(xdd_docid, page_num):
     results_obj = {'results': result_list}
     return jsonify(results_obj)
 
-@app.route('/search/object/annotate', methods=['POST'])
+
+with open('annotations_allowed.yml') as f:
+    ANNOTATIONS_ALLOWED = yaml.load(f, Loader=yaml.FullLoader)
+
+@app.route('/search/object/annotate', methods=['POST', 'GET'])
 def object_annotate():
     '''
     '''
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
-    object_id = request.args.get("object_id", None)
-    note = request.args.get("note", None)
-    proposal_success = request.args.get("proposal_success", None)
-    classification_success = request.args.get("classification_success", None)
-    if object_id is None:
-        abort(400)
-    if note is None and proposal_success is None and classification_success is None:
-        abort(400)
+    if request.method == "GET":
+        return jsonify(ANNOTATIONS_ALLOWED)
 
-    if proposal_success is not None:
-        if proposal_success.lower()=="true":
-            proposal_success = True
-        elif proposal_success.lower()=="false":
-            proposal_success = False
+    if request.method == "POST":
+        client = MongoClient(os.environ["DBCONNECT"])
+        db = client.pdfs
 
-    if classification_success is not None:
-        if classification_success.lower()=="true":
-            classification_success = True
-        elif classification_success.lower()=="false":
-            classification_success = False
+        object_id = request.args.get("object_id", None)
+        pdf_name = request.args.get("pdf_name", None)
+        page_num = int(request.args.get('page_num', -1))
+        try:
+            x, y = make_tuple(request.args.get("coords"))
+        except:
+            x, y = None
 
-    db.objects.update({"_id": ObjectId(object_id)},
-            {"$set" : {"note" : note, "classification_success": classification_success, "proposal_success" : proposal_success}})
+        if object_id is None and (x is None or y is None or pdf_name is None or page_num==-1):
+            abort(400)
 
-    return json.dumps({'success':True}), 200, {'ContentType':'application/json'}
+        # get objectid from coords
+        object_id = find_object(pdf_name, page_num, x, y)["_id"]
+
+        success = False
+        print(type(request.args))
+        for k, v in request.args.items():
+            if k not in ANNOTATIONS_ALLOWED.keys(): continue
+
+            atype = ANNOTATIONS_ALLOWED[k]
+            if atype == "text" :
+                pass
+            elif atype == "boolean":
+                if v.lower() == "true" :
+                    v = True
+                elif v.lower() == "false" :
+                    v = False
+
+            res = db.objects.update_one({"_id": ObjectId(object_id)},
+                    {"$set" : {k: v}})
+            success = success or (res.modified_count >= 1)
+
+        return json.dumps({'success':success}), 200, {'ContentType':'application/json'}
 
