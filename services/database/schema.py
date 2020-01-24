@@ -32,6 +32,15 @@ class Page(Base):
     page_number = Column(Integer)
 
 
+class DetectionExample(Base):
+    __tablename__ = 'detection_examples'
+    id = Column(Integer, primary_key=True)
+    image_name = Column(String(200))
+    bytes = Column(LargeBinary(length=(2**32)-1))
+    annotation = Column(JSON)
+    split = Column(String(20))
+
+
 @click.command()
 @click.argument('username')
 @click.argument('password')
