@@ -1,5 +1,0 @@
-click
-xmltodict
-mysqlclient
-sqlalchemy
-comet_ml
