@@ -7,17 +7,17 @@ from torch.utils.data import Dataset
 from collections import namedtuple
 import torch
 from torch_model.train.data_layer.xml_loader import XMLLoader, Example, get_radii, get_angles, get_colorfulness
-from ingestion.ingest_images import get_example_for_uuid
+from utils.ingest_images import get_example_for_uuid, ImageDB
 import random
 
 
 class ImageEmbeddingDataset(XMLLoader):
-    def __init__(self, session, ingest_objs,classes):
+    def __init__(self, ingest_objs, classes):
         """
         Create an image embedding db
         :param db: a sqlalchemy session to query for images
         """
-        super(ImageEmbeddingDataset, self).__init__(session, ingest_objs, classes)
+        super(ImageEmbeddingDataset, self).__init__(ingest_objs, classes)
 
 
     @staticmethod
@@ -30,10 +30,11 @@ class ImageEmbeddingDataset(XMLLoader):
             item.label = torch.ones(1)
         # If item is out of index, grab a random obj and generate a negative sample
         uuid = random.choice(self.uuids)
-        ex = get_example_for_uuid(uuid, self.session)
+        session = ImageDB.build()
+        ex = get_example_for_uuid(uuid, session)
         label = torch.zeros(1)
         # We pass False here, which generates negative neighbors
-        neighbors = ex.neighbors(False, self.uuids, self.session)
+        neighbors = ex.neighbors(False, self.uuids, session)
         neighbor_boxes = [n.bbox for n in neighbors]
         neighbor_windows = [n.window for n in neighbors]
         radii = get_radii(ex.bbox, torch.stack(neighbor_boxes))

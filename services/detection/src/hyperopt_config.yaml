@@ -8,8 +8,8 @@ WEIGHT_DECAY:
   MAX: 0.01
 BATCH_SIZE: 
   TYPE: "int"
-  MIN: 36
-  MAX: 54
+  MIN: 10
+  MAX: 12
 EPOCHS: 
   TYPE: "int"
   MIN: 30

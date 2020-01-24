@@ -21,7 +21,7 @@ from collections import namedtuple
 from uuid import uuid4
 from tqdm import tqdm
 from torch_model.utils.bbox import BBoxes
-from ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods, ImageDB
+from utils.ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods, ImageDB
 from dataclasses import dataclass
 
 normalizer = NormalizeWrapper()
@@ -87,7 +87,6 @@ class XMLLoader(Dataset):
         :param img_dir: directory to load PNGs from
         :param img_type: the image format to load in
         """
-        self.session = ImageDB.build()
         self.uuids = ingest_objs.uuids
         self.ngt_boxes = ingest_objs.ngt_boxes
         self.nproposals = ingest_objs.nproposals
@@ -98,17 +97,15 @@ class XMLLoader(Dataset):
         print(f"# of gt boxes:{self.ngt_boxes}")
         print(f"# of proposals:{self.nproposals}")
 
-    def __del__(self):
-        self.session.close()
-
 
     def __len__(self):
         return len(self.uuids)
 
     def __getitem__(self, item):
+        session = ImageDB.build()
         uuid = self.uuids[item]
-        ex = get_example_for_uuid(uuid, self.session)
-        neighbors = ex.neighbors(True, self.uuids, self.session)
+        ex = get_example_for_uuid(uuid, session)
+        neighbors = ex.neighbors(True, self.uuids, session)
         colorfulness = get_colorfulness(ex.window)
         #print(len(neighbors), " neighbors")
         if len(neighbors) == 0:
@@ -122,6 +119,7 @@ class XMLLoader(Dataset):
            neighbor_radii = get_radii(ex.bbox, torch.stack(neighbor_boxes))
            neighbor_angles = get_angles(ex.bbox, torch.stack(neighbor_boxes))
         label = torch.Tensor([self.classes.index(ex.label)]) if ex.label is not None else None
+        session.close()
         return Example(ex.bbox, label, ex.window, neighbor_boxes, neighbor_windows, neighbor_radii, neighbor_angles,colorfulness)
 
     @staticmethod
@@ -144,6 +142,7 @@ class XMLLoader(Dataset):
         return Batch(center_bbs=center_bbs, labels=labels, center_windows=center_windows, neighbor_boxes=neighbor_boxes, neighbor_windows=neighbor_windows,neighbor_radii=neighbor_radii, neighbor_angles=neighbor_angles, colorfulness=colorfulness)
 
     def get_weight_vec(self, classes):
+        session = ImageDB.build()
         weight_per_class = {}                                    
         N = len(self.uuids)
         for name in classes:
@@ -153,7 +152,7 @@ class XMLLoader(Dataset):
                 weight_per_class[name] = N/float(self.class_stats[name])                                 
         weight = [0] * N                                              
         for idx, uuid in tqdm(enumerate(self.uuids)):
-            lst = get_example_for_uuid(uuid, self.session)
+            lst = get_example_for_uuid(uuid, session)
             weight[idx] = weight_per_class[lst.label]
         return weight
 

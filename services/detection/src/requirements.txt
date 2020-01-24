@@ -13,3 +13,7 @@ dominate
 pytesseract
 Pillow
 redis
+click
+sqlalchemy
+pandas
+dataclasses

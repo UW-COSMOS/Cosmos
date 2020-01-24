@@ -25,3 +25,4 @@ build/
 dist/
 *.egg-info/
 services/tableextractions/build/
+semantic_segmentation/data/

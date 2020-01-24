@@ -131,7 +131,7 @@ def get_components(bmap, numpy=False):
                     tl_x = x
                 if x > br_x:
                     br_x = x
-                # don't really need this but whatever i think it makes the code clear
+                # don't really need this but i think it makes the code clear
                 if y < tl_y:
                     tl_y = y
                 if y > br_y:
@@ -284,6 +284,10 @@ def write_proposals(img_p, output_dir='tmp/cc_proposals', white_thresh=245, blan
     draw_cc(img_np_orig, block_coords, write_img_p=write_img_p)
     return
 
+
+"""
+Debug functions
+"""
 
 def draw_grid(img_np, block_coords):
     for coords in block_coords:

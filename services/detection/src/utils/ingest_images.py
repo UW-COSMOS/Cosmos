@@ -24,7 +24,7 @@ import yaml
 import io
 import logging
 
-logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
 
 normalizer = NormalizeWrapper()
@@ -176,7 +176,7 @@ def unpack_page(page, warped_size):
     return ExampleData(examples=ret, proposals_len=len(proposals_lst), gt_box_len=(len(gt_box_lst) if gt_box_lst is not None else 0))
 
 
-def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
+def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition):
     """
     ingest the db
     :param img_dir: Image directory
@@ -187,6 +187,7 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
     :param session: DB Session to work on
     :return: IngestObjs containing statistics about the DB
     """
+    session = ImageDB.build()
     class_stats = {}
     uuids = []
     nproposals = 0
@@ -225,6 +226,8 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
             ex = Ex(page_id=name, object_id=uuid, window=pt.ex_window, bbox=pt.ex_proposal, gt_box=pt.gt_box, label=pt.gt_cls, partition=partition)
             examples.append(ex)
     session.add_all(examples)
+    session.commit()
+    session.close()
     IngestObjs = namedtuple('IngestObjs', 'uuids class_stats nproposals ngt_boxes')
     return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
 
@@ -353,19 +356,17 @@ class ImageDB:
     def initialize_and_ingest(objs, warped_size, partition, expansion_delta):
         """
         Initialize and ingest the db from the inputs
-        :param img_dir: Image directory
-        :param proposal_dir: Proposal directory
-        :param xml_dir: if in train mode, this is the path to annotations
+        :param objs: Either already ingested objects or a tuple of directories
         :param warped_size: Size to warp to
         :param partition: Partition if training
         :param expansion_delta: Neighborhood expansion parameter
-        :return: DB Session, database statistics (IngestObjs object)
+        :return: database statistics (IngestObjs object)
         """
         # For training, we check the type so we can read from files
         ingest_objs = None
         if type(objs) == tuple:
             img_dir, proposal_dir, xml_dir = objs
-            ingest_objs = db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session)
+            ingest_objs = db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition)
         # Alternatively, we can pass in a list of objects and call that loading function
         else:
             ingest_objs = db_ingest_objs(objs, warped_size, partition)
