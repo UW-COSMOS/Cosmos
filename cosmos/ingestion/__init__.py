@@ -1,3 +1,0 @@
-"""
-Ingestion module for ImageDB
-"""

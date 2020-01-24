@@ -1,3 +1,0 @@
-"""
-Latex parser specific code
-"""

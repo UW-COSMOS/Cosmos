@@ -1,3 +1,0 @@
-"""
-Im2latex utils
-"""

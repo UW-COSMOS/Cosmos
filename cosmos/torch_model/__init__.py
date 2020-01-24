@@ -1,3 +1,0 @@
-"""
-Torch model directory
-"""
