@@ -40,6 +40,3 @@ def pages():
     return jsonify(results_obj)
 
 
-    
-
-    
