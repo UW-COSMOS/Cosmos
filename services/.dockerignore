@@ -1,5 +1,6 @@
 question_answering_backend/
 postprocess/
 ingestion/test_docs/
+semantic_segmentation/data
 detection/
 
