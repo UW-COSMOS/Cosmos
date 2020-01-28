@@ -58,7 +58,7 @@ def spacy_preprocess(text):
     processed_list = [token.orth_ for token in doc if not(token.is_stop or token.is_space or token.is_stop)]
     return " ".join(processed_list)
 
-def preprocess_samples(samples):
+def preprocess_data(samples):
     new_samples = []
     for sample in samples:
         sample["sub_label"] = sample["sub_label"].lower()
@@ -71,34 +71,13 @@ def preprocess_samples(samples):
         new_samples.append(sample)
     return new_samples
 
-
-def main(data_path, common_vocab_filename, max_sentence_length, template, relation_label, num_std_dev, model=None,  context_filter=None, single_token=False, inference_top_k=10):
-    msg = ""
-    # deal with vocab subset
-    vocab_subset = None
-    index_list = None
-    if common_vocab_filename is not None: #TODO: is this given? 
-        vocab_subset = load_vocab(common_vocab_filename)
-        msg += "common vocabulary size: {}\n".format(len(vocab_subset))
-
-        # optimization for some LM (such as ELMo)
-        model.optimize_top_layer(vocab_subset)
-
-      #  filter_logprob_indices, index_list = model.init_indices_for_filter_logprobs(
-      #     vocab_subset, logger
-      #  ) # TODO  Need this? 
-
-
-    data = load_file(data_path)
-    all_samples = preprocess_samples(data)
-
-   #TODO: make def construct_facts
+def construct_samples(all_samples, template):
     facts = []
     sub_objs = []
     for sample in all_samples:
         sub = sample["sub_label"]
         target=None
-        context="bad context"
+        context=None
         if 'reconstructed_word' in sample:
            print("RECONSTRUCTED WORD")# should this ever be the case?  
             #raise Exception('Reconstructed word not in sample... fix this')
@@ -128,7 +107,9 @@ def main(data_path, common_vocab_filename, max_sentence_length, template, relati
                 facts.append((sub, context, sample['reconstructed_word']))
             else:
                 facts.append((sub, context, None))
-
+    return facts_to_samples(facts, template)
+   
+def facts_to_samples(facts, template):
     all_samples = []
     for fact in facts:
         (sub, context, rw) = fact
@@ -141,6 +122,30 @@ def main(data_path, common_vocab_filename, max_sentence_length, template, relati
             template.strip(), sample["sub_label"].strip(), MASK
         )
         all_samples.append(sample)
+    return all_samples
+
+
+
+
+def main(data_path, common_vocab_filename, max_sentence_length, template, relation_label, num_std_dev, model=None,  context_filter=None, single_token=False, inference_top_k=10):
+    # deal with vocab subset
+#    vocab_subset = None
+#    index_list = None
+#    if common_vocab_filename is not None: #TODO: is this given? 
+#        vocab_subset = load_vocab(common_vocab_filename)
+#
+#        # optimization for some LM (such as ELMo)
+#        model.optimize_top_layer(vocab_subset)
+#
+#      #  filter_logprob_indices, index_list = model.init_indices_for_filter_logprobs(
+#      #     vocab_subset, logger
+#      #  ) # TODO  Need this? 
+#
+
+    data = load_file(data_path)
+    preprocessed_data = preprocess_data(data)
+
+    all_samples = construct_samples(preprocessed_data, template)
 
    # create uuid if not present
     i = 0
@@ -149,15 +154,16 @@ def main(data_path, common_vocab_filename, max_sentence_length, template, relati
             sample["uuid"] = i
             i += 1
 
-    samples_list, sentences_list = get_data_lists(all_samples) #TODO: should we leave batching as an option? 
-
+    samples_list, sentences_list = get_data_lists(all_samples) 
+    # Hyperparams for visualization 
     viz = True
     num_viz = 10
     final_viz = []
     viz_thres = 11
 
     sim_scores = []
-
+    
+    # Determine lower bound using context filter to measure similarity
     if context_filter is not None:
         for sample in samples_list:
             #print(sample)
@@ -174,6 +180,7 @@ def main(data_path, common_vocab_filename, max_sentence_length, template, relati
     predictions_list = []
     anchor_list = []
     
+    # Get predictions returned by voronoi_infer, keeping those whose similarity is larger than lower bound
     for sample in samples_list:
 
         accept_fn = default_accept if context_filter is None else context_filter.accept_context

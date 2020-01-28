@@ -98,6 +98,9 @@ class Roberta(Base_Connector):
     def _cuda(self):
         self.model.cuda()
 
+    #def _init_inverse_vocab(self):
+    #    self.inverse_vocab = {w: i for i, w in enumerate(self.vocab)}
+
     def _build_vocab(self):
         self.vocab = []
         for key in range(ROBERTA_VOCAB_SIZE):
