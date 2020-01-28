@@ -1,0 +1,14 @@
+version: "2.3"
+services:
+    lm:
+        build: .
+        ipc: host
+        volumes:
+            - ./src/:/kbc/
+              # - ./data:/data/
+            - /ssd/hadar/fairseq:/fairseq
+              #    - /ssd/hadar/DrQA:/drqa
+              # - /ssd/hadar/LAMA:/lama
+        working_dir: /kbc
+        command: "bash ./install.sh"
+

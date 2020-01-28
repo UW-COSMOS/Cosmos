@@ -1,0 +1,1 @@
+python retrieve_finetune_task.py --db-dump /data/wikipedia/docs.db --concept-file /data/concept_list_capitals.txt --tfidf-model /data/wikipedia/docs-tfidf-ngram\=2-hash\=16777216-tokenizer\=simple.npz --k-closest-docs 1 --output-file /data/output_train_capitals.txt
