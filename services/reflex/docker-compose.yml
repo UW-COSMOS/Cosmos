@@ -1,0 +1,14 @@
+version: "2.3"
+services:
+    lm:
+        build: .
+        #image: reflex:latest
+        ipc: host
+        volumes:
+            - ./src/:/kbc/
+            - /ssd/hadar/data:/data/
+              # - /ssd/hadar/fairseq/fairseq:/kbc/fairseq
+              #- /ssd/hadar/LAMA/lama:/kbc/lama
+        working_dir: /kbc
+        command: "bash install.sh"
+
