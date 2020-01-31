@@ -23,13 +23,11 @@ class Context_Filtering:
         self.nlp = spacy.load('en_core_web_lg')
         # Obtain a sample of N contexts
         self.random_contexts = self.get_random_contexts(N)
-        #print(len(random_contexts))
         # Obtain sentence embedding for all the random contexts
         self.sent_emb_rc = []
         for rc in self.random_contexts:
             self.sent_emb_rc.append(self.compute_sentence_embedding(rc))
         self.sent_emb_rc = np.asarray(self.sent_emb_rc)
-        # print(self.sent_emb_rc.shape)
 
     def get_contexts_count(self):
         '''
@@ -66,8 +64,6 @@ class Context_Filtering:
         weights = [] # a vector for word weights
         for token in doc:
             token_text = token.text
-            #if token_text in self.filter_tokens:
-            #    continue
             we.append(self.word_emb[token_text])
             weights.append(self.word_weight[token_text])
         we = np.asarray(we)
@@ -112,7 +108,6 @@ class Context_Filtering:
         sent_emb_c = sent_emb_c - mean_neg
         neg_d = np.abs(np.matmul(np.matmul(sent_emb_c, shared_cov_inv), sent_emb_c.T).diagonal()[0])
         
-        #print(pos_d, neg_d)
         if pos_d < neg_d:
             return True, -pos_d
         else:
@@ -138,9 +133,7 @@ class Context_Filtering:
                 score = self.get_cosine_sim_score(self.word_emb[c_text], self.word_emb[t_text])
                 if score > max_score:
                     max_score = score
-            #print(t_text, self.word_weight[t_text])
             set_score.append(self.word_weight[t_text] * max_score)
-        #print(set_score)
         return np.average(set_score)
 
     def accept_context_mahal(self, context, subject, template, label):
@@ -163,11 +156,9 @@ class Context_Filtering:
         sent_emb_t.append(self.compute_sentence_embedding(label))
         sent_emb_t = np.asarray(sent_emb_t)
         # print(sent_emb_t.shape)
-
         # Obtain sentence embeddings for current context
         sent_emb_c = self.compute_sentence_embedding(context)
         sent_emb_c = np.expand_dims(sent_emb_c, axis=0)
-        # print(sent_emb_c.shape)
         # Compute distributions 
         mean_pos, mean_neg, shared_cov = self.compute_distributions(sent_emb_t, self.sent_emb_rc)
 
@@ -185,14 +176,11 @@ class Context_Filtering:
 
         # Process input
         template = template.replace('[X]', subject).replace('[Y]','')+" " + label
-        #context = context.replace(subject, '')
         # Obtain sentence embedding for template
         sent_emb_t = self.compute_sentence_embedding(template)
-        # print(sent_emb_t.shape)
 
         # Obtain sentence embeddings for current context
         sent_emb_c = self.compute_sentence_embedding(context)
-        # print(sent_emb_c.shape)
 
         return self.get_cosine_sim_score(sent_emb_t, sent_emb_c)
 
@@ -208,20 +196,6 @@ class Context_Filtering:
 
         # Process input
         template = template.replace('[X]', subject).replace('[Y]','') + label
-        #print(template)
-        #context = context.replace(subject, '')
 
         return self.get_cosine_set_score(template, context)
     
-
-if __name__ == '__main__':
-    we_model_pth = 'data/cc.en.300.bin' 
-    db_dump = 'data/contexts.db'
-    word_weight_pth = 'data/wiki_word_weight.json'
-    cf = Context_Filtering(we_model_pth, db_dump, word_weight_pth)
-    print('Testing ... ')
-
-    result = cf.accept_context("Travis Hamonic (born August 16, 1990) is a Canadian professional ice hockey defenseman currently playing for the New York Islanders of the National Hockey League (NHL).", "Travis Hamonic", "[X] plays for [Y]", "drafted by")
-    print(result)
-    result = cf.accept_context("Austin Watson was born January 13, 1992, in Ann Arbor, Michigan, where he grew up with his father and mother, Mike and Mary", "Austin Watson","[X] plays for [Y]", "drafted by")
-    print(result)
