@@ -18,7 +18,7 @@ class KB_Manager:
         self.MASK= "[self.MASK]"
         self.ROBERTA_MASK="<mask>"
         self.nlp = spacy.load("en_core_web_lg")
-        
+     
     def default_accept(self, context, subject, template, label):
         return True, 0
     
@@ -35,7 +35,6 @@ class KB_Manager:
         template = template.replace(SUBJ_SYMBOL, subject_label)
         template = template.replace(OBJ_SYMBOL, object_label)
         return [template]
-    
     
     def get_data_lists(self, data):
         samples_list = []
@@ -103,31 +102,24 @@ class KB_Manager:
             all_samples.append(sample)
         return all_samples
     
-    
-    
-    
     def get_predictions(self,data, common_vocab_filename, max_sentence_length, template, relation_label, num_std_dev, model=None,  context_filter=None, single_token=False, inference_top_k=10):
         #data = self.load_file(data_path)
         preprocessed_data = self.preprocess_data(data)
-    
         all_samples = self.construct_samples(preprocessed_data, template)
-    
        # create uuid if not present
         i = 0
         for sample in all_samples:
             if "uuid" not in sample:
                 sample["uuid"] = i
                 i += 1
-    
-        samples_list, sentences_list = self.get_data_lists(all_samples) 
+        samples_list, sentences_list = self.get_data_lists(all_samples)
         # Hyperparams for visualization 
         viz = True
         num_viz = 10
         final_viz = []
         viz_thres = 11
-    
         sim_scores = []
-        
+
         # Determine lower bound using context filter to measure similarity
         if context_filter is not None:
             for sample in samples_list:
@@ -139,23 +131,15 @@ class KB_Manager:
                 mean, std = norm.fit(sim_scores)
                 lower_bound = mean + num_std_dev * std
                 print(f'Mean: {mean}, std: {std}, lower_bound: {lower_bound}')
-    
-    
-    
         predictions_list = []
-        
         # Get predictions returned by voronoi_infer, keeping those whose similarity is larger than lower bound
         for sample in samples_list:
-    
             accept_fn = self.default_accept if context_filter is None else context_filter.accept_context
-    
             voronoi_probs, viz_seq, single_pred, multi_pred = model.voronoi_infer(sample['context'], template.strip(), sample['sub_label'], self.ROBERTA_MASK, k=inference_top_k)
-            
             if single_token:
                 prediction = single_pred
             else:
                 prediction = multi_pred
-    
             if len(sim_scores) > 0:
                 sim_score = context_filter.accept_context(sample['context'], sample['sub_label'], template.strip(), relation_label)
                 if sim_score < lower_bound:
@@ -164,10 +148,8 @@ class KB_Manager:
                 if len(final_viz) != num_viz and i > viz_thres:
                     final_viz.append(viz_seq)
             predictions_list.append(prediction)
-    
         torch.cuda.empty_cache()
         if viz:
             with open('viz.pkl', 'wb') as wf:
                 pickle.dump(final_viz, wf)
         return predictions_list
-    
