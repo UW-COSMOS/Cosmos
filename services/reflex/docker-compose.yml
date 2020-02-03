@@ -9,5 +9,5 @@ services:
             - ./src/:/src/
             - ./data:/data/
             - ./tests:/tests/
-        working_dir: /kbc
+        working_dir: /tests
 
