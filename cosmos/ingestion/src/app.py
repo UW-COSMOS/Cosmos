@@ -77,8 +77,7 @@ class PreprocessedPDF(object):
             try:
                 session.commit()
             except Exception as e:
-                raise e
-
+                logging.warning(f'{e}')
                 session.rollback()
                 resp.status = falcon.HTTP_400
                 return

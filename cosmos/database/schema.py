@@ -31,6 +31,15 @@ class Page(Base):
     page_height = Column(Integer)
     page_number = Column(Integer)
 
+class PageObject(Base):
+    __tablename__ = 'page_objects'
+
+    id = Column(Integer, primary_key=True)
+    page_id = Column(Integer, ForeignKey('pages.id'))
+    bytes = Column(LargeBinary(length=(2**32)-1))
+    content = Column(String(10000))
+    bounding_box = Column(JSON)
+    cls = Column(String(200))
 
 class DetectionExample(Base):
     __tablename__ = 'detection_examples'

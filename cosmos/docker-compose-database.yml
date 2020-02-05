@@ -45,4 +45,14 @@ services:
         ports:
             - 8000:8000
 
+    process_page:
+        image: process_page:latest
+        networks:
+            swarm_network:
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+        command: "gunicorn -b 0.0.0.0:8001 app.app"
+        ports:
+            - 8001:8001
 

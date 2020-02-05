@@ -1,3 +1,0 @@
-"""
-Anchor targets module
-"""
