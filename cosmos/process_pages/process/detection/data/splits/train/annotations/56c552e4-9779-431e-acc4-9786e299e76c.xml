@@ -1,0 +1,125 @@
+<annotation>
+    <folder>vol</folder>
+    <filename>56c552e4-9779-431e-acc4-9786e299e76c.png</filename>
+    <path>/vol/56c552e4-9779-431e-acc4-9786e299e76c.png</path>
+    <source>
+        <database>Unknown</database>
+    </source>
+    <size>
+        <width>1920</width>
+        <height>1920</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>Body Text</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>165</xmin>
+            <ymin>897</ymin>
+            <xmax>727</xmax>
+            <ymax>1837</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Table Caption</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>168</xmin>
+            <ymin>228</ymin>
+            <xmax>720</xmax>
+            <ymax>286</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Table</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>168</xmin>
+            <ymin>291</ymin>
+            <xmax>728</xmax>
+            <ymax>846</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Page Header</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>175</xmin>
+            <ymin>87</ymin>
+            <xmax>1312</xmax>
+            <ymax>183</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Section Header</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>755</xmin>
+            <ymin>1109</ymin>
+            <xmax>1043</xmax>
+            <ymax>1155</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Body Text</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>757</xmin>
+            <ymin>231</ymin>
+            <xmax>1314</xmax>
+            <ymax>1080</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Body Text</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>757</xmin>
+            <ymin>1175</ymin>
+            <xmax>1316</xmax>
+            <ymax>1528</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Body Text</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>757</xmin>
+            <ymin>1597</ymin>
+            <xmax>1314</xmax>
+            <ymax>1840</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Section Header</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>758</xmin>
+            <ymin>1556</ymin>
+            <xmax>934</xmax>
+            <ymax>1593</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Page Footer</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>1235</xmin>
+            <ymin>1856</ymin>
+            <xmax>1315</xmax>
+            <ymax>1888</ymax>
+        </bndbox>
+    </object>
+</annotation>

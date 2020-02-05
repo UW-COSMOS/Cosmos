@@ -1,0 +1,92 @@
+<annotation>
+    <folder>vol</folder>
+    <filename>5f283d41-a219-432a-82e6-89fb1677be6f.png</filename>
+    <path>/vol/5f283d41-a219-432a-82e6-89fb1677be6f.png</path>
+    <source>
+        <database>Unknown</database>
+    </source>
+    <size>
+        <width>1920</width>
+        <height>1920</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>Body Text</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>183</xmin>
+            <ymin>200</ymin>
+            <xmax>1146</xmax>
+            <ymax>266</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Body Text</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>183</xmin>
+            <ymin>1509</ymin>
+            <xmax>1155</xmax>
+            <ymax>1704</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Section Header</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>184</xmin>
+            <ymin>1461</ymin>
+            <xmax>645</xmax>
+            <ymax>1499</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Body Text</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>187</xmin>
+            <ymin>373</ymin>
+            <xmax>1148</xmax>
+            <ymax>1393</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Page Footer</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>188</xmin>
+            <ymin>1744</ymin>
+            <xmax>1147</xmax>
+            <ymax>1781</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Page Header</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>406</xmin>
+            <ymin>132</ymin>
+            <xmax>934</xmax>
+            <ymax>171</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Equation</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>435</xmin>
+            <ymin>288</ymin>
+            <xmax>1145</xmax>
+            <ymax>361</ymax>
+        </bndbox>
+    </object>
+</annotation>

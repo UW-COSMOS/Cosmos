@@ -1,0 +1,48 @@
+<annotation>
+    <folder>vol</folder>
+    <filename>97aaceae-28aa-4ad4-9b80-6908da63df1c.png</filename>
+    <path>/vol/97aaceae-28aa-4ad4-9b80-6908da63df1c.png</path>
+    <source>
+        <database>Unknown</database>
+    </source>
+    <size>
+        <width>1920</width>
+        <height>1920</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>Figure Caption</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>102</xmin>
+            <ymin>1713</ymin>
+            <xmax>1364</xmax>
+            <ymax>1797</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Figure</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>152</xmin>
+            <ymin>169</ymin>
+            <xmax>1321</xmax>
+            <ymax>1693</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Page Header</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>472</xmin>
+            <ymin>112</ymin>
+            <xmax>1365</xmax>
+            <ymax>139</ymax>
+        </bndbox>
+    </object>
+</annotation>

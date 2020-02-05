@@ -1,0 +1,48 @@
+<annotation>
+    <folder>vol</folder>
+    <filename>c94f61a3-a6ce-4fb9-8fa6-2f8252206ef6.png</filename>
+    <path>/vol/c94f61a3-a6ce-4fb9-8fa6-2f8252206ef6.png</path>
+    <source>
+        <database>Unknown</database>
+    </source>
+    <size>
+        <width>1920</width>
+        <height>1920</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>Reference text</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>95</xmin>
+            <ymin>154</ymin>
+            <xmax>713</xmax>
+            <ymax>1799</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Page Header</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>521</xmin>
+            <ymin>107</ymin>
+            <xmax>1362</xmax>
+            <ymax>133</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Reference text</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>750</xmin>
+            <ymin>149</ymin>
+            <xmax>1363</xmax>
+            <ymax>1802</ymax>
+        </bndbox>
+    </object>
+</annotation>

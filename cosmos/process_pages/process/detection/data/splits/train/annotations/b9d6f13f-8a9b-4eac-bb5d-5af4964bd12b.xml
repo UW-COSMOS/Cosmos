@@ -1,0 +1,37 @@
+<annotation>
+    <folder>vol</folder>
+    <filename>b9d6f13f-8a9b-4eac-bb5d-5af4964bd12b.png</filename>
+    <path>/vol/b9d6f13f-8a9b-4eac-bb5d-5af4964bd12b.png</path>
+    <source>
+        <database>Unknown</database>
+    </source>
+    <size>
+        <width>1920</width>
+        <height>1920</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>Figure Caption</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>98</xmin>
+            <ymin>1310</ymin>
+            <xmax>1238</xmax>
+            <ymax>1453</ymax>
+        </bndbox>
+    </object>    <object>
+        <name>Figure</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>340</xmin>
+            <ymin>536</ymin>
+            <xmax>970</xmax>
+            <ymax>1171</ymax>
+        </bndbox>
+    </object>
+</annotation>
