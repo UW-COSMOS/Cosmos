@@ -3,3 +3,4 @@ cosmos/torch_model/tests/data/weights/weights.pth filter=lfs diff=lfs merge=lfs 
 cosmos/*.pth filter=lfs diff=lfs merge=lfs -text
 *.pth filter=lfs diff=lfs merge=lfs -text
 services/question_answering_backend/src/models/** filter=lfs diff=lfs merge=lfs -text
+cosmos/process_pages/process/weights/** filter=lfs diff=lfs merge=lfs -text
