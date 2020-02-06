@@ -23,7 +23,7 @@ RUN pip install -r /requirements.txt
 
 #COPY tests/pdfs /test
 
-COPY process_pages/process /app
-COPY database/schema.py /app/schema
+COPY process_pages/process /process
+COPY database/schema.py /process
 
 WORKDIR /

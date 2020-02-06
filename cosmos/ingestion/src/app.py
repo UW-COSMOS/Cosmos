@@ -1,4 +1,3 @@
-
 import uuid
 import falcon
 from .schema import Pdf, Page
@@ -15,6 +14,8 @@ import io
 import subprocess
 import glob
 from PIL import Image
+import requests
+from concurrent.futures import ThreadPoolExecutor
 
 
 import logging
@@ -30,6 +31,10 @@ class PreprocessedPDF(object):
     def on_get(self, req, resp):
         resp.body = 'Hello world!'
         resp.status = falcon.HTTP_200
+
+    def request_process(self, id):
+        url = 'http://process_page:8000'
+        result = requests.post(url, data = {'id': id})
 
     def on_post(self, req, resp):
         session = Session()
@@ -59,6 +64,7 @@ class PreprocessedPDF(object):
                                   f'-sOutputFile="{td}/%d"',
                                   tf.name
                             ])
+            page_ids = []
             for f in glob.glob(f'{td}/*'):
                 page_num = int(os.path.basename(f))
                 img = Image.open(f)
@@ -81,6 +87,9 @@ class PreprocessedPDF(object):
                 session.rollback()
                 resp.status = falcon.HTTP_400
                 return
+            with ThreadPoolExecutor(max_workers=50) as pool:
+                print(list(pool.map(self.request_process, page_ids)))
+
             resp.status = falcon.HTTP_200
 
 

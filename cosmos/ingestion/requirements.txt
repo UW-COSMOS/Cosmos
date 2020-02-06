@@ -10,5 +10,6 @@ click
 mysqlclient
 sqlalchemy
 gunicorn
+requests
 
 
