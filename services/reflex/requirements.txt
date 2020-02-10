@@ -44,7 +44,7 @@ fastBPE==0.1.0
 fasttext==0.9.1
 filelock==3.0.12
 flaky==3.6.1
-Flask==0.12.4
+Flask==1.1.1
 Flask-Cors==3.0.3
 ftfy==5.6
 future==0.18.2

@@ -5,7 +5,9 @@ services:
         #image: reflex:latest
         ipc: host
         volumes:
-            - ./reflex.py:/reflex.py/
+            - type: bind
+              source: ./reflex.py
+              target: /reflex.py
             - ./src/:/src/
             - ./data:/data/
             - ./tests:/tests/

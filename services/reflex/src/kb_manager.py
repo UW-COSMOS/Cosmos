@@ -12,62 +12,91 @@ import spacy
 import pickle
 import time, sys
 import torch
+import logging
+from typing import List, Tuple, Dict
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 
 class KB_Manager:
-    def __init__(self):
-        self.MASK= "[self.MASK]"
+    def __init__(self, use_filter: bool, we_model_pth: str, db_dump: str, word_weight_pth: str, num_random_contexts: int) -> None:
+        """
+
+        Initialize with context filter and mask tokens
+
+        """
+        self.MASK= "[MASK]"
         self.ROBERTA_MASK="<mask>"
         self.nlp = spacy.load("en_core_web_lg")
-     
+        if use_filter:
+            self.context_filter = Context_Filtering(we_model_pth, db_dump, word_weight_pth, N=num_random_contexts)
+        else:
+            self.context_filter = None
+
     def default_accept(self, context, subject, template, label):
         return True, 0
     
-    def load_file(self, filename):
-        data = []
-        with open(filename, "r") as f:
-            for line in f.readlines():
-                data.append(json.loads(line))
-        return data
-    
-    def parse_template(self, template, subject_label, object_label):
+    def parse_template(self, template: str, subject_label: str, object_label: str) -> List[str]:
+        """
+
+        Substitute correct values into template
+
+        :param samples: original template
+        :param subject_label: subject in template
+        :param object_label: object in template
+        :return: processed template
+
+        """ 
         SUBJ_SYMBOL = "[X]"
         OBJ_SYMBOL = "[Y]"
         template = template.replace(SUBJ_SYMBOL, subject_label)
         template = template.replace(OBJ_SYMBOL, object_label)
         return [template]
     
-    def get_data_lists(self, data):
-        samples_list = []
-        sentences_list = []
-        # sort to group togheter sentences with similar length
-        for sample in sorted(
-            data, key=lambda k: len(" ".join(k["masked_sentence"]).split())
-        ):
-            masked_sentence = sample["masked_sentence"]
-            samples_list.append(sample)
-            sentences_list.append(masked_sentence)
-        return samples_list, sentences_list
-    
-    
-    def spacy_preprocess(self, text):
+    def spacy_preprocess(self, text: str) -> str:
+        """
+
+        Remove stopwords, spaces, punctuation form text
+
+        :param text
+        :return: preprocessed text string
+
+        """ 
         doc = self.nlp(text)
-        processed_list = [token.orth_ for token in doc if not(token.is_stop or token.is_space or token.is_stop)]
+        processed_list = [token.orth_ for token in doc if not(token.is_stop or token.is_space or token.is_punct)]    
         return " ".join(processed_list)
-    
-    def preprocess_data(self, samples):
+
+    def preprocess_data(self, samples: Dict[str, object]) -> List[Dict[str, str]]:
+        """
+
+        Create list of preprocessed samples
+
+        :param samples: original dict of samples
+        :return: list of processed samples
+
+        """ 
         new_samples = []
         for sample in samples:
-            sample["sub_label"] = sample["sub_label"].lower()
             lower_masked_sentences = []
-            for sentence in sample["evidences"]:
-                sentence = self.spacy_preprocess(sentence['masked_sentence'].lower())
-                sentence = sentence.replace(self.MASK.lower(), self.MASK)
-                lower_masked_sentences.append(sentence)
-            sample["evidences"] = lower_masked_sentences
-            new_samples.append(sample)
+            for evidence in sample["evidences"]:
+                sentence = evidence["masked_sentence"].lower()
+                preprocessed = self.spacy_preprocess(sentence)
+                masked = preprocessed.replace(self.MASK.lower(), self.MASK)
+                lower_masked_sentences.append(masked)
+            # make copy of samples to avoid editing original 
+            new_samples.append(dict(sample))
+            new_samples[len(new_samples)-1]['evidences'] = lower_masked_sentences
+            new_samples[len(new_samples)-1]['sub_label'] = sample['sub_label'].lower()
         return new_samples
     
-    def construct_samples(self, all_samples, template):
+    def construct_samples(self, all_samples: Dict[str, object], template: str) -> Dict[str, str]:
+        """
+
+        Construct samples containing required metadata given list of original sample dictionaries
+
+        :param all_samples: list of preprocessed sample dicts
+        :template: processed template
+        :return: list of new samples
+
+        """ 
         facts = []
         sub_objs = []
         for sample in all_samples:
@@ -77,23 +106,32 @@ class KB_Manager:
             for evidence in sample['evidences']:
                context = evidence
             if context is None:
-                print('No valid context found, skipping sample')
+                raise Exception('No valid context found, skipping sample')
                 continue
             if (sub, target, context) not in sub_objs:
                 sub_objs.append((sub, target, context))
-                if 'reconstructed_word' in sample:
-                    facts.append((sub, context, sample['reconstructed_word']))
+                if 'target' in sample: # Can assume that target is always None
+                    facts.append((sub, context, sample['target']))
                 else:
                     facts.append((sub, context, None))
         return self.facts_to_samples(facts, template)
        
-    def facts_to_samples(self,facts, template):
+    def facts_to_samples(self,facts: List[Tuple[str, str, str]], template: str) -> Dict[str, str]:
+        """
+
+        Construct sample dictionaries from fact tuples
+
+        :param facts: fact tuples
+        :template: processed template
+        :return: list of new samples
+
+        """ 
         all_samples = []
         for fact in facts:
-            (sub, context, rw) = fact
+            (sub, context, target) = fact
             sample = {}
             sample["sub_label"] = sub
-            sample["reconstructed_word"] = rw
+            sample["target"] = target
             # substitute all sentences with a standard template
             sample['context'] = context
             sample["masked_sentence"] = self.parse_template(
@@ -102,17 +140,26 @@ class KB_Manager:
             all_samples.append(sample)
         return all_samples
     
-    def get_predictions(self,data, common_vocab_filename, max_sentence_length, template, relation_label, num_std_dev, model=None,  context_filter=None, single_token=False, inference_top_k=10):
-        #data = self.load_file(data_path)
+    def get_predictions(self, data: Dict[str, object], max_sentence_length: int, template: str, relation_label: str, num_std_dev: int, model: object,  context_filter: object = None, single_token: bool = False, inference_top_k: int = 10):
+        """
+
+        Invoke voronoi_infer model to get predictions for each relation in data and create visual
+
+        :param data: list of dicts containing samples
+        :param max_sentence_length
+        :param template
+        :param relation_label
+        :param num_std_dev
+        :param model: language model that infers relations 
+        :param context_filter: improves results by selecting best contexts
+        :template: processed template
+        :single_token: prediction result
+        :inference_top_k: num results for
+        :return: list of string predictions
+
+        """ 
         preprocessed_data = self.preprocess_data(data)
-        all_samples = self.construct_samples(preprocessed_data, template)
-       # create uuid if not present
-        i = 0
-        for sample in all_samples:
-            if "uuid" not in sample:
-                sample["uuid"] = i
-                i += 1
-        samples_list, sentences_list = self.get_data_lists(all_samples)
+        samples_list = self.construct_samples(preprocessed_data, template)
         # Hyperparams for visualization 
         viz = True
         num_viz = 10
@@ -123,14 +170,13 @@ class KB_Manager:
         # Determine lower bound using context filter to measure similarity
         if context_filter is not None:
             for sample in samples_list:
-                #print(sample)
                 sim_score = context_filter.accept_context(sample['context'], sample['sub_label'], template.strip(), relation_label)
                 sim_scores.append(sim_score)
             if len(sim_scores) > 0:
                 sim_scores = np.asarray(sim_scores)
                 mean, std = norm.fit(sim_scores)
                 lower_bound = mean + num_std_dev * std
-                print(f'Mean: {mean}, std: {std}, lower_bound: {lower_bound}')
+                logging.info(f'Mean: {mean}, std: {std}, lower_bound: {lower_bound}')
         predictions_list = []
         # Get predictions returned by voronoi_infer, keeping those whose similarity is larger than lower bound
         for sample in samples_list:
@@ -145,10 +191,9 @@ class KB_Manager:
                 if sim_score < lower_bound:
                     prediction = ''
             if viz:
-                if len(final_viz) != num_viz and i > viz_thres:
+                if len(final_viz) != num_viz and len(samples_list) > viz_thres:
                     final_viz.append(viz_seq)
             predictions_list.append(prediction)
-        torch.cuda.empty_cache()
         if viz:
             with open('viz.pkl', 'wb') as wf:
                 pickle.dump(final_viz, wf)
