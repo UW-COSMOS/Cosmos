@@ -1,6 +1,0 @@
-pymongo
-numpy
-pillow
-joblib
-click
-flask

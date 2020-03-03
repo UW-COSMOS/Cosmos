@@ -1,9 +1,0 @@
-pillow
-click
-pymongo
-joblib
-pandas
-pdfminer.six
-chardet
-opencv-python
-camelot-py[cv]

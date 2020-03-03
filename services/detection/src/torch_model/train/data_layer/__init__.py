@@ -1,3 +1,0 @@
-"""
-Train datalayer module
-"""

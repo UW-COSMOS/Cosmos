@@ -1,3 +1,0 @@
-"""
-Connected compoennts layer module
-"""
