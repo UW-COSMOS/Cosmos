@@ -64,7 +64,9 @@ class PreprocessedPDF(object):
             resize_bytes_stream.seek(0)
             resize_bytes = resize_bytes_stream.read()
             resize_bytes = base64.b64encode(resize_bytes).decode('ASCII')
-            page = Page(page_width=width, page_height=height, page_number=page_num, pdf_id=pdfid)
+            resize_bytes_stream.seek(0)
+            bstring = resize_bytes_stream.getvalue()
+            page = Page(page_width=width, page_height=height, page_number=page_num, pdf_id=pdfid, bytes=bstring)
             session.add(page)
         # Because PDFs can be very large (100+ pages), this transaction can become very large if we batch all pages together
         # As a result I'm committing on a per page basis.

@@ -37,6 +37,7 @@ class Page(Base):
     page_width = Column(Integer)
     page_height = Column(Integer)
     page_number = Column(Integer)
+    bytes = Column(LargeBinary(length=(2**32)-1))
 
 class PageObject(Base):
     __tablename__ = 'page_objects'
@@ -70,6 +71,6 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
+
 
 
