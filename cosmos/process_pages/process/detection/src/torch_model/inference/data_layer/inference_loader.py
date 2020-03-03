@@ -21,14 +21,14 @@ class InferenceLoader(XMLLoader):
     Inference dataset object, based on XMLLoader
     """
 
-    def __init__(self, ingest_objs, classes):
+    def __init__(self, ingest_objs, classes, session):
         """
         Init function
         :param session: DB Session
         :param ingest_objs: Database statistics object
         :param classes: List of classes
         """
-        super().__init__(ingest_objs, classes)
+        super().__init__(ingest_objs, classes, session)
 
     @staticmethod
     def collate(batch):
@@ -49,10 +49,9 @@ class InferenceLoader(XMLLoader):
         :param item: UUID index
         :return: XMLLoader exmaple, as well as InferenceLoader example
         """
-        session = ImageDB.build()
         example = super(InferenceLoader, self).__getitem__(item)
         uuid = self.uuids[item]
-        ex_db = get_example_for_uuid(uuid, session)
+        ex_db = get_example_for_uuid(uuid, self.session)
         return example, ex_db
 
 #

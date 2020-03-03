@@ -56,8 +56,11 @@ def check_overlap(obj_list, box, check_above_below=False, check_cls=None):
 
 def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
     """
-    Given a list output from xml2list, group the class in that list
-    :param obj_list: [(cls, coords, score)] list
+    Group bounding boxes of the ground truth class if they do not overlap with other classes
+    :param obj_list: [(coords), [(score, cls)]], the list of classes and their ranking for each bounding box
+    :param g_cls: the groundtruth class to merge
+    :param do_table_merge: flag to do special table case.
+    :param merge_over_classes: Optional list of classes to ignore when considering merging
     """
     nbhds = []
     for obj in obj_list:
@@ -84,13 +87,14 @@ def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
             if not added:
                 new_nbhd_list.append((coords, cls_list))
             nbhds = new_nbhd_list
+    # During a table merge, there is a chance that multiple neighborhoods are intersecting. In this case, we merge the intersecting neighborhoods
     if do_table_merge:
         while True:
             new_nbhds = []
             merged_nbhds = []
             # Now we check for intersecting table neighborhoods
             for nbhd in nbhds:
-                nbhd, scr = nbhd
+                nbhd, cls_list = nbhd
                 for nbhd2 in nbhds:
                     nbhd2, cls_list2 = nbhd2
                     if nbhd2 == nbhd:
@@ -101,13 +105,15 @@ def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
                         new_box = [min(nbhd[0], nbhd2[0]), min(nbhd[1], nbhd2[1]), max(nbhd[2], nbhd2[2]), max(nbhd[3], nbhd2[3])]
                         if new_box in new_nbhds:
                             continue
+                        # keep track of the original neighborhoods we merge
                         merged_nbhds.append(nbhd)
                         merged_nbhds.append(nbhd2)
-                        new_nbhds.append((new_box, cls_list2 if cls_list2[0][0] >= cls_list[0][0] and cls_list2[0][1] == g_cls else cls_list))
+                        new_nbhds.append((new_box, cls_list2 if cls_list2[0][0] >= cls_list[0][0] else cls_list))
             for nbhd in nbhds:
                 nbhd, cls_list = nbhd
                 if nbhd not in merged_nbhds:
                     new_nbhds.append((nbhd, cls_list))
+            # continue until convergence
             if new_nbhds == nbhds:
                 break
             nbhds = new_nbhds
@@ -121,6 +127,7 @@ def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
             obj_iou = calculate_iou(coords, nbhd)
             if obj_iou > 0:
                 filter_objs.append(obj)
+    # Filter the objects we merged over
     obj_list = [o for o in obj_list if o not in filter_objs]
     new_obj_list = []
     for obj in obj_list:

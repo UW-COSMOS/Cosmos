@@ -77,9 +77,9 @@ class FeaturePyramidResNet(nn.Module):
 
 def get_resnet(nlayers=50):
     if nlayers == 50:
-        base = models.resnet50(pretrained=True)
+        base = models.resnet50(pretrained=False)
     elif nlayers == 101:
-        base = models.resnet101(pretrained=True)
+        base = models.resnet101(pretrained=False)
     else:
         raise NotImplementedError()
     # now build from the base a sequential object with the subpieces of the network

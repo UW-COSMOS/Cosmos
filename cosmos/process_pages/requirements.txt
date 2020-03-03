@@ -22,7 +22,7 @@ sqlalchemy
 dataclasses
 matplotlib
 pandas
-xgboost
+xgboost==0.90
 sklearn
 bs4
 pytesseract

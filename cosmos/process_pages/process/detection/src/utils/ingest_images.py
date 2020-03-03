@@ -231,7 +231,7 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition):
     return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
 
 
-def db_ingest_objs(objs, warped_size, partition):
+def db_ingest_objs(objs, warped_size, partition, session):
     """
     ingest the db
     :param objs: Objects to ingest
@@ -240,7 +240,6 @@ def db_ingest_objs(objs, warped_size, partition):
     :param session: DB Session to work on
     :return: IngestObjs containing statistics about the DB
     """
-    session = ImageDB.build()
     class_stats = {}
     uuids = []
     nproposals = 0
@@ -274,7 +273,6 @@ def db_ingest_objs(objs, warped_size, partition):
             examples.append(ex)
     session.add_all(examples)
     session.commit()
-    session.close()
     IngestObjs = namedtuple('IngestObjs', 'uuids class_stats nproposals ngt_boxes')
     return IngestObjs(uuids=uuids, class_stats=class_stats, nproposals=nproposals, ngt_boxes=ngt_boxes)
 
@@ -290,7 +288,7 @@ def get_example_for_uuid(uuid, session):
     return ex
 
 
-def compute_neighborhoods(partition, expansion_delta, orig_size=1920):
+def compute_neighborhoods(partition, expansion_delta, session, orig_size=1920):
     """
     Compute the neighborhoods for a target image and input to DB
     :param session: DB Session
@@ -301,7 +299,6 @@ def compute_neighborhoods(partition, expansion_delta, orig_size=1920):
     print('Computing neighborhoods')
     avg_nbhd_size = 0.0
     nbhds = 0.0
-    session = ImageDB.build()
     partition_filter = session.query(Ex).filter(Ex.partition == partition)
     for ex in tqdm(partition_filter):
         orig_bbox = ex.bbox
@@ -318,7 +315,6 @@ def compute_neighborhoods(partition, expansion_delta, orig_size=1920):
         avg_nbhd_size += len(nbhd)
         session.add_all(nbhd)
     session.commit()
-    session.close()
     print("=== Done Computing Neighborhoods ===")
     if nbhds != 0.0:
         print(f"Average of {avg_nbhd_size/nbhds} neighbors")
@@ -330,30 +326,18 @@ def get_neighbors_for_uuid(uuid, session):
     :param session: Input DB Session
     :return: neighbors
     """
-    ex = get_example_for_uuid(uuid)
+    ex = get_example_for_uuid(uuid, session)
     return ex.neighbors
 
 
-engine = create_engine('sqlite:///:memory:', echo=False)  
-Base.metadata.create_all(engine)
-Session = sessionmaker()
-Session.configure(bind=engine)
 
 class ImageDB:
     """
     SQL alchemy session factory
     """
-    @staticmethod
-    def build():
-        """
-        Initlaize the db in memory and return the session
-        :param verbose: Verbose logging
-        :return: DB Session
-        """
-        return Session() 
 
     @staticmethod
-    def initialize_and_ingest(objs, warped_size, partition, expansion_delta):
+    def initialize_and_ingest(objs, warped_size, partition, expansion_delta, session):
         """
         Initialize and ingest the db from the inputs
         :param objs: Either already ingested objects or a tuple of directories
@@ -369,13 +353,15 @@ class ImageDB:
             ingest_objs = db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition)
         # Alternatively, we can pass in a list of objects and call that loading function
         else:
-            ingest_objs = db_ingest_objs(objs, warped_size, partition)
-        compute_neighborhoods(partition, expansion_delta)
+            ingest_objs = db_ingest_objs(objs, warped_size, partition, session)
+        compute_neighborhoods(partition, expansion_delta, session)
         return ingest_objs
 
     @staticmethod 
-    def cleanup():
-        Base.metadata.drop_all(engine)
-        Base.metadata.create_all(engine)
+    def cleanup(objs, session):
+        uuids = objs.uuids
+        for uuid in uuids:
+            session.query(Ex).filter_by(object_id=uuid).delete()
+        session.commit()
 
 

@@ -15,6 +15,8 @@ from .group_cls import group_cls
 import pandas as pd
 
 def run(img, detect_objs):
+    if len(detect_objs) == 0:
+        return None, None
     l = group_cls(detect_objs, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
     detect_objs = group_cls(l, 'Figure')
     width, height = img.size
@@ -38,7 +40,11 @@ def run(img, detect_objs):
         word_list = [word for word in word_list if word != 'nan']
         word_dump = ' '.join(word_list)
         obj_str_list.append(word_dump)
-    bbs, scrs = zip(*detect_objs)
+    try:
+        bbs, scrs = zip(*detect_objs)
+    except Exception as e:
+        logging.error(f'Detect_objs: {detect_objs}')
+        raise e
     results = list(zip(bbs, scrs, obj_str_list))
     tess_df = tess_df.to_dict()
     tess_df = json.dumps(tess_df)
