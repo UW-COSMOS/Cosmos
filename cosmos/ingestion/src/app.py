@@ -64,7 +64,7 @@ class PreprocessedPDF(object):
             resize_bytes_stream.seek(0)
             resize_bytes = resize_bytes_stream.read()
             resize_bytes = base64.b64encode(resize_bytes).decode('ASCII')
-            page = Page(page_width=width, page_height=height, page_number=page_num)
+            page = Page(page_width=width, page_height=height, page_number=page_num, pdf_id=pdfid)
             session.add(page)
         # Because PDFs can be very large (100+ pages), this transaction can become very large if we batch all pages together
         # As a result I'm committing on a per page basis.
@@ -91,7 +91,7 @@ class PreprocessedPDF(object):
 
         dataset_id = obj['dataset_id']
         pdf_name = obj['pdf_name']
-        
+
         with tempfile.NamedTemporaryFile() as tf, tempfile.TemporaryDirectory() as td:
             tf.write(pdf_file)
             tf.seek(0)
@@ -162,7 +162,7 @@ class DeleteDataset(object):
                 session.rollback()
                 pass
         session.close()
-        
+
 
 api = application = falcon.API()
 pre_pdf = PreprocessedPDF()
