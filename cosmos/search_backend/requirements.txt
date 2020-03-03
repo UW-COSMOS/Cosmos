@@ -11,3 +11,8 @@ cosmostables
 PyPDF2
 opencv-python
 camelot-py[cv]
+<<<<<<< HEAD
+=======
+tabulate
+pyyaml
+>>>>>>> feat/visualizer_interface
