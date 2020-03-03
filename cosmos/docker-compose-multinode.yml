@@ -1,0 +1,47 @@
+version: '3.4'
+
+networks:
+    swarm_network:
+        driver: overlay
+        attachable: true
+
+services:
+    adminer:
+        image: adminer
+        ports:
+            - 8080:8080
+        networks:
+            swarm_network:
+
+    ingestion:
+        image: ankurgos/ingestion:3.0
+        networks:
+            swarm_network:
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - PAGE_BSZ=5
+        command: "gunicorn -w 2 --threads 33 -b 0.0.0.0:8000 app.app"
+        ports:
+            - 8000:8000
+
+    process_pages:
+        image: ankurgos/process_pages:3.0
+        networks:
+            swarm_network:
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - CUDA_VISIBLE_DEVICES=''
+        command: "gunicorn -w 50 --threads 2 -b 0.0.0.0:8001 process.app"
+        ports:
+            - 8001:8001
+
+    detect:
+        image: ankurgos/process_pages:3.0
+        networks:
+            swarm_network:
+        ports:
+            - 8002:8002
+        command: "uwsgi --http 0.0.0.0:8002 --wsgi-file process/detect.py"
+
