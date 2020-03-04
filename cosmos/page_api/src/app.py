@@ -171,26 +171,21 @@ def search():
         logging.info(f'{e}')
         abort(400)
 
-
-
-
-PAGE_SIZE = 1
-
-@app.route('/search/image/next_prediction')
-def pages():
+@app.route('/search/image/<page_id>')
+@app.route('/search/page/<page_id>')
+def page_by_id(page_id):
     '''
-    Return a random page + objects from that page.
-    Response format shoehorned to fit what the visualzier expects as of IAR - 04.Mar.2020
     '''
     session = Session()
-
-    page = session.query(Page).order_by(func.rand()).first()
-    logging.info("got some results maybe?")
-    logging.info(res)
+    if page_id == "next_prediction":
+        page, pdf = session.query(Page, Pdf).order_by(func.rand()).first()
+    else:
+        page, pdf = session.query(Page, Pdf).filter(Page.id == page_id).first()
+    logging.info(pdf)
     result = {}
     result["_id"] = page.id
     result['pdf_id'] = page.pdf_id
-    result['pdf_name'] = "5c3ab11d1faed655488c8ec2.pdf"
+    result['pdf_name'] = pdf.pdf_name
     result['page_num'] = page.page_number
     result['page_width'] = page.page_width
     result['page_height'] = page.page_height
@@ -200,6 +195,7 @@ def pages():
     res = session.query(Page, PageObject).filter(Page.id == PageObject.page_id).filter(Page.id == page.id)
     for _, po in res.all():
         result['pp_detected_objs'].append([[float(i) for i in po.bounding_box], po.cls, 0.0])
+    results_obj = {'results': [result]}
     return jsonify({"results" : [result]})
 
 @app.route('/search/object/lookup')
