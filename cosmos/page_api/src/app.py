@@ -181,7 +181,6 @@ def page_by_id(page_id):
         page, pdf = session.query(Page, Pdf).order_by(func.rand()).first()
     else:
         page, pdf = session.query(Page, Pdf).filter(Page.id == page_id).first()
-    logging.info(pdf)
     result = {}
     result["_id"] = page.id
     result['pdf_id'] = page.pdf_id
