@@ -30,10 +30,12 @@ Session.configure(bind=engine)
 app = Flask(__name__)
 
 def postprocess_result(result):
-    result['_id'] = str(result['_id'])
+    if "_id" in result:
+        result['_id'] = str(result['_id'])
     if 'bytes' in result and result['bytes'] is not None:
         encoded = base64.encodebytes(result['bytes'])
         result['bytes'] = encoded.decode('ascii')
+    if 'page_ocr_df' in result:
         del result['page_ocr_df']
     if 'table_df' in result and result['table_df'] is not None:
         encoded = base64.encodebytes(result['table_df'])
@@ -213,37 +215,37 @@ def object_lookup():
         ]
 
     '''
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
+    session = Session()
     pdf_name = request.args.get("pdf_name")
     page_num = int(request.args.get('page_num'))
     x, y = make_tuple(request.args.get("coords"))
-    result = db.objects.find_one({
-        "pdf_name" : pdf_name,
-        "page_num" : page_num,
-        "bounding_box.0": {"$lte" : x},
-        "bounding_box.1": {"$lte" : y},
-        "bounding_box.2": {"$gte" : x},
-        "bounding_box.3":  {"$gte" : y}
-        })
-    result = postprocess_result(find_object(pdf_name, page_num, x, y))
-    return jsonify(result)
+    tobj = find_object(pdf_name, page_num, x, y)
+    obj =  {c.name: getattr(tobj, c.name) for c in tobj.__table__.columns}
+    return jsonify({"results" : [postprocess_result(obj)]})
 
 def find_object(pdf_name, page_num, x, y):
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
-    pdf_name = request.args.get("pdf_name")
-    page_num = int(request.args.get('page_num'))
-    x, y = make_tuple(request.args.get("coords"))
-    result = db.objects.find_one({
-        "pdf_name" : pdf_name,
-        "page_num" : page_num,
-        "bounding_box.0": {"$lte" : x},
-        "bounding_box.1": {"$lte" : y},
-        "bounding_box.2": {"$gte" : x},
-        "bounding_box.3": {"$gte" : y}
-        })
-    return result
+    session = Session()
+    logging.info(f"Looking for page {page_num} from pdf {pdf_name}")
+#    res = session.query(Page, PageObject, Pdf).filter(Pdf.pdf_name == pdf_name).filter(Page.page_number == page_num)
+    logging.info("qtic")
+    res = session.query(Page, PageObject, Pdf).\
+            filter(Pdf.pdf_name == pdf_name).\
+            filter(Page.page_number == page_num).\
+            filter(Pdf.id == Page.pdf_id).\
+            filter(Page.id == PageObject.page_id)
+    logging.info("qtoc")
+
+    obj = {}
+    # oof. Maybe get objects by pdf_name and page_num and just look through the bboxes for now?
+    logging.info("looptic")
+    for p, po, pdf in res:
+        bbox = po.bounding_box
+        if x >= bbox[0] and y >= bbox[1] and x <= bbox[2] and y <= bbox[3]:
+            obj = po
+    logging.info("looptoc")
+    if obj == {}:
+        logging.warning(f"Couldn't find object with coords ({x}, {y})")
+    return obj
 
 # TODO: probably shouldn't hardcode these.
 @app.route('/search/tags/all')
@@ -294,29 +296,35 @@ with open('annotations_allowed.yml') as f:
 def object_annotate():
     '''
     '''
+    session = Session()
     if request.method == "GET":
         return jsonify(ANNOTATIONS_ALLOWED)
 
+    logging.info(".....")
     if request.method == "POST":
-        client = MongoClient(os.environ["DBCONNECT"])
-        db = client.pdfs
-
-        object_id = request.args.get("object_id", None)
-        pdf_name = request.args.get("pdf_name", None)
-        page_num = int(request.args.get('page_num', -1))
+        data = request.get_json(force=True)
+        object_id = data.get("object_id", None)
+        pdf_name = data.get("pdf_name", None)
+        page_num = int(data.get('page_num', -1))
         try:
-            x, y = make_tuple(request.args.get("coords"))
-        except:
-            x, y = None
+            print(data.get("coords"))
+            x, y = make_tuple(data.get("coords"))
+        except Exception as err:
+            print(err)
+            print(sys.exc_info())
+            x = None
+            y = None
 
         if object_id is None and (x is None or y is None or pdf_name is None or page_num==-1):
             abort(400)
 
         # get objectid from coords
-        object_id = find_object(pdf_name, page_num, x, y)["_id"]
+        if object_id is None:
+            logging.info(f"tic")
+            object_id = find_object(pdf_name, page_num, x, y).id
+            logging.info(f"toc")
 
         success = False
-        print(type(request.args))
         for k, v in request.args.items():
             if k not in ANNOTATIONS_ALLOWED.keys(): continue
 
@@ -329,8 +337,12 @@ def object_annotate():
                 elif v.lower() == "false" :
                     v = False
 
-            res = db.objects.update_one({"_id": ObjectId(object_id)},
-                    {"$set" : {k: v}})
-            success = success or (res.modified_count >= 1)
-
+            try:
+                logging.info('tic')
+#                session.query(PageObject).filter(PageObject.id == object_id).update({k: v})
+#                session.commit()
+                logging.info('tic')
+                success=True
+            except:
+                logging.warning(f"Could not update object {object_id} with {k} : {v}!")
         return json.dumps({'success':success}), 200, {'ContentType':'application/json'}

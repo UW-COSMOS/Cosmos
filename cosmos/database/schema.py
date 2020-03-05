@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, LargeBinary, ForeignKey
+from sqlalchemy import Column, Integer, String, JSON, LargeBinary, ForeignKey, Boolean
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -19,7 +19,7 @@ class Pdf(Base):
 
     id = Column(Integer, primary_key=True)
     dataset_id = Column(String(200))
-    pdf_name = Column(String(200))
+    pdf_name = Column(String(200), index=True)
     name = Column(String(200))
     meta = Column(JSON)
     meta_dimension = Column(JSON)
@@ -36,7 +36,7 @@ class Page(Base):
     pdf = relationship('Pdf', back_populates='pages')
     page_width = Column(Integer)
     page_height = Column(Integer)
-    page_number = Column(Integer)
+    page_number = Column(Integer, index=True)
     bytes = Column(LargeBinary(length=(2**32)-1))
 
 class PageObject(Base):
@@ -48,6 +48,8 @@ class PageObject(Base):
     content = Column(String(10000))
     bounding_box = Column(JSON)
     cls = Column(String(200))
+    classification_success = Column(Boolean, unique=False, default=None)
+    proposal_success = Column(Boolean, unique=False, default=None)
 
 
 def ping_healthcheck():
