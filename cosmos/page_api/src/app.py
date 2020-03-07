@@ -195,12 +195,12 @@ def page_by_id(page_id):
     result['pp_detected_objs'] = []
     res = session.query(Page, PageObject).filter(Page.id == PageObject.page_id).filter(Page.id == page.id)
     for _, po in res.all():
-        result['pp_detected_objs'].append([[float(i) for i in po.bounding_box], po.cls, 0.0])
+        result['pp_detected_objs'].append({"bounding_box" : [float(i) for i in po.bounding_box], "class" : po.cls, "obj_id" : po.id})
     results_obj = {'results': [result]}
     return jsonify({"results" : [result]})
 
-@app.route('/search/object/lookup')
-def object_lookup():
+@app.route('/search/object/<obj_id>')
+def object_lookup(obj_id):
     '''
     Look up object by pdf_name, page_num, and bbox
     # TODO: could extend this to just accept a point if I get clever with the mongo query.
@@ -216,33 +216,54 @@ def object_lookup():
 
     '''
     session = Session()
-    pdf_name = request.args.get("pdf_name")
-    page_num = int(request.args.get('page_num'))
-    x, y = make_tuple(request.args.get("coords"))
-    tobj = find_object(pdf_name, page_num, x, y)
+    if obj_id == "lookup":
+        pdf_name = request.args.get("pdf_name")
+        page_num = int(request.args.get('page_num'))
+        x, y = make_tuple(request.args.get("coords"))
+        tobj = find_object(pdf_name, page_num, x, y)
+    else:
+        tobj = session.query(PageObject).get(obj_id)
     obj =  {c.name: getattr(tobj, c.name) for c in tobj.__table__.columns}
     return jsonify({"results" : [postprocess_result(obj)]})
+
+#@app.route('/search/object/lookup')
+#def object_lookup():
+#    '''
+#    Look up object by pdf_name, page_num, and bbox
+#    # TODO: could extend this to just accept a point if I get clever with the mongo query.
+#
+#    page_num
+#    pdf_name
+#    "bounding_box" : [
+#        x1,
+#        y1,
+#        x2,
+#        y2
+#        ]
+#
+#    '''
+#    session = Session()
+#    pdf_name = request.args.get("pdf_name")
+#    page_num = int(request.args.get('page_num'))
+#    x, y = make_tuple(request.args.get("coords"))
+#    tobj = find_object(pdf_name, page_num, x, y)
+#    obj =  {c.name: getattr(tobj, c.name) for c in tobj.__table__.columns}
+#    return jsonify({"results" : [postprocess_result(obj)]})
 
 def find_object(pdf_name, page_num, x, y):
     session = Session()
     logging.info(f"Looking for page {page_num} from pdf {pdf_name}")
-#    res = session.query(Page, PageObject, Pdf).filter(Pdf.pdf_name == pdf_name).filter(Page.page_number == page_num)
-    logging.info("qtic")
     res = session.query(Page, PageObject, Pdf).\
             filter(Pdf.pdf_name == pdf_name).\
             filter(Page.page_number == page_num).\
             filter(Pdf.id == Page.pdf_id).\
             filter(Page.id == PageObject.page_id)
-    logging.info("qtoc")
 
     obj = {}
-    # oof. Maybe get objects by pdf_name and page_num and just look through the bboxes for now?
-    logging.info("looptic")
     for p, po, pdf in res:
         bbox = po.bounding_box
         if x >= bbox[0] and y >= bbox[1] and x <= bbox[2] and y <= bbox[3]:
             obj = po
-    logging.info("looptoc")
     if obj == {}:
         logging.warning(f"Couldn't find object with coords ({x}, {y})")
     return obj
@@ -300,7 +321,6 @@ def object_annotate():
     if request.method == "GET":
         return jsonify(ANNOTATIONS_ALLOWED)
 
-    logging.info(".....")
     if request.method == "POST":
         data = request.get_json(force=True)
         object_id = data.get("object_id", None)
@@ -320,28 +340,24 @@ def object_annotate():
 
         # get objectid from coords
         if object_id is None:
-            logging.info(f"tic")
             object_id = find_object(pdf_name, page_num, x, y).id
-            logging.info(f"toc")
 
         success = False
-        for k, v in request.args.items():
+        for k, v in data.items():
             if k not in ANNOTATIONS_ALLOWED.keys(): continue
 
             atype = ANNOTATIONS_ALLOWED[k]
             if atype == "text" :
                 pass
             elif atype == "boolean":
-                if v.lower() == "true" :
+                if str(v).lower() == "true" :
                     v = True
-                elif v.lower() == "false" :
+                elif str(v).lower() == "false" :
                     v = False
 
             try:
-                logging.info('tic')
-#                session.query(PageObject).filter(PageObject.id == object_id).update({k: v})
-#                session.commit()
-                logging.info('tic')
+                session.query(PageObject).filter(PageObject.id == object_id).update({k: v})
+                session.commit()
                 success=True
             except:
                 logging.warning(f"Could not update object {object_id} with {k} : {v}!")
