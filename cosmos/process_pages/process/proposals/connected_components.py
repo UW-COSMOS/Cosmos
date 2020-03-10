@@ -161,23 +161,23 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5):
                     block_coords2[key].append(val)
                 else:
                     block_coords2[key] = [val]
-    
+
     if obj_count > 0:
         avg_height = obj_heights / obj_count
         if avg_height < 3 * blank_row_height:
-            get_proposals(img, white_thresh=white_thresh, blank_row_height=2 * blank_row_height, filter_thres=filter_thres)
-            return
-    for key in block_coords2:
-        coords_list = block_coords2[key]
-        for ind2, bc in enumerate(coords_list):
-            tl_y1, tl_x1, br_y1, br_x1 = bc
-            # Filter objs that are too small
-            height = br_y1 - tl_y1
-            width = br_x1 - tl_x1
-            if height <= filter_thres or width <= filter_thres:
-                continue
-            adjusted = (left_shave + tl_x1, tl_y1, left_shave + br_x1, br_y1)
-            block_coords.add(adjusted)
+            block_coords = get_proposals(img, white_thresh=white_thresh, blank_row_height=2 * blank_row_height, filter_thres=filter_thres)
+        else:
+            for key in block_coords2:
+                coords_list = block_coords2[key]
+                for ind2, bc in enumerate(coords_list):
+                    tl_y1, tl_x1, br_y1, br_x1 = bc
+                    # Filter objs that are too small
+                    height = br_y1 - tl_y1
+                    width = br_x1 - tl_x1
+                    if height <= filter_thres or width <= filter_thres:
+                        continue
+                    adjusted = (left_shave + tl_x1, tl_y1, left_shave + br_x1, br_y1)
+                    block_coords.add(adjusted)
 
     block_coords = list(block_coords)
     return block_coords
