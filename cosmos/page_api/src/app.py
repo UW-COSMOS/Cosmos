@@ -20,7 +20,7 @@ import re
 import requests
 import pandas as pd
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, defer
 from sqlalchemy.sql.expression import func
 
 engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
@@ -180,22 +180,29 @@ def page_by_id(page_id):
     '''
     session = Session()
     if page_id == "next_prediction":
-        page, pdf = session.query(Page, Pdf).order_by(func.rand()).first()
+        page = session.query(Page).order_by(func.rand()).first()
     else:
         page, pdf = session.query(Page, Pdf).filter(Page.id == page_id).first()
+    # temp hack -- bringing back the full model sucks for large docs because of the metadata field, so just bring back the column we care about IAR - 10.Mar.2020
+    res = session.execute('SELECT pdf_name FROM pdfs WHERE id =:pdf_id LIMIT 1', {'pdf_id' : page.pdf_id})
+    for r in res:
+        pdf_name = r['pdf_name']
+    logging.info(pdf_name)
     result = {}
     result["_id"] = page.id
     result['pdf_id'] = page.pdf_id
-    result['pdf_name'] = pdf.pdf_name
+    result['pdf_name'] = pdf_name
     result['page_num'] = page.page_number
     result['page_width'] = page.page_width
     result['page_height'] = page.page_height
     encoded = base64.encodebytes(page.bytes)
     result['resize_bytes'] = encoded.decode('ascii')
     result['pp_detected_objs'] = []
-    res = session.query(Page, PageObject).filter(Page.id == PageObject.page_id).filter(Page.id == page.id)
-    for _, po in res.all():
-        result['pp_detected_objs'].append({"bounding_box" : [float(i) for i in po.bounding_box], "class" : po.cls, "obj_id" : po.id})
+
+    res = session.query(PageObject).filter(page.id == PageObject.page_id)
+    for po in res.all():
+        result['pp_detected_objs'].append({"bounding_box" : [float(i) for i in po.bounding_box], "class" : po.cls, "confidence" : str(po.confidence), "obj_id" : po.id})
+
     results_obj = {'results': [result]}
     return jsonify({"results" : [result]})
 
