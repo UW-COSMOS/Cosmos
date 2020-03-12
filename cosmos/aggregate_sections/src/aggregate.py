@@ -6,25 +6,35 @@ import logging
 import time
 import os
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
-import pymongo
-from pymongo import MongoClient
 from collections import defaultdict
 from joblib import Parallel, delayed
 import click
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, defer
+from sqlalchemy.sql.expression import func
+from schema import Pdf, Page, PageObject, Section
+
+engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+Session = sessionmaker()
+Session.configure(bind=engine)
+
 MIN_SECTION_LEN = 30
 
-
-def load_pages(db, buffer_size):
+def load_pages(buffer_size):
     current_docs = []
-    for doc in db.raw_pdfs.find(no_cursor_timeout=True):
+    session = Session()
+    res = session.execute('SELECT id FROM pdfs')
+    for pdf in res:
+        pdf_id = pdf.id
+
         # Find all objects
-        pdf_name = doc['pdf_name']
+        res = session.query(Page, PageObject).filter(Page.pdf_id == pdf_id)\
+                .filter(Page.id == PageObject.page_id)
+
         obj_list = []
-        for obj in db.objects.find({'pdf_name': pdf_name}, no_cursor_timeout=True):
-            del obj['bytes']
-            del obj['page_ocr_df']
-            obj_list.append(obj)
+        for page, po in res:
+            obj_list.append({'page' : page, 'page_object': po})
 
         current_docs.append(obj_list)
         if len(current_docs) == buffer_size:
@@ -36,7 +46,7 @@ def load_pages(db, buffer_size):
 def groups(pobjs):
     groups = []
     for p in pobjs:
-        bb = p['bounding_box']
+        bb = p['page_object'].bounding_box
         x1, y1, x2, y2 = bb
         inserted = False
         for group in groups:
@@ -49,19 +59,19 @@ def groups(pobjs):
             groups.append([x1, [p]])
     for g in groups:
         # sort internally by y
-        g[1].sort(key=lambda x: x['bounding_box'][1])
+        g[1].sort(key=lambda x: x['page_object'].bounding_box[1])
     # Sort bins by x
     groups.sort(key=lambda x: x[0])
     return groups
 
 def aggregate_equations(objs):
     def filter_fn(obj):
-        return obj['class'] in ['Equation', 'Body Text']
+        return obj.page_object['class'] in ['Equation', 'Body Text']
 
     fobjs = [o for o in objs if filter_fn(o)]
     pages = defaultdict(list)
     for obj in fobjs:
-        pages[obj['page_num']].append(obj)
+        pages[obj.page['page_num']].append(obj)
 
     keys = pages.keys()
     if len(keys) == 0:
@@ -105,6 +115,7 @@ def aggregate_equations(objs):
                      'class': 'EquationContext',
                      'pdf_name': pdf_name}
         final_objs.append(final_obj)
+    import pdb; pdb.set_trace()
     return final_objs
 
 
@@ -230,27 +241,29 @@ def aggregate_tables(objs):
 
 def aggregate_sections(objs):
     def filter_fn(obj):
-        return obj['class'] in ['Body Text', 'Section Header']
+        print(obj['page_object'].cls)
+        return obj['page_object'].cls in ['Body Text', 'Section Header']
 
     fobjs = [o for o in objs if filter_fn(o)]
     pages = defaultdict(list)
     for obj in fobjs:
-        pages[obj['page_num']].append(obj)
+        pages[obj['page'].page_number].append(obj)
     keys = pages.keys()
     if len(keys) == 0:
         # Probably should log something here
         return []
     max_len = max(keys)
     sections = []
-    for i in range(max_len):
+    for i in range(max_len + 1):
         if i not in pages:
+            print(":(")
             continue
         page_objs = pages[i]
         grouped = groups(page_objs)
         current_section = None
         for group in grouped:
             for obj in group[1]:
-                if obj['class'] == 'Section Header':
+                if obj['page_object'].cls == 'Section Header':
                     current_section = obj
                     sections.append([obj, []])
                     continue
@@ -264,67 +277,82 @@ def aggregate_sections(objs):
     for section in sections:
         header, objs = section
         aggregated_context = ''
-        pdf_name = ''
+        pdf_id = ''
         if header is not None:
-            aggregated_context = f'{header["content"]}\n'
-            pdf_name = header['pdf_name']
+            aggregated_context = f'{header["page_object"].content}\n'
+            pdf_id = header['page'].pdf_id
         else:
-            pdf_name = objs[0]['pdf_name']
+            pdf_id = objs[0]['page'].pdf_id
         for obj in objs:
-            aggregated_context += f'\n{obj["content"]}\n'
+            aggregated_context += f'\n{obj["page_object"].content}\n'
         if aggregated_context.strip() == '' or len(aggregated_context.strip()) < MIN_SECTION_LEN:
             continue
-        objs = [{'_id': obj['_id']} for obj in objs]
+        objs = [{'_id': obj['page_object'].id} for obj in objs]
+        # TODO: make this a model
         final_obj = {'header': header,
                      'objects': objs,
                      'content': aggregated_context,
                      'class': 'Section',
-                     'pdf_name': pdf_name}
+                     'pdf_id': pdf_id}
         final_objs.append(final_obj)
     return final_objs
-
 
 def section_scan(db_section_insert_fn, db_equation_insert_fn, db_figure_insert_fn, db_table_insert_fn, num_processes, sections, equations, figures, tables):
     logging.info('Starting section extraction over objects')
     start_time = time.time()
-    client = MongoClient(os.environ['DBCONNECT'])
-    logging.info(f'Connected to client: {client}')
-    db = client.pdfs
-    for batch in load_pages(db, num_processes):
+    for batch in load_pages(num_processes):
         logging.info('Batch constructed. Running aggregation')
         if sections:
             objs = Parallel(n_jobs=num_processes)(delayed(aggregate_sections)(o) for o in batch)
             objs = [o for p in objs for o in p]
             if len(objs) == 0:
                 continue
-            db_section_insert_fn(objs, client)
-        if equations:
-            objs = Parallel(n_jobs=num_processes)(delayed(aggregate_equations)(o) for o in batch)
-            objs = [o for p in objs for o in p]
-            if len(objs) == 0:
-                continue
-            db_equation_insert_fn(objs, client)
+            db_section_insert_fn(objs)
 
-        if figures:
-            objs = Parallel(n_jobs=num_processes)(delayed(aggregate_figures)(o) for o in batch)
-            objs = [o for p in objs for o in p]
-            if len(objs) == 0:
-                continue
-            db_figure_insert_fn(objs, client)
+        # TODO: Maybe bring these back?
+#        if equations:
+#            objs = Parallel(n_jobs=num_processes)(delayed(aggregate_equations)(o) for o in batch)
+#            objs = [o for p in objs for o in p]
+#            if len(objs) == 0:
+#                continue
+#            db_equation_insert_fn(objs, client)
+#
+#        if figures:
+#            objs = Parallel(n_jobs=num_processes)(delayed(aggregate_figures)(o) for o in batch)
+#            objs = [o for p in objs for o in p]
+#            if len(objs) == 0:
+#                continue
+#            db_figure_insert_fn(objs, client)
+#
+#        if tables:
+#            objs = Parallel(n_jobs=num_processes)(delayed(aggregate_tables)(o) for o in batch)
+#            objs = [o for p in objs for o in p]
+#            if len(objs) == 0:
+#                continue
+#            db_table_insert_fn(objs, client)
 
-        if tables:
-            objs = Parallel(n_jobs=num_processes)(delayed(aggregate_tables)(o) for o in batch)
-            objs = [o for p in objs for o in p]
-            if len(objs) == 0:
-                continue
-            db_table_insert_fn(objs, client)
-
-def section_insert_fn(objs, client):
-    db = client.pdfs
+def section_insert_fn(objs):
+    session = Session()
     for obj in objs:
+#    page_id = Column(Integer, ForeignKey('pages.id'))
+#    header = Column(String(200))
+#    content = Column(String(10000))
+#    objects = Column(ARRAY(Integer))
+#    cls = Column(String(200))
+        section = Section(pdf_id=obj['pdf_id'],
+                header=obj['header'],
+                content=obj['content'],
+                objects=','.join([str(i['_id']) for i in obj['objects']]),
+                cls=obj['class'],
+                )
+        session.add(section)
+        session.commit()
+
         print(obj['content'])
         print('-----------------------------------------')
-    result = db.sections.insert_many(objs)
+
+
+#    result = db.sections.insert_many(objs)
     logging.info(f'Inserted result: {result}')
 
 

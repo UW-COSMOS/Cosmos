@@ -52,6 +52,14 @@ class PageObject(Base):
     classification_success = Column(Boolean, unique=False, default=None)
     proposal_success = Column(Boolean, unique=False, default=None)
 
+class Section(Base):
+    __tablename__ = 'sections'
+    id = Column(Integer, primary_key=True)
+    pdf_id = Column(Integer, ForeignKey('pdfs.id'))
+    header = Column(String(200))
+    content = Column(String(10000))
+    objects = Column(String(200)) # oof, wish that mysql support arrays
+    cls = Column(String(200))
 
 def ping_healthcheck():
     try:

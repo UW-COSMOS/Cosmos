@@ -1,13 +1,21 @@
 version: "2.3"
+
 services:
     aggregate_sections:
-        build: .
+        image: iaross/aggregate_sections_test
         ipc: host
-        #volumes:
-        #    - .:/develop/
-        command: "python3 aggregate.py 30 --section --equation --figure --table"
+#        volumes:
+#            - .:/develop/
+#        command: "python3 aggregate.py 1 --section --equation --figure --table"
+        command: "python3 aggregate.py 1 --section"
+#        command: "tail -f /dev/null"
+
         environment:
-            - DBCONNECT
-        
-        
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network 
 

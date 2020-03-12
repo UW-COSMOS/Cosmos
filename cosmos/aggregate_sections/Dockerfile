@@ -6,12 +6,13 @@ FROM python:3.7
 # Pillow requirements
 #run apt install build-base jpeg-dev zlib-dev
 
-COPY requirements.txt /
+COPY ./aggregate_sections/requirements.txt /
 
 #For Debugging purpose
 RUN apt-get update && apt-get -y install vim
 
 RUN pip install -r /requirements.txt
 
-COPY src/ /app
+COPY ./aggregate_sections/src/ /app
+COPY ./database/schema.py /app
 WORKDIR /app
