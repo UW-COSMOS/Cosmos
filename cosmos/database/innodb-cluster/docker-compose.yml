@@ -53,7 +53,7 @@ services:
         cosmos_swarm_network:
     env_file:
       - mysql-router.env
-    image: ankurgos/router:latest
+    image: iaross/router:latest
     ports:
       - "6446:6446"
     depends_on:

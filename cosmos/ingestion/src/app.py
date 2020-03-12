@@ -30,6 +30,33 @@ bsz = int(os.environ['PAGE_BSZ'])
 Session = sessionmaker()
 Session.configure(bind=engine)
 
+# https://github.com/falconry/falcon/issues/1220
+class CORSComponent(object):
+    def process_response(self, req, resp, resource, req_succeeded):
+        logging.info(req)
+        logging.info("CORSing it up")
+        resp.set_header('Access-Control-Allow-Origin', '*')
+
+        if (req_succeeded
+            and req.method == 'OPTIONS'
+            and req.get_header('Access-Control-Request-Method')
+        ):
+            # NOTE(kgriffs): This is a CORS preflight request. Patch the
+            #   response accordingly.
+
+            allow = resp.get_header('Allow')
+            resp.delete_header('Allow')
+
+            allow_headers = req.get_header(
+                'Access-Control-Request-Headers',
+                default='*'
+            )
+
+            resp.set_headers((
+                ('Access-Control-Allow-Methods', allow),
+                ('Access-Control-Allow-Headers', allow_headers),
+                ('Access-Control-Max-Age', '86400'),  # 24 hours
+            ))
 
 class PreprocessedPDF(object):
 
@@ -85,7 +112,9 @@ class PreprocessedPDF(object):
 
 
     def on_post(self, req, resp):
+        logging.info("POST  detected!")
         obj = req.media
+        logging.info(obj)
         pdf_file = base64.b64decode(obj['pdf'].encode())
         if 'dataset_id' not in obj or 'pdf_name' not in obj:
             resp.status = falcon.HTTP_400
@@ -109,6 +138,7 @@ class PreprocessedPDF(object):
                 meta = json.loads(meta)
                 dims = list(dims)
             pdf_id = uuid.uuid4()
+            logging.info("Splitting pages")
             subprocess.run(['gs', '-dBATCH',
                                   '-dNOPAUSE',
                                   '-sDEVICE=png16m',
@@ -166,7 +196,7 @@ class DeleteDataset(object):
         session.close()
 
 
-api = application = falcon.API()
+api = application = falcon.API(middleware=[CORSComponent() ])
 pre_pdf = PreprocessedPDF()
 delete_dataset = DeleteDataset()
 api.add_route('/preprocess', pre_pdf)

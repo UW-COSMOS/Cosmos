@@ -76,7 +76,7 @@ class ProcessPage(object):
 
     def detect(self, payload):
         url = 'http://detect:8002/detect'
-        result = requests.post(url, json=payload)
+        result = requests.post(url, json=payload, timeout=300)
         return result.json()
 
     def on_post(self, req, resp):

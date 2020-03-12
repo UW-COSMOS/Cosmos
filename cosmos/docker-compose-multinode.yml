@@ -14,34 +14,72 @@ services:
             swarm_network:
 
     ingestion:
-        image: ankurgos/ingestion:3.0
+        image: iaross/ingestion_test:latest
         networks:
             swarm_network:
         environment:
             - MYSQL_USER
             - MYSQL_PASSWORD
             - PAGE_BSZ=5
-        command: "gunicorn -w 2 --threads 33 -b 0.0.0.0:8000 app.app"
+        command: "gunicorn -w 1 --threads 1 -b 0.0.0.0:8000 app.app"
         ports:
             - 8000:8000
 
     process_pages:
-        image: ankurgos/process_pages:3.0
+        image: iaross/process_pages_test:latest
         networks:
             swarm_network:
         environment:
             - MYSQL_USER
             - MYSQL_PASSWORD
             - CUDA_VISIBLE_DEVICES=''
-        command: "gunicorn -w 50 --threads 2 -b 0.0.0.0:8001 process.app"
+        command: "gunicorn -w 1 --timeout 3600 --threads 1 -b 0.0.0.0:8001 process.app"
         ports:
             - 8001:8001
 
     detect:
-        image: ankurgos/process_pages:3.0
+        image: iaross/process_pages_test:latest
         networks:
             swarm_network:
         ports:
             - 8002:8002
-        command: "uwsgi --http 0.0.0.0:8002 --wsgi-file process/detect.py"
+        command: "uwsgi --http 0.0.0.0:8002 --http-timeout 300 --wsgi-file process/detect.py"
+
+    gateway:
+        image: nginx:latest
+        ports:
+            - "80:80"
+        networks:
+            swarm_network:
+        volumes:
+            - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+    frontend:
+        image: frontend_frontend:latest
+        volumes:
+            - './frontend/cosmos:/app/'
+            - '/app/node_modules'
+        command: "yarn start"
+        ports:
+            - 3001:3000
+
+        networks:
+            swarm_network:
+
+    search_backend:
+        build: .
+        image: iaross/sbackend
+        ipc: host
+        command: "flask run --host=0.0.0.0 --port=5002"
+        #volumes:
+        #    - .:/develop/
+        #command: "tail -F /dev/null"
+        environment:
+            - DBCONNECT
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
+        ports:
+            - 5002:5002
+        networks:
+            swarm_network:
 

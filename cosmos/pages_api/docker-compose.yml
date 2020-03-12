@@ -1,14 +1,10 @@
 version: "2.3"
 services:
-    s_backend:
+    search_backend:
         build: .
         image: iaross/sbackend
         ipc: host
-<<<<<<< HEAD
-=======
-        container_name: search_backend
->>>>>>> feat/visualizer_interface
-        command: "flask run --host=0.0.0.0 --port=5001"
+        command: "flask run --host=0.0.0.0 --port=5002"
         #volumes:
         #    - .:/develop/
         #command: "tail -F /dev/null"
@@ -17,8 +13,5 @@ services:
             - FLASK_APP=app.py
             - FLASK_ENV=development
         ports:
-            - 5001:5001
-networks:
-  default:
-    external:
-      name: elasticsearch_esnet
+            - 5002:5002
+
