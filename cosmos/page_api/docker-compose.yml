@@ -1,0 +1,24 @@
+version: "2.3"
+services:
+    s_backend:
+#        build: .
+        image: sbackend
+        ipc: host
+        container_name: search_backend
+        command: "flask run --host=0.0.0.0 --port=5001"
+        volumes:
+            - ${PWD}/src/app.py:/app/app.py
+            - ${PWD}/src/app.py:/app/dummy
+        #command: "tail -F /dev/null"
+        environment:
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
+        ports:
+            - 5001:5001
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network 
