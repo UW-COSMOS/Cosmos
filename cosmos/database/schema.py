@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, LargeBinary, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, JSON, LargeBinary, ForeignKey, Boolean, Numeric
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -48,6 +48,7 @@ class PageObject(Base):
     content = Column(String(10000))
     bounding_box = Column(JSON)
     cls = Column(String(200))
+    confidence = Column(Numeric(precision=9, scale=6))
     classification_success = Column(Boolean, unique=False, default=None)
     proposal_success = Column(Boolean, unique=False, default=None)
 
