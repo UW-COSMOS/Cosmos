@@ -1,3 +1,0 @@
-"""
-Head module
-"""

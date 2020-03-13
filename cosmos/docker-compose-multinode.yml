@@ -14,34 +14,135 @@ services:
             swarm_network:
 
     ingestion:
-        image: ankurgos/ingestion:3.0
+        image: ankurgos/ingestion:3.1
         networks:
             swarm_network:
         environment:
             - MYSQL_USER
             - MYSQL_PASSWORD
             - PAGE_BSZ=5
-        command: "gunicorn -w 2 --threads 33 -b 0.0.0.0:8000 app.app"
+            - CELERY_BROKER=redis://redis:6379/0
+            - CELERY_BACKEND=redis://redis:6379/0
+            - DEVICE=cpu
+        command: "gunicorn -w 4 -b 0.0.0.0:8000 ingest.app"
+        depends_on:
+            - scheduler
+            - worker1
+            - worker2
         ports:
             - 8000:8000
 
-    process_pages:
-        image: ankurgos/process_pages:3.0
+    scheduler:
+        image: ankurgos/ingestion:3.1
+        networks:
+            swarm_network:
+        command: "dask-scheduler"
+        ports:
+            - 8787:8787
+
+    worker1:
+        image: ankurgos/ingestion:3.1
         networks:
             swarm_network:
         environment:
             - MYSQL_USER
             - MYSQL_PASSWORD
             - CUDA_VISIBLE_DEVICES=''
-        command: "gunicorn -w 50 --threads 2 -b 0.0.0.0:8001 process.app"
-        ports:
-            - 8001:8001
+        command: "dask-worker tcp://scheduler:8786 --nprocs 100 --resources 'process=1' --preload ingest.process_setup"
+        depends_on:
+            - scheduler
 
-    detect:
-        image: ankurgos/process_pages:3.0
+    worker2:
+        image: ankurgos/ingestion:3.1
         networks:
             swarm_network:
-        ports:
-            - 8002:8002
-        command: "uwsgi --http 0.0.0.0:8002 --wsgi-file process/detect.py"
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - DEVICE=cuda:0
+            - CUDA_VISIBLE_DEVICES=0
+        command: "dask-worker tcp://scheduler:8786 --nprocs 1 --resources 'GPU=1' --preload ingest.detect_setup"
+        depends_on:
+            - scheduler
+    #flower:
+    #    ports:
+    #        - 5555:5555
+    #    image: ankurgos/ingestion:3.1
+    #    networks:
+    #        swarm_network:
+    #    depends_on:
+    #        - redis
+    #        - ingestion
+    #    command: "flower --app=ingest.process_page.app  --broker=redis://redis:6379/0"
+
+    #ingestion_celery:
+    #    image: ankurgos/ingestion:3.1
+    #    networks:
+    #        swarm_network:
+    #    environment:
+    #        - CELERY_BROKER=redis://redis:6379/0
+    #        - CELERY_BACKEND=redis://redis:6379/0
+    #        - MYSQL_USER
+    #        - MYSQL_PASSWORD
+    #        - CUDA_VISIBLE_DEVICES=''
+    #        - DEVICE=cpu
+    #    depends_on:
+    #        - redis
+    #        - ingestion
+    #    command: "celery worker --app=ingest.ingest.app --concurrency=30 --loglevel=debug -Q ingest_q"
+
+    #process_pages_celery:
+    #    image: ankurgos/ingestion:3.1
+    #    networks:
+    #        swarm_network:
+    #    environment:
+    #        - CELERY_BROKER=redis://redis:6379/0
+    #        - CELERY_BACKEND=redis://redis:6379/0
+    #        - MYSQL_USER
+    #        - MYSQL_PASSWORD
+    #        - CUDA_VISIBLE_DEVICES=''
+    #        - DEVICE=cpu
+    #    depends_on:
+    #        - redis
+    #        - ingestion
+    #    command: "celery worker --app=ingest.process_page.app --concurrency=45 --loglevel=debug -Q process_q"
+
+    ##postprocess_pages_celery:
+    ##    image: ankurgos/ingestion:3.1
+    ##    networks:
+    ##        swarm_network:
+    ##    environment:
+    ##        - CELERY_BROKER=redis://redis:6379/0
+    ##        - CELERY_BACKEND=redis://redis:6379/0
+    ##        - MYSQL_USER
+    ##        - MYSQL_PASSWORD
+    ##        - CUDA_VISIBLE_DEVICES=''
+    ##        - DEVICE=cpu
+    ##    depends_on:
+    ##        - redis
+    ##        - ingestion
+    ##    command: "celery worker --app=ingest.postprocess_page.app --concurrency=45 --loglevel=debug -Q postprocess_q"
+
+    #detect_celery:
+    #    image: ankurgos/ingestion:3.1
+    #    networks:
+    #        swarm_network:
+    #    environment:
+    #        - CELERY_BROKER=redis://redis:6379/0
+    #        - CELERY_BACKEND=redis://redis:6379/0
+    #        - MYSQL_USER
+    #        - MYSQL_PASSWORD
+    #        - DEVICE=cuda
+    #    depends_on:
+    #        - redis
+    #        - ingestion
+    #    command: "celery worker --app=ingest.detect.app --loglevel=debug -Q detect_q"
+
+    #redis:
+    #    image: redis:5.0.3-alpine
+    #    networks:
+    #        swarm_network:
+    #    volumes:
+    #        - ${REDIS_PTH}:/data
+
 

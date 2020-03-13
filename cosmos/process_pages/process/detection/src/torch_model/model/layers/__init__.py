@@ -1,3 +1,0 @@
-"""
-Featurization module
-"""
