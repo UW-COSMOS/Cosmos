@@ -21,65 +21,85 @@ services:
             - MYSQL_USER
             - MYSQL_PASSWORD
             - PAGE_BSZ=5
-        command: "gunicorn -w 1 --threads 1 -b 0.0.0.0:8000 app.app"
+            - CELERY_BROKER=redis://redis:6379/0
+            - CELERY_BACKEND=redis://redis:6379/0
+            - DEVICE=cpu
+        command: "gunicorn -w 4 -b 0.0.0.0:8000 ingest.app"
+        depends_on:
+            - scheduler
+            - worker1
+            - worker2
         ports:
             - 8000:8000
 
-    process_pages:
-        image: iaross/process_pages_test:latest
+    scheduler:
+        image: ankurgos/ingestion:3.1
+        networks:
+            swarm_network:
+        command: "dask-scheduler"
+        ports:
+            - 8787:8787
+
+    worker1:
+        image: ankurgos/ingestion:3.1
         networks:
             swarm_network:
         environment:
             - MYSQL_USER
             - MYSQL_PASSWORD
             - CUDA_VISIBLE_DEVICES=''
-        command: "gunicorn -w 1 --timeout 3600 --threads 1 -b 0.0.0.0:8001 process.app"
-        ports:
-            - 8001:8001
+        command: "dask-worker tcp://scheduler:8786 --nprocs 100 --resources 'process=1' --preload ingest.process_setup"
+        depends_on:
+            - scheduler
 
-    detect:
-        image: iaross/process_pages_test:latest
+    worker2:
+        image: ankurgos/ingestion:3.1
         networks:
             swarm_network:
-        ports:
-            - 8002:8002
-        command: "uwsgi --http 0.0.0.0:8002 --http-timeout 300 --wsgi-file process/detect.py"
-
-    gateway:
-        image: nginx:latest
-        ports:
-            - "80:80"
-        networks:
-            swarm_network:
-        volumes:
-            - ./nginx.conf:/etc/nginx/nginx.conf:ro
-
-    frontend:
-        image: frontend_frontend:latest
-        volumes:
-            - './frontend/cosmos:/app/'
-            - '/app/node_modules'
-        command: "yarn start"
-        ports:
-            - 3001:3000
-
-        networks:
-            swarm_network:
-
-    search_backend:
-        build: .
-        image: iaross/sbackend
-        ipc: host
-        command: "flask run --host=0.0.0.0 --port=5002"
-        #volumes:
-        #    - .:/develop/
-        #command: "tail -F /dev/null"
         environment:
-            - DBCONNECT
-            - FLASK_APP=app.py
-            - FLASK_ENV=development
-        ports:
-            - 5002:5002
-        networks:
-            swarm_network:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - DEVICE=cuda:0
+            - CUDA_VISIBLE_DEVICES=0
+        command: "dask-worker tcp://scheduler:8786 --nprocs 1 --resources 'GPU=1' --preload ingest.detect_setup"
+        depends_on:
+            - scheduler
+
+#    gateway:
+#        image: nginx:latest
+#        ports:
+#            - "80:80"
+#        networks:
+#            swarm_network:
+#        volumes:
+#            - ./nginx.conf:/etc/nginx/nginx.conf:ro
+#
+#    frontend:
+#        image: frontend_frontend:latest
+#        volumes:
+#            - './frontend/cosmos:/app/'
+#            - '/app/node_modules'
+#        command: "yarn start"
+#        ports:
+#            - 3001:3000
+#
+#        networks:
+#            swarm_network:
+#
+#    search_backend:
+#        build: .
+#        image: iaross/sbackend
+#        ipc: host
+#        command: "flask run --host=0.0.0.0 --port=5002"
+#        #volumes:
+#        #    - .:/develop/
+#        #command: "tail -F /dev/null"
+#        environment:
+#            - DBCONNECT
+#            - FLASK_APP=app.py
+#            - FLASK_ENV=development
+#        ports:
+#            - 5002:5002
+#        networks:
+#            swarm_network:
 

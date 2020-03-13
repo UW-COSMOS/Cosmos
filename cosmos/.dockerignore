@@ -2,7 +2,7 @@ question_answering_backend/
 postprocess/
 ingestion/test_docs/
 semantic_segmentation/data
-process_pages/process/detection/weights
-process_pages/process/detection/data
-process_pages/process/detection/src/runs
+ingestion/ingest/process/detection/weights
+ingestion/ingest/process/detection/data
+ingestion/ingest/process/detection/src/runs
 
