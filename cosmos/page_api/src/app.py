@@ -12,6 +12,7 @@ from schema import Pdf, Page, PageObject
 from ast import literal_eval as make_tuple
 from io import BytesIO
 import logging
+import random
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 import base64
 import html
@@ -180,10 +181,14 @@ def page_by_id(page_id):
     '''
     session = Session()
     if page_id == "next_prediction":
-        page = session.query(Page).order_by(func.rand()).first()
+        # Hacky way to get a random, because sorting by rand().limit(1) is real slow
+        rowCount = int(session.query(Page).count())
+        rand = random.randrange(0, rowCount)
+        page = session.query(Page).filter(Page.id==int(rand)).first()
     else:
         page, pdf = session.query(Page, Pdf).filter(Page.id == page_id).first()
     # temp hack -- bringing back the full model sucks for large docs because of the metadata field, so just bring back the column we care about IAR - 10.Mar.2020
+
     res = session.execute('SELECT pdf_name FROM pdfs WHERE id =:pdf_id LIMIT 1', {'pdf_id' : page.pdf_id})
     for r in res:
         pdf_name = r['pdf_name']
