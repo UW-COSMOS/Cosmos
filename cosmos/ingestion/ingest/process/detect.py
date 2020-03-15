@@ -14,7 +14,7 @@ engine = create_engine('sqlite:///:memory:', echo=False)
 Session = sessionmaker()
 Session.configure(bind=engine)
 
-device_str = 'cpu'
+device_str = 'cuda'
 cfg_path = '/process/configs/model_config.yaml'
 weights_pth = '/process/weights/model_weights.pth'
 model = get_model(cfg_path, weights_pth, device_str)
