@@ -33,7 +33,7 @@ services:
             - 8000:8000
 
     scheduler:
-        image: ankurgos/ingestion:3.1
+        image: iaross/ingestion_test:latest
         networks:
             swarm_network:
         command: "dask-scheduler"
@@ -41,7 +41,7 @@ services:
             - 8787:8787
 
     worker1:
-        image: ankurgos/ingestion:3.1
+        image: iaross/ingestion_test:latest
         networks:
             swarm_network:
         environment:
@@ -53,7 +53,7 @@ services:
             - scheduler
 
     worker2:
-        image: ankurgos/ingestion:3.1
+        image: iaross/ingestion_test:latest
         networks:
             swarm_network:
         environment:
@@ -65,41 +65,26 @@ services:
         depends_on:
             - scheduler
 
-#    gateway:
-#        image: nginx:latest
-#        ports:
-#            - "80:80"
-#        networks:
-#            swarm_network:
-#        volumes:
-#            - ./nginx.conf:/etc/nginx/nginx.conf:ro
-#
-#    frontend:
-#        image: frontend_frontend:latest
-#        volumes:
-#            - './frontend/cosmos:/app/'
-#            - '/app/node_modules'
-#        command: "yarn start"
-#        ports:
-#            - 3001:3000
-#
-#        networks:
-#            swarm_network:
-#
-#    search_backend:
-#        build: .
-#        image: iaross/sbackend
-#        ipc: host
-#        command: "flask run --host=0.0.0.0 --port=5002"
-#        #volumes:
-#        #    - .:/develop/
-#        #command: "tail -F /dev/null"
-#        environment:
-#            - DBCONNECT
-#            - FLASK_APP=app.py
-#            - FLASK_ENV=development
-#        ports:
-#            - 5002:5002
-#        networks:
-#            swarm_network:
+    gateway:
+        image: iaross/visualizer
+        ports:
+            - 8081:80
+        networks:
+            swarm_network:
+  
+    search_backend:
+        image: iaross/sbackend
+        container_name: search_backend
+        command: "flask run --host=0.0.0.0 --port=5001"
+        ports:
+            - 5001:5001
+        environment:
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+            - PDF_DB=pdfs
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
+        networks:
+           swarm_network:
 
