@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, LargeBinary, ForeignKey, Boolean, Numeric
+from sqlalchemy import Column, Integer, String, JSON, LargeBinary, ForeignKey, Boolean, Numeric, Text
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -6,6 +6,8 @@ import requests
 import logging
 import os
 import time
+from alembic.config import Config
+from alembic import command
 
 
 Base = declarative_base()
@@ -44,6 +46,7 @@ class PageObject(Base):
 
     id = Column(Integer, primary_key=True)
     page_id = Column(Integer, ForeignKey('pages.id'))
+    context_id = Column(Integer, ForeignKey('object_contexts.id'))
     bytes = Column(LargeBinary(length=(2**32)-1))
     content = Column(String(10000))
     bounding_box = Column(JSON)
@@ -60,6 +63,20 @@ class Section(Base):
     content = Column(String(10000))
     objects = Column(String(200)) # oof, wish that mysql support arrays
     cls = Column(String(200))
+
+class ObjectContext(Base):
+    """
+    An object context is a mapping between a page object and its associated contexts.
+    Many PageObjects map to one ObjectContext
+    Example: A Figure's ObjectContext contains the information in its Figure Caption
+    """
+    __tablename__ = 'object_contexts'
+    id = Column(Integer, primary_key=True)
+    pdf_id = Column(Integer, ForeignKey('pdfs.id'))
+    header_id = Column(Integer, ForeignKey('page_objects.id'))
+    header_content = Column(Text())
+    content = Column(Text())
+
 
 def ping_healthcheck():
     try:
@@ -79,6 +96,9 @@ def main():
     password = os.environ['DBPASS']
     engine = create_engine(f'mysql://{username}:{password}@mysql-router:6446/cosmos')
     Base.metadata.create_all(engine)
+    alembic_cfg = Config(os.environ['ALEMBIC_CFG'])
+    command.stamp(alembic_cfg, "head")
+
 
 if __name__ == '__main__':
     main()

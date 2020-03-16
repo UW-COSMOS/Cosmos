@@ -56,7 +56,7 @@ services:
         cosmos_swarm_network:
     env_file:
       - mysql-router.env
-    image: iaross/router:latest
+    image: ankurgos/router:latest
     ports:
       - "6446:6446"
     depends_on:
@@ -75,12 +75,4 @@ services:
       - "8089:8080"
     depends_on:
       - mysql-router
-  schema:
-    networks:
-        cosmos_swarm_network:
-    env_file:
-      - dbwebapp.env
-    image: schema:latest
-    command: python schema.py
-    depends_on:
-      - mysql-router
+
