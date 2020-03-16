@@ -1,4 +1,9 @@
-version: "2.3"
+version: "3.4"
+networks:
+    swarm_network:
+        external: 
+            name: cosmos_swarm_network
+
 services:
     frontend:
         build: .
@@ -8,6 +13,9 @@ services:
         command: "yarn start"
         ports:
             - 3001:3000
+
+        networks:
+            swarm_network:
 
 
 

@@ -61,7 +61,7 @@ def commit_objs(objs, page_id, session):
     ids = []
     pobjs = []
     for obj in objs:
-        pobj = PageObject(bytes=obj['bstring'], content=obj['content'], bounding_box=obj['bb'], cls=obj['cls'], page_id=page_id)
+        pobj = PageObject(bytes=obj['bstring'], content=obj['content'], bounding_box=obj['bb'], cls=obj['cls'], page_id=page_id, confidence=obj['confidence'])
         session.add(pobj)
         pobjs.append(pobj)
     session.commit()
@@ -94,7 +94,8 @@ def postprocess_page(obj):
             objects = postprocess(dp.postprocess_model, dp.classes, objects)
             page_objs = []
             for obj in objects:
-                bb, cls, text = obj
+                bb, cls, text, score = obj
+                logging.info(f"class: {cls}, score: {score}")
                 feathered_bb = [max(bb[0]-2, 0), max(bb[1]-2, 0),
                                 min(bb[2]+2, 1920), min(bb[3]+2, 1920)]
                 cropped_img = padded_img.crop(feathered_bb)
@@ -102,7 +103,7 @@ def postprocess_page(obj):
                 cropped_img.save(bytes_stream, format='PNG', optimize=True)
                 bstring = bytes_stream.getvalue()
                 bb = json.loads(json.dumps(bb))
-                page_objs.append({'bstring': bstring, 'bb': bb, 'content': text, 'cls': cls})
+                page_objs.append({'bstring': bstring, 'bb': bb, 'content': text, 'cls': cls, 'confidence': score})
             ids = commit_objs(page_objs, pageid, session)
             return {'ids': ids}
         else:

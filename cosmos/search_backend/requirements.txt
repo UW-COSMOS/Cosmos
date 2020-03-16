@@ -11,3 +11,5 @@ cosmostables
 PyPDF2
 opencv-python
 camelot-py[cv]
+tabulate
+pyyaml

@@ -14,7 +14,7 @@ services:
             swarm_network:
 
     ingestion:
-        image: ankurgos/ingestion:3.1
+        image: iaross/ingestion_test:latest
         networks:
             swarm_network:
         environment:
@@ -33,7 +33,7 @@ services:
             - 8000:8000
 
     scheduler:
-        image: ankurgos/ingestion:3.1
+        image: iaross/ingestion_test:latest
         networks:
             swarm_network:
         command: "dask-scheduler"
@@ -41,7 +41,7 @@ services:
             - 8787:8787
 
     worker1:
-        image: ankurgos/ingestion:3.1
+        image: iaross/ingestion_test:latest
         networks:
             swarm_network:
         environment:
@@ -53,7 +53,7 @@ services:
             - scheduler
 
     worker2:
-        image: ankurgos/ingestion:3.1
+        image: iaross/ingestion_test:latest
         networks:
             swarm_network:
         environment:
@@ -64,85 +64,27 @@ services:
         command: "dask-worker tcp://scheduler:8786 --nprocs 1 --resources 'GPU=1' --preload ingest.detect_setup"
         depends_on:
             - scheduler
-    #flower:
-    #    ports:
-    #        - 5555:5555
-    #    image: ankurgos/ingestion:3.1
-    #    networks:
-    #        swarm_network:
-    #    depends_on:
-    #        - redis
-    #        - ingestion
-    #    command: "flower --app=ingest.process_page.app  --broker=redis://redis:6379/0"
 
-    #ingestion_celery:
-    #    image: ankurgos/ingestion:3.1
-    #    networks:
-    #        swarm_network:
-    #    environment:
-    #        - CELERY_BROKER=redis://redis:6379/0
-    #        - CELERY_BACKEND=redis://redis:6379/0
-    #        - MYSQL_USER
-    #        - MYSQL_PASSWORD
-    #        - CUDA_VISIBLE_DEVICES=''
-    #        - DEVICE=cpu
-    #    depends_on:
-    #        - redis
-    #        - ingestion
-    #    command: "celery worker --app=ingest.ingest.app --concurrency=30 --loglevel=debug -Q ingest_q"
-
-    #process_pages_celery:
-    #    image: ankurgos/ingestion:3.1
-    #    networks:
-    #        swarm_network:
-    #    environment:
-    #        - CELERY_BROKER=redis://redis:6379/0
-    #        - CELERY_BACKEND=redis://redis:6379/0
-    #        - MYSQL_USER
-    #        - MYSQL_PASSWORD
-    #        - CUDA_VISIBLE_DEVICES=''
-    #        - DEVICE=cpu
-    #    depends_on:
-    #        - redis
-    #        - ingestion
-    #    command: "celery worker --app=ingest.process_page.app --concurrency=45 --loglevel=debug -Q process_q"
-
-    ##postprocess_pages_celery:
-    ##    image: ankurgos/ingestion:3.1
-    ##    networks:
-    ##        swarm_network:
-    ##    environment:
-    ##        - CELERY_BROKER=redis://redis:6379/0
-    ##        - CELERY_BACKEND=redis://redis:6379/0
-    ##        - MYSQL_USER
-    ##        - MYSQL_PASSWORD
-    ##        - CUDA_VISIBLE_DEVICES=''
-    ##        - DEVICE=cpu
-    ##    depends_on:
-    ##        - redis
-    ##        - ingestion
-    ##    command: "celery worker --app=ingest.postprocess_page.app --concurrency=45 --loglevel=debug -Q postprocess_q"
-
-    #detect_celery:
-    #    image: ankurgos/ingestion:3.1
-    #    networks:
-    #        swarm_network:
-    #    environment:
-    #        - CELERY_BROKER=redis://redis:6379/0
-    #        - CELERY_BACKEND=redis://redis:6379/0
-    #        - MYSQL_USER
-    #        - MYSQL_PASSWORD
-    #        - DEVICE=cuda
-    #    depends_on:
-    #        - redis
-    #        - ingestion
-    #    command: "celery worker --app=ingest.detect.app --loglevel=debug -Q detect_q"
-
-    #redis:
-    #    image: redis:5.0.3-alpine
-    #    networks:
-    #        swarm_network:
-    #    volumes:
-    #        - ${REDIS_PTH}:/data
-
+    gateway:
+        image: iaross/visualizer
+        ports:
+            - 8081:80
+        networks:
+            swarm_network:
+  
+    search_backend:
+        image: iaross/sbackend
+        container_name: search_backend
+        command: "flask run --host=0.0.0.0 --port=5001"
+        ports:
+            - 5001:5001
+        environment:
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+            - PDF_DB=pdfs
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
+        networks:
+           swarm_network:
 

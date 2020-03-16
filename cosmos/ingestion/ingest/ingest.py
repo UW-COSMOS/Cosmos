@@ -54,7 +54,9 @@ def process_page(filepath, pdfid, session, client):
         resize_bytes_stream.seek(0)
         resize_bytes = resize_bytes_stream.read()
         resize_bytes = base64.b64encode(resize_bytes).decode('ASCII')
-        page = Page(pdf_id=pdfid, page_width=width, page_height=height, page_number=page_num)
+        resize_bytes_stream.seek(0)
+        bstring = resize_bytes_stream.getvalue()
+        page = Page(pdf_id=pdfid, page_width=width, page_height=height, page_number=page_num, bytes=bstring)
         session.add(page)
     # Because PDFs can be very large (100+ pages), this transaction can become very large if we batch all pages together
     # As a result I'm committing on a per page basis.
@@ -82,7 +84,7 @@ def ingest(obj):
 
     dataset_id = obj['dataset_id']
     pdf_name = obj['pdf_name']
-    
+
     with tempfile.NamedTemporaryFile() as tf, tempfile.TemporaryDirectory() as td:
         tf.write(pdf_file)
         tf.seek(0)

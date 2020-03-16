@@ -1,0 +1,9 @@
+sqlalchemy
+mysqlclient
+joblib
+click
+flask
+requests
+tabulate
+pandas
+pyyaml

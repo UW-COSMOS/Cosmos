@@ -65,7 +65,7 @@ class ProcessPage(object):
         ids = []
         pobjs = []
         for obj in objs:
-            pobj = PageObject(bytes=obj['bstring'], content=obj['content'], bounding_box=obj['bb'], cls=obj['cls'], page_id=page_id)
+            pobj = PageObject(bytes=obj['bstring'], content=obj['content'], bounding_box=obj['bb'], cls=obj['cls'], page_id=page_id, confidence=obj['confidence'])
             session.add(pobj)
             pobjs.append(pobj)
         session.commit()
@@ -125,7 +125,7 @@ class ProcessPage(object):
                 objects = postprocess(self.pp_model, self.classes, objects)
                 page_objs = []
                 for obj in objects:
-                    bb, cls, text = obj
+                    bb, cls, text, score = obj
                     feathered_bb = [max(bb[0]-2, 0), max(bb[1]-2, 0),
                                     min(bb[2]+2, 1920), min(bb[3]+2, 1920)]
                     cropped_img = img.crop(feathered_bb)
@@ -133,7 +133,7 @@ class ProcessPage(object):
                     cropped_img.save(bytes_stream, format='PNG', optimize=True)
                     bstring = bytes_stream.getvalue()
                     bb = json.loads(json.dumps(bb))
-                    page_objs.append({'bstring': bstring, 'bb': bb, 'content': text, 'cls': cls})
+                    page_objs.append({'bstring': bstring, 'bb': bb, 'content': text, 'cls': cls, 'confidence': score})
                 ids = self.commit_objs(page_objs, page_id, session)
                 resp.status = falcon.HTTP_200
                 resp.body = json.dumps({'ids': ids})

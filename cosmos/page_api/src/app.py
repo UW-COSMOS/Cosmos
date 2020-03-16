@@ -1,65 +1,42 @@
 """
-Some endpoints
 """
 
 import pickle
-import pymongo
 import yaml
-from pymongo import MongoClient
-from bson.objectid import ObjectId
-from flask import Flask, request, abort
 from flask.json import JSONEncoder
+from flask import Flask, request, abort
+from flask import jsonify, send_file
 import os
 from tabulate import tabulate
+from schema import Pdf, Page, PageObject
 from ast import literal_eval as make_tuple
 from io import BytesIO
 import logging
+import random
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
-from bson import json_util
 import base64
 import html
 import json
-from flask import jsonify, send_file
-from elasticsearch import Elasticsearch
-from elasticsearch_dsl import Search, connections, Q
 import re
-import spacy
 import requests
 import pandas as pd
-from values_query import values_query
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, defer
+from sqlalchemy.sql.expression import func
 
-connections.create_connection(hosts=['es01'], timeout=20)
+engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+Session = sessionmaker()
+Session.configure(bind=engine)
 
 app = Flask(__name__)
 
-nlp = spacy.load('en_core_web_lg')
-
-@app.route('/analyze', methods=['POST'])
-def analyze():
-    try:
-        file_content = request.get_json().get('file', '')
-    except Exception as e:
-        logging.info(f'{e}')
-
-    comment_reg = re.compile('.*(::|REAL|real|logical|=|LOGICAL|integer|INTEGER).*!(.*)')
-    loc = []
-    for i, line in enumerate(file_content.split('\n')):
-        m = comment_reg.search(line)
-        if m is not None:
-            comment = m.group(2)
-            doc = nlp(comment)
-            chunks = [chunk.text for chunk in doc.noun_chunks]
-            for chunk in chunks:
-                loc.append({'phrase': chunk, 'line': line, 'line_number': i})
-    final_obj = {'results': loc}
-    return jsonify(final_obj)
-
-
 def postprocess_result(result):
-    result['_id'] = str(result['_id'])
+    if "_id" in result:
+        result['_id'] = str(result['_id'])
     if 'bytes' in result and result['bytes'] is not None:
         encoded = base64.encodebytes(result['bytes'])
         result['bytes'] = encoded.decode('ascii')
+    if 'page_ocr_df' in result:
         del result['page_ocr_df']
     if 'table_df' in result and result['table_df'] is not None:
         encoded = base64.encodebytes(result['table_df'])
@@ -197,103 +174,45 @@ def search():
         logging.info(f'{e}')
         abort(400)
 
-
-
-@app.route('/values')
-def values():
-    client = MongoClient(os.environ['DBCONNECT'])
-    db = client.pdfs
-    try:
-        query = request.args.get('q', '')
-        print(values_query)
-        values, oids = values_query(query)
-        result_list = []
-        for oid in oids:
-            r = db.objects.find_one({'_id': oid})
-            result_list.append(r)
-
-        result_list = [postprocess_result(r) for r in result_list]
-        return jsonify({'results': result_list, 'values': values})
-    except Exception as e:
-        logging.error(e)
-        abort(400)
-
-
-threshold_qa = 0.5
-qa_URL = 'http://qa:4000/query'
-@app.route('/qa')
-def qa():
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
-    try:
-        query = request.args.get('q', '')
-        s = Search().query('match', content=query).query('match', cls='Section')[:25]
-        response = s.execute()
-#        logging.info(response)
-        result_list = []
-        content_set = set()
-        for obj in response:
-            id = obj.meta.id
-            obj_id = ObjectId(id)
-
-            res = None
-            logging.info(id)
-            res = db.sections.find_one({'_id': obj_id})
-            if res is not None:
-                if res['content'] in content_set:
-                    continue
-                content_set.add(res['content'])
-                logging.info(res['pdf_name'])
-                candidate = res['content']
-                answer = requests.get(qa_URL, {'query':query, 'candidate':candidate}).json()
-                logging.info(answer)
-                result = {}
-                if len(answer) > 0 and answer['probability'] > threshold_qa:
-                    result['answer'] = str(answer['answer'])
-                    result['probability'] = answer['probability']
-                    result['content'] = res['content']
-                    result['pdf_name'] = res['pdf_name']
-                    result_list.append(result)
-        result_list = sorted(result_list, key = lambda i : i['probability'], reverse=True)
-        logging.info(result_list)
-        results_obj = {'results': result_list}
-        return jsonify(results_obj)
-    except TypeError as e:
-        logging.info(f'{e}')
-        abort(400)
-    except Exception as e:
-        logging.info(e)
-
-PAGE_SIZE = 1
-
-# TODO: add POST to accept an object id and sets {good_box: bool, good_classification: bool}
-
-
-@app.route('/search/image/next_prediction')
-def pages():
+@app.route('/search/image/<page_id>')
+@app.route('/search/page/<page_id>')
+def page_by_id(page_id):
     '''
     '''
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
-    page_num = int(request.args.get('pageNumber', 0))
-#    curs = db.propose_pages.find().sort('_id').skip(PAGE_SIZE * page_num).limit(PAGE_SIZE)
-    curs = db.propose_pages.aggregate([
-        {"$match" : {}},
-        {"$sample" : {"size" : 1}}])
-    result_list = []
-    for result in curs:
-        result['_id'] = str(result['_id'])
-        result['pdf_id'] = str(result['pdf_id'])
-        del result['bytes']
-        encoded = base64.encodebytes(result['resize_bytes'])
-        result['resize_bytes'] = encoded.decode('ascii')
-        del result['ocr_df']
-        result_list.append(result)
-    results_obj = {'results': result_list}
-    return jsonify(results_obj)
+    session = Session()
+    if page_id == "next_prediction":
+        # Hacky way to get a random, because sorting by rand().limit(1) is real slow
+        rowCount = int(session.query(Page).count())
+        rand = random.randrange(0, rowCount)
+        page = session.query(Page).filter(Page.id==int(rand)).first()
+    else:
+        page, pdf = session.query(Page, Pdf).filter(Page.id == page_id).first()
+    # temp hack -- bringing back the full model sucks for large docs because of the metadata field, so just bring back the column we care about IAR - 10.Mar.2020
 
-@app.route('/search/object/lookup')
-def object_lookup():
+    res = session.execute('SELECT pdf_name FROM pdfs WHERE id =:pdf_id LIMIT 1', {'pdf_id' : page.pdf_id})
+    for r in res:
+        pdf_name = r['pdf_name']
+    logging.info(pdf_name)
+    result = {}
+    result["_id"] = page.id
+    result['pdf_id'] = page.pdf_id
+    result['pdf_name'] = pdf_name
+    result['page_num'] = page.page_number
+    result['page_width'] = page.page_width
+    result['page_height'] = page.page_height
+    encoded = base64.encodebytes(page.bytes)
+    result['resize_bytes'] = encoded.decode('ascii')
+    result['pp_detected_objs'] = []
+
+    res = session.query(PageObject).filter(page.id == PageObject.page_id)
+    for po in res.all():
+        result['pp_detected_objs'].append({"bounding_box" : [float(i) for i in po.bounding_box], "class" : po.cls, "confidence" : str(po.confidence), "obj_id" : po.id})
+
+    results_obj = {'results': [result]}
+    return jsonify({"results" : [result]})
+
+@app.route('/search/object/<obj_id>')
+def object_lookup(obj_id):
     '''
     Look up object by pdf_name, page_num, and bbox
     # TODO: could extend this to just accept a point if I get clever with the mongo query.
@@ -308,37 +227,58 @@ def object_lookup():
         ]
 
     '''
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
-    pdf_name = request.args.get("pdf_name")
-    page_num = int(request.args.get('page_num'))
-    x, y = make_tuple(request.args.get("coords"))
-    result = db.objects.find_one({
-        "pdf_name" : pdf_name,
-        "page_num" : page_num,
-        "bounding_box.0": {"$lte" : x},
-        "bounding_box.1": {"$lte" : y},
-        "bounding_box.2": {"$gte" : x},
-        "bounding_box.3":  {"$gte" : y}
-        })
-    result = postprocess_result(find_object(pdf_name, page_num, x, y))
-    return jsonify(result)
+    session = Session()
+    if obj_id == "lookup":
+        pdf_name = request.args.get("pdf_name")
+        page_num = int(request.args.get('page_num'))
+        x, y = make_tuple(request.args.get("coords"))
+        tobj = find_object(pdf_name, page_num, x, y)
+    else:
+        tobj = session.query(PageObject).get(obj_id)
+    obj =  {c.name: getattr(tobj, c.name) for c in tobj.__table__.columns}
+    return jsonify({"results" : [postprocess_result(obj)]})
+
+#@app.route('/search/object/lookup')
+#def object_lookup():
+#    '''
+#    Look up object by pdf_name, page_num, and bbox
+#    # TODO: could extend this to just accept a point if I get clever with the mongo query.
+#
+#    page_num
+#    pdf_name
+#    "bounding_box" : [
+#        x1,
+#        y1,
+#        x2,
+#        y2
+#        ]
+#
+#    '''
+#    session = Session()
+#    pdf_name = request.args.get("pdf_name")
+#    page_num = int(request.args.get('page_num'))
+#    x, y = make_tuple(request.args.get("coords"))
+#    tobj = find_object(pdf_name, page_num, x, y)
+#    obj =  {c.name: getattr(tobj, c.name) for c in tobj.__table__.columns}
+#    return jsonify({"results" : [postprocess_result(obj)]})
 
 def find_object(pdf_name, page_num, x, y):
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
-    pdf_name = request.args.get("pdf_name")
-    page_num = int(request.args.get('page_num'))
-    x, y = make_tuple(request.args.get("coords"))
-    result = db.objects.find_one({
-        "pdf_name" : pdf_name,
-        "page_num" : page_num,
-        "bounding_box.0": {"$lte" : x},
-        "bounding_box.1": {"$lte" : y},
-        "bounding_box.2": {"$gte" : x},
-        "bounding_box.3": {"$gte" : y}
-        })
-    return result
+    session = Session()
+    logging.info(f"Looking for page {page_num} from pdf {pdf_name}")
+    res = session.query(Page, PageObject, Pdf).\
+            filter(Pdf.pdf_name == pdf_name).\
+            filter(Page.page_number == page_num).\
+            filter(Pdf.id == Page.pdf_id).\
+            filter(Page.id == PageObject.page_id)
+
+    obj = {}
+    for p, po, pdf in res:
+        bbox = po.bounding_box
+        if x >= bbox[0] and y >= bbox[1] and x <= bbox[2] and y <= bbox[3]:
+            obj = po
+    if obj == {}:
+        logging.warning(f"Couldn't find object with coords ({x}, {y})")
+    return obj
 
 # TODO: probably shouldn't hardcode these.
 @app.route('/search/tags/all')
@@ -389,44 +329,48 @@ with open('annotations_allowed.yml') as f:
 def object_annotate():
     '''
     '''
+    session = Session()
     if request.method == "GET":
         return jsonify(ANNOTATIONS_ALLOWED)
 
     if request.method == "POST":
-        client = MongoClient(os.environ["DBCONNECT"])
-        db = client.pdfs
-
-        object_id = request.args.get("object_id", None)
-        pdf_name = request.args.get("pdf_name", None)
-        page_num = int(request.args.get('page_num', -1))
+        data = request.get_json(force=True)
+        object_id = data.get("object_id", None)
+        pdf_name = data.get("pdf_name", None)
+        page_num = int(data.get('page_num', -1))
         try:
-            x, y = make_tuple(request.args.get("coords"))
-        except:
-            x, y = None
+            print(data.get("coords"))
+            x, y = make_tuple(data.get("coords"))
+        except Exception as err:
+            print(err)
+            print(sys.exc_info())
+            x = None
+            y = None
 
         if object_id is None and (x is None or y is None or pdf_name is None or page_num==-1):
             abort(400)
 
         # get objectid from coords
-        object_id = find_object(pdf_name, page_num, x, y)["_id"]
+        if object_id is None:
+            object_id = find_object(pdf_name, page_num, x, y).id
 
         success = False
-        print(type(request.args))
-        for k, v in request.args.items():
+        for k, v in data.items():
             if k not in ANNOTATIONS_ALLOWED.keys(): continue
 
             atype = ANNOTATIONS_ALLOWED[k]
             if atype == "text" :
                 pass
             elif atype == "boolean":
-                if v.lower() == "true" :
+                if str(v).lower() == "true" :
                     v = True
-                elif v.lower() == "false" :
+                elif str(v).lower() == "false" :
                     v = False
 
-            res = db.objects.update_one({"_id": ObjectId(object_id)},
-                    {"$set" : {k: v}})
-            success = success or (res.modified_count >= 1)
-
+            try:
+                session.query(PageObject).filter(PageObject.id == object_id).update({k: v})
+                session.commit()
+                success=True
+            except:
+                logging.warning(f"Could not update object {object_id} with {k} : {v}!")
         return json.dumps({'success':success}), 200, {'ContentType':'application/json'}
-
