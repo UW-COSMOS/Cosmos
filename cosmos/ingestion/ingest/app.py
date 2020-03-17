@@ -30,7 +30,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
-bsz = int(os.environ['PAGE_BSZ'])
 Session = sessionmaker()
 Session.configure(bind=engine)
 

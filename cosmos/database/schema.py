@@ -73,6 +73,7 @@ class ObjectContext(Base):
     __tablename__ = 'object_contexts'
     id = Column(Integer, primary_key=True)
     pdf_id = Column(Integer, ForeignKey('pdfs.id'))
+    cls = Column(String(200))
     header_id = Column(Integer, ForeignKey('page_objects.id'))
     header_content = Column(Text())
     content = Column(Text())

@@ -14,15 +14,12 @@ services:
             swarm_network:
 
     ingestion:
-        image: iaross/ingestion_test:latest
+        image: ankurgos/ingest:latest
         networks:
             swarm_network:
         environment:
             - MYSQL_USER
             - MYSQL_PASSWORD
-            - PAGE_BSZ=5
-            - CELERY_BROKER=redis://redis:6379/0
-            - CELERY_BACKEND=redis://redis:6379/0
             - DEVICE=cpu
         command: "gunicorn -w 4 -b 0.0.0.0:8000 ingest.app"
         depends_on:
@@ -33,7 +30,7 @@ services:
             - 8000:8000
 
     scheduler:
-        image: iaross/ingestion_test:latest
+        image: ankurgos/ingest:latest
         networks:
             swarm_network:
         command: "dask-scheduler"
@@ -41,7 +38,7 @@ services:
             - 8787:8787
 
     worker1:
-        image: iaross/ingestion_test:latest
+        image: ankurgos/ingest:latest
         networks:
             swarm_network:
         environment:
@@ -53,7 +50,7 @@ services:
             - scheduler
 
     worker2:
-        image: iaross/ingestion_test:latest
+        image: ankurgos/ingest:latest
         networks:
             swarm_network:
         environment:
@@ -65,26 +62,26 @@ services:
         depends_on:
             - scheduler
 
-    gateway:
-        image: iaross/visualizer
-        ports:
-            - 8081:80
-        networks:
-            swarm_network:
+    #gateway:
+    #    image: iaross/visualizer
+    #    ports:
+    #        - 8081:80
+    #    networks:
+    #        swarm_network:
   
-    search_backend:
-        image: iaross/sbackend
-        container_name: search_backend
-        command: "flask run --host=0.0.0.0 --port=5001"
-        ports:
-            - 5001:5001
-        environment:
-            - MYSQL_USER=myuser
-            - MYSQL_DATABASE=cosmos
-            - MYSQL_PASSWORD=cosmos123
-            - PDF_DB=pdfs
-            - FLASK_APP=app.py
-            - FLASK_ENV=development
-        networks:
-           swarm_network:
+    #search_backend:
+    #    image: iaross/sbackend
+    #    container_name: search_backend
+    #    command: "flask run --host=0.0.0.0 --port=5001"
+    #    ports:
+    #        - 5001:5001
+    #    environment:
+    #        - MYSQL_USER=myuser
+    #        - MYSQL_DATABASE=cosmos
+    #        - MYSQL_PASSWORD=cosmos123
+    #        - PDF_DB=pdfs
+    #        - FLASK_APP=app.py
+    #        - FLASK_ENV=development
+    #    networks:
+    #       swarm_network:
 
