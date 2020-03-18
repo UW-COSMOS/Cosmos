@@ -55,6 +55,13 @@ class PageObject(Base):
     classification_success = Column(Boolean, unique=False, default=None)
     proposal_success = Column(Boolean, unique=False, default=None)
 
+class Table(Base):
+    __tablename__ = 'tables'
+    id = Column(Integer, primary_key=True)
+    page_object_id = Column(Integer, ForeignKey('page_objects.id'))
+    page_id = Column(Integer, ForeignKey('pages.id'))
+    df = Column(LargeBinary(length=(2**32)-1))
+
 class Section(Base):
     __tablename__ = 'sections'
     id = Column(Integer, primary_key=True)
