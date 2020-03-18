@@ -11,3 +11,5 @@ sqlalchemy
 mysqlclient
 PyPDF2
 dask
+requests
+alembic

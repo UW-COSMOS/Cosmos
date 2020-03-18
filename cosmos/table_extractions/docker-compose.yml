@@ -9,8 +9,8 @@ services:
     extract_tables:
         image: iaross/extract_tables_test:latest
         ipc: host
-#        command: "python3 -m tableextractions.pdf_table_extractions"
-        command: "tail -f /dev/null"
+        command: "python3 -m pdf_table_extractions"
+#        command: "tail -f /dev/null"
         volumes:
             - /home/iaross/test_pdfs:/input
         environment:

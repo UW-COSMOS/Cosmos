@@ -22,6 +22,7 @@ from PyPDF2 import PdfFileReader
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from dask.distributed import Client, progress
+from schema import Pdf, Page, PageObject, Table
 
 import camelot
 from utils import grouper
@@ -168,7 +169,7 @@ def prepare_table_data(table: dict, df: bytes, flavor: str) -> list:
     return table
 
 
-def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_page: str, lattice_params: str, stream_params: str, pkl=False) -> list:
+def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_page: str, lattice_params: str, stream_params: str, object_id: int, page_id: int, pkl=True) -> list:
     """
     Extract tables from pages.
     Needs:
@@ -181,7 +182,6 @@ def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_pa
     logs = []
 
     logs.append('Extracting tables')
-    # TODO: dump pdf_bytes to a temp_file
     logging.info("Creating PDF")
     logging.info(pdf_name)
     logging.info(type(pdf_bytes))
@@ -215,7 +215,7 @@ def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_pa
 
 
     stream_params = json.load(open(stream_params))
-    logging.info(f"camelot.read_pdf({temp_pdf_name}, pages={table_page}, table_regions=[{coords_camelot}])")  
+    logging.info(f"camelot.read_pdf({temp_pdf_name}, pages={table_page}, table_regions=[{coords_camelot}])")
     tables = camelot.read_pdf(temp_pdf_name,
                                      pages=str(table_page),
                                      table_regions=[coords_camelot],
@@ -234,8 +234,15 @@ def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_pa
     if pkl:
         table_df = pickle.dumps(table_df)
     os.remove(temp_pdf_name)
-    import pdb; pdb.set_trace()
-    # TODO: write Table object here
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    Session = sessionmaker()
+    Session.configure(bind=engine)
+    session = Session()
+    table = Table(page_object_id=object_id, page_id=page_id, df=table_df)
+    session.add(table)
+    session.commit()
+    session.close()
+    # TODO: don't open a session every object. Sigh.
 
 
     return [table_df, flavor, logs, acc, whitespace]
@@ -258,7 +265,7 @@ def process_dataset(client):
 
             res = session.execute(
                     """
-                    SELECT * FROM page_objects po
+                    SELECT *, po.id as object_id FROM page_objects po
                         INNER JOIN (SELECT page_number, pdf_id, id FROM pages) AS p ON po.page_id = p.id
                         INNER JOIN (SELECT id, pdf_name FROM pdfs) AS d ON p.pdf_id = d.id
                       WHERE po.cls='Table' AND d.pdf_name=:pdf_name;'
@@ -270,22 +277,24 @@ def process_dataset(client):
                 pdf_name = obj['pdf_name']
                 page_num = obj['page_number']
                 coords = json.loads(obj['bounding_box'])
+                object_id = obj['object_id']
+                page_id = obj['page_id']
 
                 logging.info(f"Extracting table from page {page_num} of {pdf_name}.")
 
                 # TODO: this is a job per table.. passing lots of crap around when we should do it at the PDF level
 
 
-                extract_tables(pdf_bytes, pdf_name, coords, page_num, "camelot_lattice_params.txt", "camelot_stream_params.txt")
+                extract_tables(pdf_bytes, pdf_name, coords, page_num, "camelot_lattice_params.txt", "camelot_stream_params.txt", object_id, page_id)
                 #final_table_futures.append(client.submit(extract_tables, pdf_bytes, pdf_name, coords, page_num, "camelot_lattice_params.txt", "camelot_stream_params.txt", resources={'extract_tables': 1}))
-                progress(final_table_futures)
-                client.gather(final_table_futures)
+#                progress(final_table_futures)
+#                client.gather(final_table_futures)
     except Exception as e:
         logging.error(str(e), exc_info=True)
         raise Exception(f'process_dataset error, {str(e)}')
     finally:
         session.close()
-    return 
+    return
 
 
 def run():
