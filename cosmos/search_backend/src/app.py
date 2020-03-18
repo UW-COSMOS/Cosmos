@@ -1,9 +1,5 @@
 """
-<<<<<<< HEAD
 Some endpoints
-=======
-Some endpoints
->>>>>>> feat/visualizer_interface
 """
 
 import pickle

@@ -44,4 +44,5 @@ bs4
 pytesseract
 flower
 setuptools
+alembic
 

@@ -1,0 +1,21 @@
+version: '3'
+networks:
+    cosmos_swarm_network:
+        external: true
+services:
+  create_schema:
+    networks:
+        cosmos_swarm_network:
+    env_file:
+      - dbwebapp.env
+    image: schema:latest
+    command: python schema.py
+
+  migrate:
+    networks:
+        cosmos_swarm_network:
+    env_file:
+      - dbwebapp.env
+    image: schema:latest
+    command: alembic upgrade head
+

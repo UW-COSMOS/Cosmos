@@ -1,21 +1,43 @@
-version: "2.3"
+version: "3"
 
-services:
-    aggregate_sections:
-        image: iaross/aggregate_sections_test
-        ipc: host
-#        volumes:
-#            - .:/develop/
-#        command: "python3 aggregate.py 1 --section --equation --figure --table"
-        command: "python3 aggregate.py 1 --section"
-#        command: "tail -f /dev/null"
-
-        environment:
-            - MYSQL_USER=myuser
-            - MYSQL_DATABASE=cosmos
-            - MYSQL_PASSWORD=cosmos123
 networks:
   default:
     external:
       name: cosmos_swarm_network 
+services:
+    aggregate_sections:
+        image: ankurgos/aggregate_sections:latest
+        ipc: host
+        command: "python3 -m agg.aggregate"
+        environment:
+            - DATASET_ID
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+        #networks:
+        #    cosmos_swarm_network:
+        depends_on:
+            - scheduler
+
+    scheduler:
+        image: ankurgos/aggregate_sections:latest
+        #networks:
+        #    cosmos_swarm_network:
+        command: "dask-scheduler"
+        ports:
+            - 8787:8787
+
+    worker1:
+        image: ankurgos/aggregate_sections:latest
+        #networks:
+        #    cosmos_swarm_network:
+        environment:
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+            - CUDA_VISIBLE_DEVICES=''
+        command: "dask-worker tcp://scheduler:8786 --nprocs 1 --resources 'process=1'"
+        depends_on:
+            - scheduler
+
 

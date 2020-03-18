@@ -1,18 +1,30 @@
-FROM python:3.7
+FROM nvidia/cuda:10.1-devel-ubuntu18.04
 
-# Install bash and vim
-#RUN apk add bash vim
+ENV PATH="/root/miniconda3/bin:${PATH}"
+ARG PATH="/root/miniconda3/bin:${PATH}"
 
-# Pillow requirements
-#run apt install build-base jpeg-dev zlib-dev
+RUN apt-get update
 
-COPY ./aggregate_sections/requirements.txt /
+RUN apt-get install -y --allow-unauthenticated tesseract-ocr
+RUN apt-get install -y ghostscript gcc libmysqlclient-dev wget tesseract-ocr software-properties-common apt-transport-https
 
-#For Debugging purpose
-RUN apt-get update && apt-get -y install vim
+RUN rm -rf /var/lib/apt/lists/*
+RUN wget \
+    https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+    && mkdir /root/.conda \
+    && bash Miniconda3-latest-Linux-x86_64.sh -b \
+    && rm -f Miniconda3-latest-Linux-x86_64.sh 
 
+RUN conda update conda
+RUN conda install python=3.6
+RUN conda install dask
+
+RUN conda install -c conda-forge uwsgi
+COPY aggregate_sections/requirements.txt /
 RUN pip install -r /requirements.txt
 
-COPY ./aggregate_sections/src/ /app
-COPY ./database/schema.py /app
+
+COPY ./aggregate_sections/ /app
+COPY ./database/schema.py /app/agg
 WORKDIR /app
+RUN python setup.py install
