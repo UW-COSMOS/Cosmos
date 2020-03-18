@@ -1,10 +1,45 @@
-version: "2.3"
+version: "3"
+
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network 
+
 services:
-    table_extractions:
-        build: .
+    extract_tables:
+        image: iaross/extract_tables_test:latest
         ipc: host
+#        command: "python3 -m tableextractions.pdf_table_extractions"
+        command: "tail -f /dev/null"
         volumes:
-            - .:/develop/
-        command: tail -F anything
-        
+            - /home/iaross/test_pdfs:/input
+        environment:
+            - DATASET_ID
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+        #networks:
+        #    cosmos_swarm_network:
+        depends_on:
+            - scheduler
+
+    scheduler:
+        image: iaross/extract_tables_test:latest
+        #networks:
+        #    cosmos_swarm_network:
+        command: "dask-scheduler --port 8786"
+        ports:
+            - 8786:8786
+
+    worker1:
+        image: iaross/extract_tables_test:latest
+        environment:
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+            - CUDA_VISIBLE_DEVICES=''
+        command: "dask-worker tcp://scheduler:8786 --nprocs 1 --resources 'extract_tables=1'"
+        depends_on:
+            - scheduler
+
 

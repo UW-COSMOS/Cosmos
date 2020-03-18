@@ -1,9 +1,13 @@
 pillow
 click
-pymongo
 joblib
 pandas
 pdfminer.six
 chardet
 opencv-python
 camelot-py[cv]
+falcon
+sqlalchemy
+mysqlclient
+PyPDF2
+dask

@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libjpeg-dev \
     libgtk2.0-dev \
+    libmysqlclient-dev \
     zlib1g-dev \
  && rm -rf /var/lib/apt/lists/*
 
@@ -48,9 +49,11 @@ ENV CONDA_PREFIX=/home/user/miniconda/envs/$CONDA_DEFAULT_ENV
 ENV PATH=$CONDA_PREFIX/bin:$PATH
 
 # Install the necessary requirements
-COPY requirements.txt /
+COPY table_extractions/requirements.txt /
+RUN conda install dask
 RUN pip install -r /requirements.txt
 
 # Copy /app and work in it
-COPY tableextractions/ /app
+COPY table_extractions/* /app/
+COPY database/schema.py /app/schema.py
 WORKDIR /app
