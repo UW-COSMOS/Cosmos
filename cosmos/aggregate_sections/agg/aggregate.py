@@ -36,6 +36,10 @@ def process_dataset(did, client):
         object_context_futures = []
         for pdf in res:
             pdf_id = pdf.id
+            n = session.query(ObjectContext).filter(ObjectContext.pdf_id == pdf_id).count()
+            if n > 0:
+                logging.info("Already aggregated this PDF!")
+                continue
             res2 = session.query(Page, PageObject).filter(Page.pdf_id == pdf_id)\
                     .filter(Page.id == PageObject.page_id)
 
@@ -43,11 +47,11 @@ def process_dataset(did, client):
             for page, po in res2:
                 obj = {'page' : page, 'page_object': po}
                 obj_list.append(obj)
-                
-            object_context_futures.append(client.submit(aggregate_sections, obj_list, resources={'process': 1}))
-            object_context_futures.append(client.submit(aggregate_equations, obj_list, resources={'process': 1}))
-            object_context_futures.append(client.submit(aggregate_figures, obj_list, resources={'process': 1}))
-            object_context_futures.append(client.submit(aggregate_tables, obj_list, resources={'process': 1}))
+
+            object_context_futures.append(client.submit(aggregate_sections, obj_list, resources={'agg': 1}))
+            object_context_futures.append(client.submit(aggregate_equations, obj_list, resources={'agg': 1}))
+            object_context_futures.append(client.submit(aggregate_figures, obj_list, resources={'agg': 1}))
+            object_context_futures.append(client.submit(aggregate_tables, obj_list, resources={'agg': 1}))
             final_context_futures.extend(object_context_futures)
         progress(final_context_futures)
         client.gather(final_context_futures)
@@ -344,8 +348,8 @@ def aggregate_sections(objs):
             objs = [{'_id': obj['page_object'].id} for obj in objs]
             oc = ObjectContext(pdf_id=obj['page'].pdf_id,
                                cls='Section',
-                               header_id=header["page_object"].id,
-                               header_content=header["page_object"].content,
+                               header_id=header["page_object"].id if header is not None else None,
+                               header_content=header["page_object"].content if header is not None else None,
                                content=aggregated_context)
             session.add(oc)
         session.commit()
@@ -360,7 +364,7 @@ def aggregate_sections(objs):
 
 
 def run():
-    client = Client('scheduler:8786')
+    client = Client('scheduler:8788')
     process_dataset(os.environ['DATASET_ID'], client)
 
 if __name__ == '__main__':
