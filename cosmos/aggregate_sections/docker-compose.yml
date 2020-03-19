@@ -9,7 +9,7 @@ services:
         image: ankurgos/aggregate_sections:latest
         command: "python3 -m agg.aggregate"
         environment:
-            - DATASET_ID
+            - DATASET_ID=3271e2ab-6aba-4d0f-9f07-50bc7129f5eb
             - MYSQL_USER=myuser
             - MYSQL_DATABASE=cosmos
             - MYSQL_PASSWORD=cosmos123
@@ -19,15 +19,15 @@ services:
             - scheduler
 
     scheduler:
-        image: ankurgos/aggregate_sections:latest
+        image: iaross/aggregate_sections_test:latest
         #networks:
         #    cosmos_swarm_network:
-        command: "dask-scheduler"
+        command: "dask-scheduler --port 8788"
         ports:
-            - 8787:8787
+            - 8788:8786
 
     worker1:
-        image: ankurgos/aggregate_sections:latest
+        image: iaross/aggregate_sections_test:latest
         #networks:
         #    cosmos_swarm_network:
         environment:
@@ -35,7 +35,11 @@ services:
             - MYSQL_DATABASE=cosmos
             - MYSQL_PASSWORD=cosmos123
             - CUDA_VISIBLE_DEVICES=''
+<<<<<<< HEAD
         command: "dask-worker tcp://scheduler:8786 --nprocs 100 --resources 'process=1'"
+=======
+        command: "dask-worker tcp://scheduler:8788 --nprocs 1 --resources 'agg=1'"
+>>>>>>> 4b28c45711e2fb96834abf4aaac7d606495fce4b
         depends_on:
             - scheduler
 

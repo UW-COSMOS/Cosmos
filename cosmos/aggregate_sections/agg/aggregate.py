@@ -37,6 +37,10 @@ def process_dataset(did, client):
         object_context_futures = []
         for pdf in res:
             pdf_id = pdf.id
+            n = session.query(ObjectContext).filter(ObjectContext.pdf_id == pdf_id).count()
+            if n > 0:
+                logging.info("Already aggregated this PDF!")
+                continue
             res2 = session.query(Page.pdf_id, Page.page_number, PageObject.id, PageObject.content, PageObject.cls, PageObject.bounding_box).filter(Page.pdf_id == pdf_id)\
                     .filter(Page.id == PageObject.page_id)
 
@@ -369,7 +373,7 @@ def aggregate_sections(objs):
 
 
 def run():
-    client = Client('scheduler:8786')
+    client = Client('scheduler:8788')
     process_dataset(os.environ['DATASET_ID'], client)
 
 if __name__ == '__main__':
