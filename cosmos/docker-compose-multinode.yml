@@ -46,6 +46,8 @@ services:
             - MYSQL_PASSWORD
             - CUDA_VISIBLE_DEVICES=''
         command: "dask-worker tcp://scheduler:8786 --nprocs 100 --resources 'process=1' --preload ingest.process_setup"
+        volumes:
+            - ${TMP_DIR}:/tmp
         depends_on:
             - scheduler
 

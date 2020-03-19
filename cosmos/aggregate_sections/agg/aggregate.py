@@ -2,6 +2,7 @@
 Aggregate text blobs into coherent sections
 """
 
+import sys
 import time
 import os
 from collections import defaultdict
@@ -13,7 +14,7 @@ from sqlalchemy.orm import sessionmaker, defer
 from sqlalchemy.sql.expression import func
 from sqlalchemy.sql import text
 from agg.schema import Pdf, Page, PageObject, Section, ObjectContext
-from dask.distributed import Client, progress
+from dask.distributed import Client, progress, fire_and_forget
 
 
 import logging
@@ -36,21 +37,25 @@ def process_dataset(did, client):
         object_context_futures = []
         for pdf in res:
             pdf_id = pdf.id
-            res2 = session.query(Page, PageObject).filter(Page.pdf_id == pdf_id)\
+            res2 = session.query(Page.pdf_id, Page.page_number, PageObject.id, PageObject.content, PageObject.cls, PageObject.bounding_box).filter(Page.pdf_id == pdf_id)\
                     .filter(Page.id == PageObject.page_id)
 
             obj_list = []
-            for page, po in res2:
-                obj = {'page' : page, 'page_object': po}
+            for pid, page_number, poid, po_content, po_cls, po_bb in res2:
+                obj = {'pdf_id' : pid, 'page_number': page_number, 'po_id': poid, 'po_content': po_content, 'po_cls': po_cls, 'po_bb': po_bb}
                 obj_list.append(obj)
                 
-            object_context_futures.append(client.submit(aggregate_sections, obj_list, resources={'process': 1}))
-            object_context_futures.append(client.submit(aggregate_equations, obj_list, resources={'process': 1}))
-            object_context_futures.append(client.submit(aggregate_figures, obj_list, resources={'process': 1}))
-            object_context_futures.append(client.submit(aggregate_tables, obj_list, resources={'process': 1}))
-            final_context_futures.extend(object_context_futures)
-        progress(final_context_futures)
-        client.gather(final_context_futures)
+            if len(obj_list) == 0:
+                continue
+            [r] = client.scatter([obj_list])
+            r1 = client.submit(aggregate_sections, r, resources={'process': 1})
+            fire_and_forget(r1)
+            r2 = client.submit(aggregate_equations, r, resources={'process': 1})
+            fire_and_forget(r2)
+            r3 = client.submit(aggregate_figures, r, resources={'process': 1})
+            fire_and_forget(r3)
+            r4 = client.submit(aggregate_tables, r, resources={'process': 1})
+            fire_and_forget(r4)
     except Exception as e:
         logger.error(str(e), exc_info=True)
         raise Exception(f'process_dataset error, {str(e)}')
@@ -67,7 +72,7 @@ def groups(pobjs):
     """
     groups = []
     for p in pobjs:
-        bb = p['page_object'].bounding_box
+        bb = p['po_bb']
         x1, y1, x2, y2 = bb
         inserted = False
         for group in groups:
@@ -80,7 +85,7 @@ def groups(pobjs):
             groups.append([x1, [p]])
     for g in groups:
         # sort internally by y
-        g[1].sort(key=lambda x: x['page_object'].bounding_box[1])
+        g[1].sort(key=lambda x: x['po_bb'][1])
     # Sort bins by x
     groups.sort(key=lambda x: x[0])
     return groups
@@ -92,12 +97,12 @@ def aggregate_equations(objs):
     session = Session()
     try:
         def filter_fn(obj):
-            return obj['page_object'].cls in ['Equation', 'Body Text']
+            return obj['po_cls'] in ['Equation', 'Body Text']
 
         fobjs = [o for o in objs if filter_fn(o)]
         pages = defaultdict(list)
         for obj in fobjs:
-            pages[obj['page'].page_number].append(obj)
+            pages[obj['page_number']].append(obj)
 
         keys = pages.keys()
         if len(keys) == 0:
@@ -112,15 +117,15 @@ def aggregate_equations(objs):
             grouped = groups(page_objs)
             for gind, group in enumerate(grouped):
                 for ind, obj in enumerate(group[1]):
-                    if obj['page_object'].cls == 'Equation':
+                    if obj['po_cls'] == 'Equation':
                         # Try to grab nearest body texts
                         assoc_text = []
-                        if ind-1 >= 0 and group[1][ind-1]['page_object'].cls == 'Body Text':
+                        if ind-1 >= 0 and group[1][ind-1]['po_cls'] == 'Body Text':
                             assoc_text.append(group[1][ind-1])
                         if ind+1 < len(group[1]):
-                            if group[1][ind+1]['page_object'].cls == 'Body Text':
+                            if group[1][ind+1]['po_cls'] == 'Body Text':
                                 assoc_text.append(group[1][ind+1])
-                        elif gind+1 < len(grouped) and grouped[gind+1][1][0]['page_object'].cls == 'Body Text': # Check the first item in the next group
+                        elif gind+1 < len(grouped) and grouped[gind+1][1][0]['po_cls'] == 'Body Text': # Check the first item in the next group
                             assoc_text.append(grouped[gind+1][1][0])
 
                         equations.append([obj, assoc_text])
@@ -130,13 +135,13 @@ def aggregate_equations(objs):
             eq, contexts = eq_contexts
             aggregated_context = ''
             for context in contexts:
-                aggregated_context += f'\n{context["page_object"].content}\n'
+                aggregated_context += f'\n{context["po_content"]}\n'
             if aggregated_context.strip() == '' or len(aggregated_context.strip()) < MIN_SECTION_LEN:
                 continue
-            oc = ObjectContext(pdf_id=eq['page'].pdf_id,
+            oc = ObjectContext(pdf_id=eq['pdf_id'],
                                cls='EquationContext',
-                               header_id=eq["page_object"].id,
-                               header_content=eq["page_object"].content,
+                               header_id=eq["po_id"],
+                               header_content=eq["po_content"],
                                content=aggregated_context)
             session.add(oc)
         session.commit()
@@ -154,12 +159,12 @@ def aggregate_figures(objs):
     Session.configure(bind=engine)
     session = Session()
     def filter_fn(obj):
-        return obj['page_object'].cls in ['Figure', 'Figure Caption']
+        return obj['po_cls'] in ['Figure', 'Figure Caption']
     try:
         fobjs = [o for o in objs if filter_fn(o)]
         pages = defaultdict(list)
         for obj in fobjs:
-            pages[obj['page'].page_number].append(obj)
+            pages[obj['page_number']].append(obj)
 
         keys = pages.keys()
         if len(keys) == 0:
@@ -174,7 +179,7 @@ def aggregate_figures(objs):
             page_objs = pages[i]
             grouped = groups(page_objs)
             flattened = [o for g in grouped for o in g[1]]
-            if flattened[0]['page_object'].cls == 'Figure':
+            if flattened[0]['po_cls'] == 'Figure':
                 after = True
             break
 
@@ -185,22 +190,22 @@ def aggregate_figures(objs):
             grouped = groups(page_objs)
             flattened = [o for g in grouped for o in g[1]]
             for ind, obj in enumerate(flattened):
-                if obj['page_object'].cls == 'Figure Caption':
-                    if after and (ind-1) > 0 and flattened[ind-1]['page_object'].cls == 'Figure':
+                if obj['po_cls'] == 'Figure Caption':
+                    if after and (ind-1) > 0 and flattened[ind-1]['po_cls'] == 'Figure':
                         figures.append([flattened[ind-1], flattened[ind]])
-                    if not after and (ind+1) < len(flattened) and flattened[ind+1]['page_object'].cls == 'Figure':
+                    if not after and (ind+1) < len(flattened) and flattened[ind+1]['po_cls'] == 'Figure':
                         figures.append([flattened[ind+1], flattened[ind]])
 
         final_objs = []
         for fig_fig_caption in figures:
             fig, fig_caption = fig_fig_caption
-            aggregated_context = fig_caption['page_object'].content
+            aggregated_context = fig_caption['po_content']
             if aggregated_context.strip() == '':
                 continue
-            oc = ObjectContext(pdf_id=fig['page'].pdf_id,
+            oc = ObjectContext(pdf_id=fig['pdf_id'],
                                cls='FigureContext',
-                               header_id=fig["page_object"].id,
-                               header_content=fig["page_object"].content,
+                               header_id=fig["po_id"],
+                               header_content=fig["po_content"],
                                content=aggregated_context)
             session.add(oc)
         session.commit()
@@ -211,7 +216,6 @@ def aggregate_figures(objs):
     finally:
         session.close()
     return 'Ok'
-    return final_objs
 
 
 
@@ -221,12 +225,12 @@ def aggregate_tables(objs):
     Session.configure(bind=engine)
     session = Session()
     def filter_fn(obj):
-        return obj['page_object'].cls in ['Table', 'Table Caption']
+        return obj['po_cls'] in ['Table', 'Table Caption']
     try:
         fobjs = [o for o in objs if filter_fn(o)]
         pages = defaultdict(list)
         for obj in fobjs:
-            pages[obj['page'].page_number].append(obj)
+            pages[obj['page_number']].append(obj)
 
         keys = pages.keys()
         if len(keys) == 0:
@@ -242,7 +246,7 @@ def aggregate_tables(objs):
             grouped = groups(page_objs)
             flattened = [o for g in grouped for o in g[1]]
             # Decide if the caption comes after or before the table generally
-            if flattened[0]['page_object'].cls == 'Table':
+            if flattened[0]['po_cls'] == 'Table':
                 after = True
             break
 
@@ -253,15 +257,15 @@ def aggregate_tables(objs):
             grouped = groups(page_objs)
             flattened = [o for g in grouped for o in g[1]]
             for ind, obj in enumerate(flattened):
-                if obj['page_object'].cls == 'Table':
+                if obj['po_cls'] == 'Table':
                     if not after:
-                        if (ind-1) > 0 and flattened[ind-1]['page_object'].cls == 'Table Caption':
+                        if (ind-1) > 0 and flattened[ind-1]['po_cls'] == 'Table Caption':
                             tables.append([flattened[ind], flattened[ind-1]])
                         else:
                             tables.append([flattened[ind], None])
 
                     if after:
-                        if (ind+1) < len(flattened) and flattened[ind+1]['page_object'].cls == 'Table Caption':
+                        if (ind+1) < len(flattened) and flattened[ind+1]['po_cls'] == 'Table Caption':
                             tables.append([flattened[ind], flattened[ind+1]])
                         else:
                             tables.append([flattened[ind], None])
@@ -269,13 +273,13 @@ def aggregate_tables(objs):
         final_objs = []
         for tab_tab_caption in tables:
             tab, tab_caption = tab_tab_caption
-            aggregated_context = f"{tab['page_object'].content}\n{tab_caption['page_object'].content}" if tab_caption is not None else tab['page_object'].content
+            aggregated_context = f"{tab['po_content']}\n{tab_caption['po_content']}" if tab_caption is not None else tab['po_content']
             if aggregated_context.strip() == '':
                 continue
-            oc = ObjectContext(pdf_id=tab['page'].pdf_id,
+            oc = ObjectContext(pdf_id=tab['pdf_id'],
                                cls='TableContext',
-                               header_id=tab["page_object"].id,
-                               header_content=tab["page_object"].content,
+                               header_id=tab["po_id"],
+                               header_content=tab["po_content"],
                                content=aggregated_context)
             session.add(oc)
         session.commit()
@@ -295,13 +299,12 @@ def aggregate_sections(objs):
     session = Session()
     try:
         def filter_fn(obj):
-            print(obj['page_object'].cls)
-            return obj['page_object'].cls in ['Body Text', 'Section Header']
+            return obj['po_cls'] in ['Body Text', 'Section Header']
 
         fobjs = [o for o in objs if filter_fn(o)]
         pages = defaultdict(list)
         for obj in fobjs:
-            pages[obj['page'].page_number].append(obj)
+            pages[obj['page_number']].append(obj)
         keys = pages.keys()
         if len(keys) == 0:
             # Probably should log something here
@@ -310,14 +313,13 @@ def aggregate_sections(objs):
         sections = []
         for i in range(max_len + 1):
             if i not in pages:
-                print(":(")
                 continue
             page_objs = pages[i]
             grouped = groups(page_objs)
             current_section = None
             for group in grouped:
                 for obj in group[1]:
-                    if obj['page_object'].cls == 'Section Header':
+                    if obj['po_cls'] == 'Section Header':
                         current_section = obj
                         sections.append([obj, []])
                         continue
@@ -333,20 +335,27 @@ def aggregate_sections(objs):
             aggregated_context = ''
             pdf_id = ''
             if header is not None:
-                aggregated_context = f'{header["page_object"].content}\n'
-                pdf_id = header['page'].pdf_id
+                aggregated_context = f'{header["po_content"]}\n'
+                pdf_id = header['pdf_id']
             else:
-                pdf_id = objs[0]['page'].pdf_id
+                pdf_id = objs[0]['pdf_id']
             for obj in objs:
-                aggregated_context += f'\n{obj["page_object"].content}\n'
+                aggregated_context += f'\n{obj["po_content"]}\n'
             if aggregated_context.strip() == '' or len(aggregated_context.strip()) < MIN_SECTION_LEN:
                 continue
-            objs = [{'_id': obj['page_object'].id} for obj in objs]
-            oc = ObjectContext(pdf_id=obj['page'].pdf_id,
-                               cls='Section',
-                               header_id=header["page_object"].id,
-                               header_content=header["page_object"].content,
-                               content=aggregated_context)
+            objs = [{'_id': obj['po_id']} for obj in objs]
+            if header is not None:
+                oc = ObjectContext(pdf_id=obj['pdf_id'],
+                                   cls='Section',
+                                   header_id=header["po_id"],
+                                   header_content=header["po_content"],
+                                   content=aggregated_context)
+            else:
+                oc = ObjectContext(pdf_id=obj['pdf_id'],
+                                   cls='Section',
+                                   header_id=None,
+                                   header_content=None,
+                                   content=aggregated_context)
             session.add(oc)
         session.commit()
     except Exception as e:

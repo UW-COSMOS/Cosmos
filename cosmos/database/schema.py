@@ -41,6 +41,9 @@ class Page(Base):
     page_number = Column(Integer, index=True)
     bytes = Column(LargeBinary(length=(2**32)-1))
 
+    def __repr__(self):
+        return f'<Page(id={self.id}, pdf_id={self.pdf_id}, page_width={self.page_width}, page_height={self.page_height}, page_number={self.page_number}>'
+
 class PageObject(Base):
     __tablename__ = 'page_objects'
 
@@ -76,7 +79,7 @@ class ObjectContext(Base):
     cls = Column(String(200))
     header_id = Column(Integer, ForeignKey('page_objects.id'))
     header_content = Column(Text())
-    content = Column(Text())
+    content = Column(Text(2**32-1))
 
 
 def ping_healthcheck():

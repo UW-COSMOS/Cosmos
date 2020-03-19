@@ -7,7 +7,6 @@ networks:
 services:
     aggregate_sections:
         image: ankurgos/aggregate_sections:latest
-        ipc: host
         command: "python3 -m agg.aggregate"
         environment:
             - DATASET_ID
@@ -36,7 +35,7 @@ services:
             - MYSQL_DATABASE=cosmos
             - MYSQL_PASSWORD=cosmos123
             - CUDA_VISIBLE_DEVICES=''
-        command: "dask-worker tcp://scheduler:8786 --nprocs 1 --resources 'process=1'"
+        command: "dask-worker tcp://scheduler:8786 --nprocs 100 --resources 'process=1'"
         depends_on:
             - scheduler
 

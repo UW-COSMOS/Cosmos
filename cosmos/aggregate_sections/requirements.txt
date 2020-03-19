@@ -10,6 +10,5 @@ pandas
 sqlalchemy
 requests
 mysqlclient
-dask
 alembic
 

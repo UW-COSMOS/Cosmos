@@ -17,7 +17,7 @@ RUN wget \
 
 RUN conda update conda
 RUN conda install python=3.6
-RUN conda install dask
+RUN conda install dask=2.12.0
 
 RUN conda install -c conda-forge uwsgi
 COPY aggregate_sections/requirements.txt /
