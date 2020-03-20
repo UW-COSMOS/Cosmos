@@ -17,10 +17,10 @@ def convert(did, session, conn):
     if os.path.exists(dataset_pth):
         logger.warning(f'Found the dataset directory already created {dataset_pth}. Deleting contents to repopulate')
         shutil.rmtree(dataset_pth)
-    os.mkdirs(dataset_pth)
+    os.makedirs(dataset_pth)
 
     # Full contexts
-    r = session.query(ObjectContext.content).filter(ObjectContext.id, ObjectContext.pdf_id == Pdf.id).filter(Pdf.dataset_id == did)
+    r = session.query(ObjectContext.id, ObjectContext.content).filter(ObjectContext.id, ObjectContext.pdf_id == Pdf.id).filter(Pdf.dataset_id == did)
     with open(os.path.join(dataset_pth, 'full_contexts.jsonl'), 'w') as wf, open(os.path.join(dataset_pth, 'raw.txt'), 'w') as rawf, open(os.path.join(dataset_pth, 'split_contexts.jsonl'), 'w') as splf:
         for id, content in r:
             example = {'id': str(id), 'contents': content}
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()
-    convert(did, session)
+    convert(did, session, conn)
 
     
 
