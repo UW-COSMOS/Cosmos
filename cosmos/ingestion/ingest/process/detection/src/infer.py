@@ -39,8 +39,8 @@ def run_inference(model, page_objs, model_config, device_str, session):
     device = torch.device(device_str)
     infer_session = InferenceHelper(model, loader, device)
     print("Running infer in session")
-    results = infer_session.run()
+    results, softmax_results = infer_session.run()
     ImageDB.cleanup(ingest_objs, session)
     print("Returning results")
-    return results
+    return results, softmax_results
 

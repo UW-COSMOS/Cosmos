@@ -28,6 +28,7 @@ class InferenceHelper:
         """
         loader = DataLoader(self.dataset, batch_size=1, collate_fn=self.dataset.collate)
         pred_dict = defaultdict(list)
+        s_pred_dict = defaultdict(list)
         for ex in tqdm(loader):
             batch, db_ex = ex
             windows = batch.neighbor_windows.to(self.device)
@@ -41,14 +42,19 @@ class InferenceHelper:
             #probabilities = torch.nn.functional.softmax(cls_scores).squeeze()
             bb = batch.center_bbs[0] 
             probs, pred_idxs = torch.sort(cls_scores, dim=1, descending=True)
+            sprobs = torch.softmax(probs, dim=1)
+            sprobs = sprobs.tolist()[0]
             pred_idxs = pred_idxs.tolist()[0]
             pred_cls = [self.cls[i] for i in pred_idxs]
             prediction = list(zip(probs.tolist()[0], pred_cls))
+            softmax_prediction = list(zip(sprobs, pred_cls))
             pred_tuple = (bb.tolist(), prediction)
+            s_pred_tuple = (bb.tolist(), softmax_prediction) 
             page_id = db_ex.page_id
             pred_dict[page_id].append(pred_tuple)
+            s_pred_dict[page_id].append(s_pred_tuple)
 
-        return pred_dict
+        return pred_dict, s_pred_dict
 
     def _get_predictions(self, windows, proposals):
         """

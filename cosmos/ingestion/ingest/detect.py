@@ -32,10 +32,13 @@ def detect(obj):
         Base.metadata.create_all(engine)
         session = Session()
         obj['img'] = Image.open(io.BytesIO(base64.b64decode(obj['pad_img'].encode('ASCII')))).convert('RGB')
-        detected_objs = run_inference(model, [obj], model_config, device_str, session)['0']
+        detected_objs, softmax_detected_objs = run_inference(model, [obj], model_config, device_str, session)
+        detected_objs = detected_objs['0']
+        softmax_detected_objs = softmax_detected_objs['0']
         session.close()
         del obj['img']
         obj['detected_objs'] = detected_objs
+        obj['softmax_objs'] = softmax_detected_objs
 
         return obj
     except Exception as e:

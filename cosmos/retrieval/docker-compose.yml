@@ -15,3 +15,11 @@ services:
         volumes:
             - ${DATASET_INDEX_DIR}:/index_dir
         command: "python write_dataset.py"
+
+    retrieve:
+        image: ankurgos/retrieval:latest
+        environment:
+            - DATASET_ID
+        volumes:
+            - ${DATASET_INDEX_DIR}:/index_dir
+

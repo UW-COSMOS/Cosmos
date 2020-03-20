@@ -61,7 +61,7 @@ def commit_objs(objs, page_id, session):
     ids = []
     pobjs = []
     for obj in objs:
-        pobj = PageObject(bytes=obj['bstring'], content=obj['content'], bounding_box=obj['bb'], cls=obj['cls'], page_id=page_id, confidence=obj['confidence'])
+        pobj = PageObject(init_cls_confidences=obj['detect_objects'], bytes=obj['bstring'], content=obj['content'], bounding_box=obj['bb'], cls=obj['cls'], page_id=page_id, confidence=obj['confidence'])
         session.add(pobj)
         pobjs.append(pobj)
     session.commit()
@@ -87,11 +87,12 @@ def postprocess_page(obj):
         session = Session()
         padded_img = Image.open(io.BytesIO(base64.b64decode(obj['pad_img'].encode('ASCII')))).convert('RGB')
         detected_objs = obj['detected_objs']
-        tess_df, objects = ocr(padded_img, detected_objs)
+        softmax_detect_objects = obj['softmax_objs']
+        tess_df, detect_objects = ocr(padded_img, detected_objs)
         pageid = obj['page_id']
 
-        if objects is not None:
-            objects = postprocess(dp.postprocess_model, dp.classes, objects)
+        if detect_objects is not None:
+            objects = postprocess(dp.postprocess_model, dp.classes, detect_objects)
             page_objs = []
             for obj in objects:
                 bb, cls, text, score = obj
@@ -103,7 +104,18 @@ def postprocess_page(obj):
                 cropped_img.save(bytes_stream, format='PNG', optimize=True)
                 bstring = bytes_stream.getvalue()
                 bb = json.loads(json.dumps(bb))
-                page_objs.append({'bstring': bstring, 'bb': bb, 'content': text, 'cls': cls, 'confidence': score})
+                s_detect_objects = json.dumps(softmax_detect_objects)
+                s_detect_objects = json.loads(s_detect_objects)
+                d_objects = None
+                for dobj in s_detect_objects:
+                    check_bb = dobj[0]
+                    if check_bb == bb:
+                        d_objects = dobj[1]
+                        break
+                if d_objects is None:
+                    raise Exception('Something very wrong, bounding boxes are not aligned', exc_info=True)
+
+                page_objs.append({'detect_objects': d_objects, 'bstring': bstring, 'bb': bb, 'content': text, 'cls': cls, 'confidence': score})
             ids = commit_objs(page_objs, pageid, session)
             return {'ids': ids}
         else:

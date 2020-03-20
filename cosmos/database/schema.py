@@ -53,6 +53,7 @@ class PageObject(Base):
     bytes = Column(LargeBinary(length=(2**32)-1))
     content = Column(String(10000))
     bounding_box = Column(JSON)
+    init_cls_confidences = Column(JSON)
     cls = Column(String(200))
     confidence = Column(Numeric(precision=9, scale=6))
     classification_success = Column(Boolean, unique=False, default=None)

@@ -22,7 +22,7 @@ def run_request(payload):
     return result
 
 
-def run(directory, bsz):
+def run(directory):
     did = str(uuid.uuid4())
     logger.info(f'Dataset id generated: {did}')
     filenames = glob.glob(os.path.join(directory, '*.pdf'))
@@ -121,9 +121,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('directory', help='Path to pdf directory')
     args = parser.parse_args()
-    bsz = int(os.environ['BSZ'])
     stime = time.time()
-    run(args.directory, bsz)
+    run(args.directory)
     time_up = time.time() - stime
     logger.info(f'TOTAL TIME UP: {time_up} seconds')
 
