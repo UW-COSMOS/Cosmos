@@ -1,0 +1,12 @@
+FROM pytorch/pytorch:latest
+
+#RUN pip install pytorch_transformers
+RUN pip install flask amqp redis celery
+RUN pip install pymongo
+RUN pip install pytest
+RUN pip install tensorboardX
+
+RUN apt-get update && apt-get -y install vim
+
+COPY src/ /app
+WORKDIR /app
