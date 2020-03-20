@@ -14,13 +14,14 @@ services:
             swarm_network:
 
     ingestion:
-        image: ankurgos/ingest:latest
+        image: iaross/ingestion_test_dummy:latest
         networks:
             swarm_network:
         environment:
             - MYSQL_USER
             - MYSQL_PASSWORD
             - DEVICE=cpu
+            - PYTHONUNBUFFERED=TRUE
         command: "gunicorn -w 4 -b 0.0.0.0:8000 ingest.app"
         depends_on:
             - scheduler
@@ -30,7 +31,7 @@ services:
             - 8000:8000
 
     scheduler:
-        image: ankurgos/ingest:latest
+        image: iaross/ingestion_test_dummy:latest
         networks:
             swarm_network:
         command: "dask-scheduler"
@@ -38,21 +39,21 @@ services:
             - 8787:8787
 
     worker1:
-        image: ankurgos/ingest:latest
+        image: iaross/ingestion_test_dummy:latest
         networks:
             swarm_network:
         environment:
             - MYSQL_USER
             - MYSQL_PASSWORD
             - CUDA_VISIBLE_DEVICES=''
-        command: "dask-worker tcp://scheduler:8786 --nprocs 100 --resources 'process=1' --preload ingest.process_setup"
+        command: "dask-worker tcp://scheduler:8786 --nprocs 30 --resources 'process=1' --preload ingest.process_setup"
         volumes:
             - ${TMP_DIR}:/tmp
         depends_on:
             - scheduler
 
     worker2:
-        image: ankurgos/ingest:latest
+        image: iaross/ingestion_test_dummy:latest
         networks:
             swarm_network:
         environment:
@@ -64,26 +65,26 @@ services:
         depends_on:
             - scheduler
 
-    #gateway:
-    #    image: iaross/visualizer
-    #    ports:
-    #        - 8081:80
-    #    networks:
-    #        swarm_network:
+    gateway:
+        image: iaross/visualizer
+        ports:
+            - 8081:80
+        networks:
+            swarm_network:
   
-    #search_backend:
-    #    image: iaross/sbackend
-    #    container_name: search_backend
-    #    command: "flask run --host=0.0.0.0 --port=5001"
-    #    ports:
-    #        - 5001:5001
-    #    environment:
-    #        - MYSQL_USER=myuser
-    #        - MYSQL_DATABASE=cosmos
-    #        - MYSQL_PASSWORD=cosmos123
-    #        - PDF_DB=pdfs
-    #        - FLASK_APP=app.py
-    #        - FLASK_ENV=development
-    #    networks:
-    #       swarm_network:
+    search_backend:
+        image: iaross/sbackend_test
+        container_name: search_backend
+        command: "flask run --host=0.0.0.0 --port=5001"
+        ports:
+            - 5001:5001
+        environment:
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+            - PDF_DB=pdfs
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
+        networks:
+           swarm_network:
 
