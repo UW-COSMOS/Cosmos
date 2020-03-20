@@ -1,7 +1,17 @@
-version: "2.3"
+version: "3"
+
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network 
 services:
-  retrieval:
-    ipc: host
-    build: .
-    volumes:
-      - .:/develop
+    index:
+        image: ankurgos/retrieval:latest
+        environment:
+            - DATASET_ID
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+        volumes:
+            - ${DATASET_INDEX_DIR}:/index_dir
+        command: "python write_dataset.py"

@@ -23,6 +23,9 @@ ENV PATH=$CONDA_PREFIX/bin:$PATH
 
 RUN pip install pyserini
 
-WORKDIR /develop
+RUN mkdir /app
+COPY database/schema.py /app
+COPY retrieval/retrieval /app
+WORKDIR /app
 
 CMD ["mvn clean package appassembler:assemble"]
