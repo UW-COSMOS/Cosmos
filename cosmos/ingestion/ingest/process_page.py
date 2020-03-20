@@ -22,6 +22,7 @@ from ingest.process.proposals.connected_components import get_proposals
 from ingest.process.detection.src.preprocess import pad_image
 from ingest.process.ocr.ocr import run as ocr
 from ingest.process.postprocess.xgboost_model.inference import run_inference as postprocess
+from ingest.process.postprocess.pp_rules import apply_rules as postprocess_rules
 from dask.distributed import get_worker
 
 import logging
@@ -61,7 +62,7 @@ def commit_objs(objs, page_id, session):
     ids = []
     pobjs = []
     for obj in objs:
-        pobj = PageObject(bytes=obj['bstring'], content=obj['content'], bounding_box=obj['bb'], cls=obj['cls'], page_id=page_id, confidence=obj['confidence'])
+        pobj = PageObject(bytes=obj['bstring'], content=obj['content'], bounding_box=obj['bb'], cls=obj['cls'], page_id=page_id, confidence=obj['confidence'], pp_rule_cls=obj['pp_rule_cls'])
         session.add(pobj)
         pobjs.append(pobj)
     session.commit()
@@ -92,9 +93,10 @@ def postprocess_page(obj):
 
         if objects is not None:
             objects = postprocess(dp.postprocess_model, dp.classes, objects)
+            objects = postprocess_rules(objects)
             page_objs = []
             for obj in objects:
-                bb, cls, text, score = obj
+                bb, cls, text, score, pp_rule_cls = obj
                 logging.info(f"class: {cls}, score: {score}")
                 feathered_bb = [max(bb[0]-2, 0), max(bb[1]-2, 0),
                                 min(bb[2]+2, 1920), min(bb[3]+2, 1920)]
@@ -103,7 +105,7 @@ def postprocess_page(obj):
                 cropped_img.save(bytes_stream, format='PNG', optimize=True)
                 bstring = bytes_stream.getvalue()
                 bb = json.loads(json.dumps(bb))
-                page_objs.append({'bstring': bstring, 'bb': bb, 'content': text, 'cls': cls, 'confidence': score})
+                page_objs.append({'bstring': bstring, 'bb': bb, 'content': text, 'cls': cls, 'confidence': score, 'pp_rule_cls' : pp_rule_cls})
             ids = commit_objs(page_objs, pageid, session)
             return {'ids': ids}
         else:

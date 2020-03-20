@@ -54,6 +54,7 @@ class PageObject(Base):
     content = Column(String(10000))
     bounding_box = Column(JSON)
     cls = Column(String(200))
+    pp_rule_cls = Column(String(200))
     confidence = Column(Numeric(precision=9, scale=6))
     classification_success = Column(Boolean, unique=False, default=None)
     proposal_success = Column(Boolean, unique=False, default=None)
