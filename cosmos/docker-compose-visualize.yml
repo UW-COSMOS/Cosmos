@@ -1,0 +1,26 @@
+version: '3'
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network 
+
+services:
+    gateway:
+        image: iaross/visualizer
+        ports:
+            - 8081:80
+        depends_on:
+            - search_backend
+  
+    search_backend:
+        image: iaross/sbackend
+        command: "flask run --host=0.0.0.0 --port=5001"
+        ports:
+            - 5001:5001
+        environment:
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+            - PDF_DB=pdfs
+            - FLASK_APP=app.py
+            - FLASK_ENV=development

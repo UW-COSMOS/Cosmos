@@ -77,7 +77,7 @@ def get_blank_rows(inp_np, blank_row_h):
         curr_bot = curr_top + blank_row_h
     return white_rows
 
-def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5):
+def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, min_col_width=50):
     """
      Function that handles writing of object proposals
     :param img_p: Path to image
@@ -115,15 +115,37 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5):
         else:
             # New way
             rowT = row.T
-            white_cols = get_blank_rows(rowT, blank_row_height)
+            col_height = blank_row_height
+            white_cols = get_blank_rows(rowT, col_height)
+            num_cols = len(white_cols)
+            # This should be something reasonable, like less than 6
+            while num_cols > 5:
+                col_height += 5
+                white_cols = get_blank_rows(rowT, col_height)
+                num_cols = len(white_cols)
+
             cols = []
             blocks = []
             coords = []
             col_idx = []
-            num_cols = len(col_idx)
+            curr_white_cols = []
+            # columns are fundamentally larger than rows, so we can lowerbound their width
+            #for i in range(len(white_cols)-1):
+            #    curr = white_cols[i]
+            #    nxt = white_cols[i+1]
+            #    assert nxt - curr - col_height > 0
+            #    if nxt - curr - col_height > min_col_width:
+            #        curr_white_cols.append(curr)
+            #    else:
+            #        continue
+            #curr_white_cols.append(white_cols[-1])
+            #white_cols = curr_white_cols
+
+
             for i in range(len(white_cols)-1):
                 curr = white_cols[i]
                 nxt = white_cols[i+1]
+
                 spl = rowT[curr:nxt, :]
                 spl = spl.T
                 blocks.append(spl)
@@ -163,9 +185,8 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5):
                     block_coords2[key] = [val]
 
     if obj_count > 0:
-        avg_height = obj_heights / obj_count
-        if avg_height < 3 * blank_row_height:
-            block_coords = get_proposals(img, white_thresh=white_thresh, blank_row_height=2 * blank_row_height, filter_thres=filter_thres)
+        if obj_count > 19:
+            block_coords = get_proposals(img, white_thresh=white_thresh, blank_row_height=5 + blank_row_height, filter_thres=filter_thres)
         else:
             for key in block_coords2:
                 coords_list = block_coords2[key]

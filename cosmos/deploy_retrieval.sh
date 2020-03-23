@@ -1,2 +1,2 @@
-export DATASET_INDEX_DIR=
-docker stack deploy retrieval --compose-file retrieval/docker-compose.yml 
+export DATASET_INDEX_DIR=/ssd/ankur/retrieval
+docker-compose -f retrieval/docker-compose.yml up

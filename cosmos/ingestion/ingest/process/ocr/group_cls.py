@@ -53,6 +53,9 @@ def check_overlap(obj_list, box, check_above_below=False, check_cls=None):
         return False
     return True
 
+def check_overlap_bb(bb, box):
+    iou = calculate_iou(bb, box)
+    return iou > 0
 
 def group_cls(obj_list, g_cls, do_table_merge=False, merge_over_classes=None):
     """
