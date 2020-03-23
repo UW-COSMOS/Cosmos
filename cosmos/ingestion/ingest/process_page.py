@@ -2,6 +2,7 @@
 """
 Route to handle decomposition of pages into page objects
 """
+from scipy.special import softmax
 import copy
 import base64
 import uuid
@@ -21,6 +22,7 @@ from PIL import Image, UnidentifiedImageError
 from ingest.process.proposals.connected_components import get_proposals
 from ingest.process.detection.src.preprocess import pad_image
 from ingest.process.ocr.ocr import run as ocr
+from ingest.process.ocr.group_cls import check_overlap_bb
 from ingest.process.postprocess.xgboost_model.inference import run_inference as postprocess
 from dask.distributed import get_worker
 
@@ -107,13 +109,16 @@ def postprocess_page(obj):
                 s_detect_objects = json.dumps(softmax_detect_objects)
                 s_detect_objects = json.loads(s_detect_objects)
                 d_objects = None
+                max_score = 0
                 for dobj in s_detect_objects:
                     check_bb = dobj[0]
-                    if check_bb == bb:
-                        d_objects = dobj[1]
-                        break
+                    if check_overlap_bb(check_bb, bb):
+                        d_score = dobj[1][0][0]
+                        if d_score > max_score:
+                            max_score = d_score
+                            d_objects = dobj[1]
                 if d_objects is None:
-                    raise Exception('Something very wrong, bounding boxes are not aligned', exc_info=True)
+                    raise Exception('Something very wrong, bounding boxes are not aligned')
 
                 page_objs.append({'detect_objects': d_objects, 'bstring': bstring, 'bb': bb, 'content': text, 'cls': cls, 'confidence': score})
             ids = commit_objs(page_objs, pageid, session)

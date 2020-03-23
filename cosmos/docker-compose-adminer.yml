@@ -1,0 +1,12 @@
+version: '3'
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network 
+
+services:
+    adminer:
+        image: adminer:standalone
+        ports:
+            - 8080:8080
+
