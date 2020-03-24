@@ -21,6 +21,7 @@ services:
             - MYSQL_USER
             - MYSQL_PASSWORD
             - DEVICE=cpu
+            - PYTHONUNBUFFERED=TRUE
         command: "gunicorn -w 4 -b 0.0.0.0:8000 ingest.app"
         depends_on:
             - scheduler
@@ -63,5 +64,4 @@ services:
         command: "dask-worker tcp://scheduler:8786 --nprocs 1 --resources 'GPU=1' --preload ingest.detect_setup"
         depends_on:
             - scheduler
-
 
