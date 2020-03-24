@@ -175,7 +175,7 @@ def unpack_page(page, warped_size):
     return ExampleData(examples=ret, proposals_len=len(proposals_lst), gt_box_len=(len(gt_box_lst) if gt_box_lst is not None else 0))
 
 
-def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition):
+def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
     """
     ingest the db
     :param img_dir: Image directory
@@ -186,7 +186,6 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition):
     :param session: DB Session to work on
     :return: IngestObjs containing statistics about the DB
     """
-    session = ImageDB.build()
     class_stats = {}
     uuids = []
     nproposals = 0
@@ -350,7 +349,7 @@ class ImageDB:
         ingest_objs = None
         if type(objs) == tuple:
             img_dir, proposal_dir, xml_dir = objs
-            ingest_objs = db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition)
+            ingest_objs = db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session)
         # Alternatively, we can pass in a list of objects and call that loading function
         else:
             ingest_objs = db_ingest_objs(objs, warped_size, partition, session)

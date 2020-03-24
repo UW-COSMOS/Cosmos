@@ -1,20 +1,8 @@
-FROM pytorch/pytorch:1.3-cuda10.1-cudnn7-runtime
+FROM ankurgos/ingest:3.0 
 
-# Install some basic utilities
-RUN apt-get update && apt-get install -y \
-    curl \
-    ca-certificates \
-    sudo \
-    git \
-    bzip2 \
-    libx11-6 
-
-USER root
-
-RUN apt-get -y install gcc g++ vim imagemagick tesseract-ocr libtesseract-dev
-COPY ./requirements.txt .
+RUN mkdir /app
+WORKDIR /app
+COPY ingestion/ingest/process/detection/src/requirements.txt /app
 RUN pip install -r requirements.txt --user
-
-USER root
-
+COPY ingestion/ingest/process/detection/src /app
 

@@ -9,11 +9,11 @@ WEIGHT_DECAY:
 BATCH_SIZE: 
   TYPE: "int"
   MIN: 10
-  MAX: 12
+  MAX: 11
 EPOCHS: 
   TYPE: "int"
   MIN: 30
-  MAX: 60
+  MAX: 50
 HEAD_DIM: 
   TYPE: "int"
   MIN: 512

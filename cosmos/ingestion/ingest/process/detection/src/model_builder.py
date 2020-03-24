@@ -1,12 +1,15 @@
 """
 Train entry point
 """
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import torch
 from hyperyaml.hyperyaml import HyperYaml
 from torch_model.model.model import MMFasterRCNN
 from torch_model.train.train import TrainerHelper
 from torch_model.model.utils.config_manager import ConfigManager
 from torch_model.train.data_layer.xml_loader import XMLLoader
+from torch_model.train.data_layer.sql_types import Base
 from torch_model.train.embedding.embedding_dataset import ImageEmbeddingDataset
 from utils.ingest_images import ImageDB
 import argparse
@@ -24,15 +27,20 @@ def get_proposal_dir(root):
     return join(root, "proposals")
 
 def get_dataset(dir, warped_size, expansion_delta, img_type, partition, cfg):
+    engine = create_engine('sqlite:///:memory:')  
+    Base.metadata.create_all(engine)
+    Session = sessionmaker()
+    Session.configure(bind=engine)
+    session = Session() 
     ingest_objs = ImageDB.initialize_and_ingest((get_img_dir(dir),
                                                          get_proposal_dir(dir),
                                                          get_anno_dir(dir)),
                                                          warped_size,
                                                          partition,
-                                                         expansion_delta)
-    dataset = XMLLoader(ingest_objs, cfg.CLASSES)
-    session = ImageDB.build()
-    embedding_dataset = ImageEmbeddingDataset(ingest_objs, cfg.CLASSES)
+                                                         expansion_delta, session)
+    dataset = XMLLoader(ingest_objs, cfg.CLASSES, session)
+    embedding_dataset = ImageEmbeddingDataset(ingest_objs, cfg.CLASSES, session)
+    session.close()
     return dataset
 
 class ModelBuilder:
@@ -71,7 +79,7 @@ def build_model(hyperopt_config, max_evals, val_dir, train_dir):
     builder = ModelBuilder(val_dir, train_dir)
     hyp = HyperYaml(hyperopt_config,builder, max_evals)
     hyp.run()
-    hyp.write("best.yaml")
+    hyp.write("/data/weights/best.yaml")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

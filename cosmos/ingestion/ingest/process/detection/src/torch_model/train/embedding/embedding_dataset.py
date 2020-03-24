@@ -12,12 +12,12 @@ import random
 
 
 class ImageEmbeddingDataset(XMLLoader):
-    def __init__(self, ingest_objs, classes):
+    def __init__(self, ingest_objs, classes, session):
         """
         Create an image embedding db
         :param db: a sqlalchemy session to query for images
         """
-        super(ImageEmbeddingDataset, self).__init__(ingest_objs, classes)
+        super(ImageEmbeddingDataset, self).__init__(ingest_objs, classes, session)
 
 
     @staticmethod
