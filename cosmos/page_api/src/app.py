@@ -206,7 +206,7 @@ def page_by_id(page_id):
 
     res = session.query(PageObject).filter(page.id == PageObject.page_id)
     for po in res.all():
-        result['pp_detected_objs'].append({"bounding_box" : [float(i) for i in po.bounding_box], "class" : po.cls, "confidence" : str(po.confidence), "obj_id" : po.id})
+        result['pp_detected_objs'].append({"bounding_box" : [float(i) for i in po.bounding_box], "class" : po.cls, "confidence" : str(po.confidence), "obj_id" : po.id, "annotated_cls" : po.annotated_cls})
 
     results_obj = {'results': [result]}
     return jsonify({"results" : [result]})
