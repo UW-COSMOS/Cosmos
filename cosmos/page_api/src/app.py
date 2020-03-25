@@ -20,6 +20,8 @@ import json
 import re
 import requests
 import pandas as pd
+from elasticsearch_dsl import Search, connections, Q
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, defer
 from sqlalchemy.sql.expression import func
@@ -27,6 +29,8 @@ from sqlalchemy.sql.expression import func
 engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
 Session = sessionmaker()
 Session.configure(bind=engine)
+
+connections.create_connection(hosts=['es01'], timeout=20)
 
 app = Flask(__name__)
 
@@ -80,12 +84,14 @@ def get_dataframe():
 
 @app.route('/search')
 def search():
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
+    session = Session()
     try:
         _id = request.args.get('id', '')
         obj_type = request.args.get('type', '')
         query = request.args.get('query', '')
+        area = request.args.get('area', '')
+        base_confidence = request.args.get('base_confidence', '')
+        postprocess_confidence = request.args.get('postprocess_confidence', '')
         page_num = int(request.args.get('pageNumber', 0))
         offset = int(request.args.get('offset', 0))
         logging.info(f"offset is {offset} and page_num is {page_num}")
@@ -103,62 +109,74 @@ def search():
                 q = q & Q('match', content=query)
 
             if obj_type != '':
-                if not obj_type.endswith("Context"):
-                    obj_type += "Context"
+#                if not obj_type.endswith("Context"):
+#                    obj_type += "Context"
                 logging.info(f"querying for cls: {obj_type}")
-                q = q & Q('match', cls=obj_type)
+                q = q & Q('match_phrase', cls=obj_type)
+            if area != '':
+                logging.info(f"querying for area: gte {area}")
+                q = q & Q('range', area={'gte': area})
+            if base_confidence != '':
+                logging.info(f"querying for base_confidence: gte {base_confidence}")
+                q = q & Q('range', base_confidence={'gte': base_confidence})
+            if postprocess_confidence != '':
+                logging.info(f"querying for postprocessing_confidence: gte {postprocess_confidence}")
+                q = q & Q('range', postprocessing_confidence={'gte': postprocess_confidence})
 
-            if "biomass_filter" in request.args:
-                logging.info("Biomass filter specified -- adding additional keyword filters")
-                q = q & Q('bool', should=[
-                    Q('match', content='abundance'),
-                    Q('match', content='distribution'),
-                    Q('match', content='biomass'),
-                    Q('match', content='mass'),
-                    Q('match', content='density'),
-                    ])
-
-            s = Search().query(q)
-    #        logging.info(s.to_dict())
+            s = Search(index='object').query(q)
 
             logging.info(f"Getting results {page_num*20} to {(page_num+1)*20}")
             s = s[page_num*20:(page_num+1)*20]
 
+            logging.info(q)
+            logging.info(s)
             response = s.execute()
-    #        logging.info(str(response))
-            content_set = set()
             for result in response:
-    #            logging.info(result)
                 id = result.meta.id
-                obj_id = ObjectId(id)
-    #            logging.info(obj_id)
-                res = None
-                if result['cls'] == 'code':
-                    res = db.code_objs.find_one({'_id': obj_id})
-                elif result['cls'] == 'Section':
-                    sc = db.sections.find_one({'_id': obj_id})
-                    if len(sc['objects']) == 0:
-                        continue
-                    bt = sc['objects'][0]['_id']
-                    res = db.objects.find_one({'_id': bt})
-                elif result['cls'] == 'FigureContext':
-                    fc = db.figureContexts.find_one({'_id': obj_id})
-                    figure = fc['figure']['_id']
-                    res = db.objects.find_one({'_id': figure})
-                elif result['cls'] == 'EquationContext':
-                    ec = db.equationContexts.find_one({'_id': obj_id})
-                    eq = ec['equation']['_id']
-                    res = db.objects.find_one({'_id': eq})
-                elif result['cls'] == 'TableContext':
-                    tc = db.tableContexts.find_one({'_id': obj_id})
-                    table = tc['table']['_id']
-                    res = db.objects.find_one({'_id': table})
-                else:
-                    res = db.objects.find_one({'_id': obj_id})
-                if res['content'] in content_set:
-                    continue
-                content_set.add(res['content'])
-                result_list.append(res)
+                res = {}
+                logging.info(result['cls'])
+                # TODO: don't have the necessarily handle to group by header, etc right now. Just placeholder for the time being.
+                tobj = {
+                        'header_id' : None,
+                        'header_bytes' : None,
+                        'content' : None,
+                        'children' : [],
+                        }
+                obj_id = result.meta['id']
+                po, page_number, pdf_name = session.query(PageObject, Page.page_number, Pdf.pdf_name).filter(PageObject.id == obj_id).filter(PageObject.page_id == Page.id).filter(Page.pdf_id == Pdf.id).first()
+                logging.info(po)
+                res['id'] = obj_id
+                res['bytes'] = po.bytes
+                res['content'] = po.content
+                res['page_number'] = page_number
+                res = postprocess_result(res)
+                tobj['children'].append(res)
+                tobj['pdf_name'] = pdf_name
+                result_list.append(tobj)
+#                if result['cls'] == 'Section':
+#                    sc = db.sections.find_one({'_id': obj_id})
+#                    if len(sc['objects']) == 0:
+#                        continue
+#                    bt = sc['objects'][0]['_id']
+#                    res = db.objects.find_one({'_id': bt})
+#                lif result['cls'] == 'FigureContext':
+#                    fc = db.figureContexts.find_one({'_id': obj_id})
+#                    figure = fc['figure']['_id']
+#                    res = db.objects.find_one({'_id': figure})
+#                elif result['cls'] == 'EquationContext':
+#                    ec = db.equationContexts.find_one({'_id': obj_id})
+#                    eq = ec['equation']['_id']
+#                    res = db.objects.find_one({'_id': eq})
+#                elif result['cls'] == 'TableContext':
+#                    tc = db.tableContexts.find_one({'_id': obj_id})
+#                    table = tc['table']['_id']
+#                    res = db.objects.find_one({'_id': table})
+#                else:
+#                    res = db.objects.find_one({'_id': obj_id})
+#                if res['content'] in content_set:
+#                    continue
+#                content_set.add(res['content'])
+#                result_list.append(res)
         else:  # passed in a specific object id
             logging.info("no id specified, skipping ES junk")
             obj_id = ObjectId(_id)

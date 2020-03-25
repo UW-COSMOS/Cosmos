@@ -8,5 +8,9 @@ FROM python:3.7
 
 RUN pip install elasticsearch_dsl pymongo click
 
-COPY src/ /app
+COPY ./elasticsearch/src/ /app
+COPY ./elasticsearch/requirements.txt /
+RUN pip install -r requirements.txt
+COPY ./database/schema.py /app/
 WORKDIR /app
+CMD python ingest_elastic.py
