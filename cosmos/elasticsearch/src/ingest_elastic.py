@@ -3,18 +3,55 @@ Ingest to elasticsearch
 """
 import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
-from elasticsearch_dsl import Document, Text, connections
+from elasticsearch_dsl import Document, Text, connections, Integer, Float
 import pymongo
 from pymongo import MongoClient
 import os
 import click
+from schema import Pdf, Page, PageObject, ObjectContext
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, defer
+from sqlalchemy.sql.expression import func
+import json
+engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+Session = sessionmaker()
+Session.configure(bind=engine)
 
-class Snippet(Document):
-    content = Text()
+class Object(Document):
+    # Not clear if we want to search the context of the header, the context of the object, or both
+
     cls = Text()
+    dataset_id = Text()
+    content = Text()
+    area = Integer()
+#    init_cls_confidences = Float()
+    postprocessing_confidence = Float()
+    pp_rule_cls = Text()
+    annotated_cls = Text()
+
 
     class Index:
-        name = 'snippet'
+        name = 'object'
+        settings = {
+                'number_of_shards': 1,
+                'number_of_replicas': 0
+        }
+
+class Context(Document):
+    # Not clear if we want to search the context of the header, the context of the object, or both
+    cls = Text()
+    header_id = Integer() # same as _id
+    dataset_id = Text()
+    content = Text()
+    header_content = Text()
+
+    # Hmm these are really filters at the _object_ level, not the _context_ level...
+#    area = Integer()
+#    base_confidence = Float()
+#    postprocessing_confidence = Float()
+
+    class Index:
+        name = 'context'
         settings = {
                 'number_of_shards': 1,
                 'number_of_replicas': 0
@@ -26,40 +63,41 @@ def ingest_elasticsearch(objects, code, sections, tableContexts, figureContexts,
     Ingest some mongo collections to elasticsearch
     """
     connections.create_connection(hosts=['es01'])
-    Snippet.init()
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
-    if objects:
-        for batch in load_pages(db.objects, 100):
-            for obj in batch:
-                Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
+    Context.init()
+    session = Session()
+    logging.info("Querying for contexts")
+#    contexts = session.execute('SELECT oc.*, p.dataset_id FROM object_contexts oc JOIN (SELECT dataset_id, id FROM pdfs) p ON oc.pdf_id = p.id')
+#    logging.info("Writing to ES")
+#    for c in contexts:
+#        logging.info(f"Found a {c['cls']}")
+#        Context(_id = str(c['id']),
+#                header_id = c['header_id'],
+#                cls = c['cls'],
+#                dataset_id = c['dataset_id'],
+#                header_content = c['header_content'],
+#                content = c['content']
+#                ).save()
+#
+#    Context._index.refresh()
+    Object.init()
 
-    if code:
-        for batch in load_pages(db.code_objs, 100):
-            for obj in batch:
-                Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
+#    objects = session.execute('SELECT po.*, d.dataset_id FROM page_objects po JOIN (SELECT id, pdf_id FROM pages) p ON p.pdf_id = d.id JOIN (SELECT dataset_id, id FROM pdfs) d  ON po.page_id = p.id')
+    objects = session.execute('SELECT po.* FROM page_objects po')
+    for obj in objects:
+        bb = json.loads(obj['bounding_box'])
+        tlx, tly, brx, bry = bb
+        area = (brx - tlx) * (bry - tly)
+        Object(_id = str(obj['id']),
+                cls = obj['cls'],
+#                dataset_id = obj['dataset_id'],
+                content = obj['content'],
+                area = area,
+                base_confidence = json.loads(obj['init_cls_confidences'])[0][0],
+                postprocessing_confidence = obj['confidence'],
+                pp_rule_cls = obj['pp_rule_cls'],
+                annotated_cls = obj['annotated_cls']
+    ).save()
 
-    if sections:
-        for batch in load_pages(db.sections, 100):
-            for obj in batch:
-                Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
-
-    if tableContexts:
-        for batch in load_pages(db.tableContexts, 100):
-            for obj in batch:
-                Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
-
-    if figureContexts:
-        for batch in load_pages(db.figureContexts, 100):
-            for obj in batch:
-                Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
-
-    if equationContexts:
-        for batch in load_pages(db.equationContexts, 100):
-            for obj in batch:
-                Snippet(_id=str(obj['_id']), cls=str(obj['class']), content=str(obj['content'])).save()
-
-    Snippet._index.refresh()
 
 
 def load_pages(coll, buffer_size):

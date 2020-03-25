@@ -7,3 +7,5 @@ requests
 tabulate
 pandas
 pyyaml
+alembic
+elasticsearch_dsl

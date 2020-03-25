@@ -1,3 +1,4 @@
 note : text
 classification_success : boolean
 proposal_success : boolean
+annotated_cls : text

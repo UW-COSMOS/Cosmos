@@ -1,16 +1,19 @@
 version: '2.3'
 services:
   ingest_elastic:
-      build: .
+      image: iaross/es_ingest
       ipc: host
-      command: "python ingest_elastic.py --no-objects --sections --no-code --tables --figures --equations"
-      #volumes:
-      #    - .:/develop/
-      #command: "tail -F /dev/null"
+      command: "python ingest_elastic.py"
+      volumes:
+          - .:/develop/
+#      command: "tail -F /dev/null"
       environment:
-          - DBCONNECT
+        - MYSQL_USER=myuser
+        - MYSQL_DATABASE=cosmos
+        - MYSQL_PASSWORD=cosmos123
 
 networks:
   default:
     external:
-      name: elasticsearch_esnet
+      name: cosmos_swarm_network
+
