@@ -1,0 +1,14 @@
+version: '3.4'
+
+services:
+    train:
+        image: ankurgos/ingest:3.0
+        ipc: host
+        volumes:
+            - ${TRAIN_DIR}:/data/train
+            - ${VAL_DIR}:/data/val
+            - ${WEIGHTS_DIR}:/data/weights
+            - ${LOGDIR}:/data/logs
+        command: "/bin/sh -c ./train_postprocess.sh"
+
+

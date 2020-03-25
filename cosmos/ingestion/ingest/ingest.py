@@ -1,11 +1,11 @@
 import uuid
 #import celery
-from .schema import Pdf, Page, PageObject
+from ingest.schema import Pdf, Page, PageObject
 import json
 import uuid
 import tempfile
-from .pdf_extractor import parse_pdf
-from .preprocess import resize_png
+from ingest.pdf_extractor import parse_pdf
+from ingest.preprocess import resize_png
 import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

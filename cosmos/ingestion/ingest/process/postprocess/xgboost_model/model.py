@@ -7,24 +7,23 @@ import joblib
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score
 
-with open("classes.yaml") as stream:
-    classes  = yaml.load(stream)["classes"]
 
 class PostProcessTrainer:
-    def __init__(self, model, train_set_x, train_set_y, val_set_x, val_set_y, log_dir ='./log_dir', model_path='pp_model_weights.pth'):
+    def __init__(self, model, train_set_x, train_set_y, val_set_x, val_set_y, classes, log_dir ='./log_dir', model_path='pp_model_weights.pth'):
         self.train_set_x = train_set_x
         self.train_set_y = train_set_y
         self.val_set_x = val_set_x
         self.val_set_y = val_set_y
         self.model = model
         self.model_path = model_path
+        self.classes = classes
 
     def train(self):        
         self.model.fit(self.train_set_x, self.train_set_y)
         accuracy, classification_list = self.validate()
         print("Val Accuracy: {} \n".format(accuracy*100))
         print(classification_list)
-        #run_evaluate(classification_list)
+        #run_evaluate(classification_list, classes)
         joblib.dump(self.model, self.model_path)
         
     def validate(self):
@@ -35,11 +34,11 @@ class PostProcessTrainer:
         correct = sum(predicted == self.val_set_y)
         total = len(predicted)
         for i in range(len(predicted)):
-            classification_list.append((classes[predicted[i]], classes[self.val_set_y[i]]))     
+            classification_list.append((self.classes[predicted[i]], self.classes[self.val_set_y[i]]))     
         return correct/total, classification_list
         
 
-def run_evaluate(classification_list):
+def run_evaluate(classification_list, classes):
     print('Classes')
     print(classes)
     class_counts = {}

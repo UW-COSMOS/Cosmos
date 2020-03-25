@@ -195,7 +195,7 @@ def list2html(input_list, image_name, image_dir, output_dir, unicode_df=None,tes
     doc = dominate.document(title=image_name[:-4])
     
     inter_path = os.path.join(output_dir, 'img', image_name[:-4])
-    im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
+    #im2latex_model = get_im2latex_model(IM2LATEX_WEIGHT)
     with doc:
         img = Image.open(os.path.join(image_dir, image_name))
         for ind, inp in enumerate(input_list):
