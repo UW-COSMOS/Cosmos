@@ -8,7 +8,7 @@ from flask import Flask, request, abort
 from flask import jsonify, send_file
 import os
 from tabulate import tabulate
-from schema import Pdf, Page, PageObject
+from schema import Pdf, Page, PageObject, Table
 from ast import literal_eval as make_tuple
 from io import BytesIO
 import logging
@@ -52,13 +52,11 @@ def postprocess_result(result):
 
 @app.route('/search/preview')
 def download():
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
+    session = Session()
     try:
         _id = request.args.get('id', '')
-        obj_id = ObjectId(_id)
-        res = db.objects.find_one({'_id': obj_id})
-        table = tabulate(pickle.loads(res['table_df']), tablefmt='psql')
+        res = session.query(Table).filter(Table.page_object_id == _id).first()
+        table = tabulate(pickle.loads(res.df), tablefmt='psql')
         table = html.escape(table)
         return f"<div><pre>{table}</pre></div>"
 
@@ -68,14 +66,12 @@ def download():
 
 @app.route('/search/get_dataframe')
 def get_dataframe():
-    client = MongoClient(os.environ["DBCONNECT"])
-    db = client.pdfs
+    session = Session()
     try:
         _id = request.args.get('id', '')
-        obj_id = ObjectId(_id)
-        res = db.objects.find_one({'_id': obj_id})
+        res = session.query(Table).filter(Table.page_object_id == _id).first()
         buffer = BytesIO()
-        buffer.write(res["table_df"])
+        buffer.write(res.df)
         buffer.seek(0)
         return send_file(buffer, as_attachment=True, attachment_filename=f"{_id}.pickle")
     except TypeError as e:
