@@ -2,7 +2,7 @@
 # Data service application providing access to the 'word2vec' operation and others from the Gensim model.
 #
 
-from flask import Flask, Response, request
+from flask import Flask, Response, request, send_file
 from flask_cors import CORS, cross_origin
 
 from gensim.models import Word2Vec
@@ -12,16 +12,26 @@ from nltk import word_tokenize
 from nltk.corpus import stopwords
 stop_words = stopwords.words('english')
 
+from io import BytesIO, StringIO
+import zipfile
+
 import json
 import sys
 
-# import logging
+import logging
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 # import traceback
 
+def generate_zip(files):
+    mem_zip = BytesIO()
+    with zipfile.ZipFile(mem_zip, mode="w",compression=zipfile.ZIP_DEFLATED) as zf:
+        for f in files:
+            zf.writestr(f[0], f[1].getvalue())
+    return mem_zip
 
-model_path = "./data/corpus_1k_model_trigram"
-dictionary_path = "./data/corpus_1k_model_dictionary_trigram"
-tfidf_path = "./data/corpus_1k_model_tfidf_trigram"
+model_path = "./data/model_100_streamed"
+dictionary_path = "./data/model_100_streamed_dictionary"
+tfidf_path = "./data/model_100_streamed_tfidf"
 
 sys.stdout.write("Loading model from '{}'... ".format(model_path))
 sys.stdout.flush()
@@ -76,6 +86,15 @@ def word2vec():
     else:
         return error_400("You must specify a value for the argument 'word'")
 
+@app.route('/tensors', methods=['POST'])
+def tensors():
+    body = request.json
+    terms = body['terms']
+    products = get_tensors(terms)
+    zipfile = generate_zip(products)
+    zipfile.seek(0)
+    return send_file(zipfile, attachment_filename=f"dummy.zip", as_attachment=True)
+
 @app.errorhandler(404)
 def not_found(error):
     return json_response('{ "status": "404", "error": "Page not found." }', 404)
@@ -105,17 +124,28 @@ def json_response(content, status):
     r.headers["Content-Type"] = "application/json; charset=utf-8"
     return r
 
+def get_tensors(terms):
+    """
+    TODO: Docstring for get_products.
 
+    Args:
+        model (TODO): TODO
+        terms (TODO): TODO
 
-# return '[%s]' % ', '.join(map(str,a))
-# try:
-#     n = args.n
+    Returns: TODO
 
-# except:
-#     n = 10
+    """
+    metadata = StringIO()
+    tensors = StringIO()
+    for word in model.wv.index2word:
+#            if word == word.lower():
+#                continue
+        if word.lower() not in terms:
+            continue
+#            encoded=word.encode('utf-8')
+        metadata.write(word + '\n')
+        vector_row = '\t'.join(map(str, model[word]))
+        tensors.write(vector_row + '\n')
+    return [("tensors.tsv", tensors),
+            ("metadata.tsv", metadata)]
 
-# If path is to a word2vec model and words can be found.
-
-# if(not(model_FLAG)):
-# 	a = model.wv.most_similar(positive=args.word, topn=n)
-# 	print('[%s]' % ', '.join(map(str,a)))
