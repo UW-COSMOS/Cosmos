@@ -1,19 +1,19 @@
 LEARNING_RATE: 
    TYPE: "float"
    MIN: 0.0001
-   MAX: 0.001 
+   MAX: 0.0001 
 WEIGHT_DECAY:
   TYPE: "FLOAT"
   MIN: 0.0001
-  MAX: 0.01
+  MAX: 0.001
 BATCH_SIZE: 
   TYPE: "int"
   MIN: 10
   MAX: 11
 EPOCHS: 
   TYPE: "int"
-  MIN: 5
-  MAX: 5
+  MIN: 10
+  MAX: 10
 HEAD_DIM: 
   TYPE: "int"
   MIN: 1024
