@@ -52,13 +52,13 @@ def process_dataset(did, client):
             if len(obj_list) == 0:
                 continue
             [r] = client.scatter([obj_list])
-            r1 = client.submit(aggregate_sections, r, resources={'process': 1})
+            r1 = client.submit(aggregate_sections, obj_list)
             fire_and_forget(r1)
-            r2 = client.submit(aggregate_equations, r, resources={'process': 1})
+            r2 = client.submit(aggregate_equations, r)
             fire_and_forget(r2)
-            r3 = client.submit(aggregate_figures, r, resources={'process': 1})
+            r3 = client.submit(aggregate_figures, r)
             fire_and_forget(r3)
-            r4 = client.submit(aggregate_tables, r, resources={'process': 1})
+            r4 = client.submit(aggregate_tables, r)
             fire_and_forget(r4)
     except Exception as e:
         logger.error(str(e), exc_info=True)
@@ -373,7 +373,7 @@ def aggregate_sections(objs):
 
 
 def run():
-    client = Client('scheduler:8788')
+    client = Client('scheduler:8786')
     process_dataset(os.environ['DATASET_ID'], client)
 
 if __name__ == '__main__':

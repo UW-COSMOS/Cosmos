@@ -9,21 +9,21 @@ app = Flask(__name__)
 def search():
     try:
         query = request.args.get('query', type=str)
-        if query is None:
-            #TODO: What to return ?
-            results_obj = {"query" : None} #dummy
-            return jsonify(results_obj)
-        else:
-            logging.info("Dont reach here !!!")
-            obj_type = request.args.get('type', type=str)
-            dataset_id = request.args.get('dataset_id', type=str)
-            area = request.args.get('area', type=int)
-            base_confidence = request.args.get('base_confidence', type=float)
-            postprocessing_confidene = request.args.get('postprocessing_confidence', type=float)
-            
-            #TODO: Body
-            results_obj = {"query" : query, "obj_type":obj_type, "dataset_id":dataset_id, "area":area, "base_confidence":base_confidence, "postprocessing_confidene":postprocessing_confidene} #dummy
-            return jsonify(results_obj)
+        obj_type = request.args.get('type', type=str)
+        dataset_id = request.args.get('dataset_id', type=str)
+        area = request.args.get('area', type=int)
+        base_confidence = request.args.get('base_confidence', type=float)
+        postprocessing_confidence = request.args.get('postprocessing_confidence', type=float)
+        
+        results_obj = {
+                         "query" : query, 
+                         "obj_type": obj_type, 
+                         "dataset_id": dataset_id, 
+                         "area": area, 
+                         "base_confidence": base_confidence, 
+                         "postprocessing_confidence": postprocessing_confidence
+                      }
+        return jsonify(results_obj)
 
     except TypeError as e:
         logging.info(f'{e}')

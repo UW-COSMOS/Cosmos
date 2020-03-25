@@ -5,7 +5,7 @@ networks:
     external:
       name: cosmos_swarm_network 
 services:
-    index:
+    preprocess:
         image: ankurgos/retrieval:latest
         environment:
             - DATASET_ID
@@ -15,6 +15,18 @@ services:
         volumes:
             - ${DATASET_INDEX_DIR}:/index_dir
         command: "python write_dataset.py"
+
+    index:
+        image: ankurgos/retrieval:latest
+        environment:
+            - DATASET_ID
+            - MYSQL_USER=myuser
+            - MYSQL_DATABASE=cosmos
+            - MYSQL_PASSWORD=cosmos123
+        volumes:
+            - ${DATASET_INDEX_DIR}:/index_dir
+        command: "/bin/bash -c ./index.sh"
+
 
     retrieve:
         image: ankurgos/retrieval:latest
