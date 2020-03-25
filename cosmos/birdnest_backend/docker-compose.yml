@@ -1,0 +1,20 @@
+
+version: "2.3"
+services:
+    birdnest_backend:
+        build: .
+        ipc: host
+        container_name: birdnest_backend
+        command: "flask run --host=0.0.0.0 --port=5010"
+        volumes:
+            - .:/develop
+        #command: "tail -F /dev/null"
+        environment:
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
+        ports:
+            - 5010:5010
+# networks:
+#   default:
+#     external:
+#       name: cosmos_swarm_network 

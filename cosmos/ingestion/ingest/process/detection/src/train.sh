@@ -1,1 +1,1 @@
-python model_builder.py hyperopt_config.yaml 5 /data/val /data/train
+python model_builder.py hyperopt_config.yaml 1 /data/val /data/train

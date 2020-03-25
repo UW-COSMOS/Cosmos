@@ -51,6 +51,9 @@ def not_ocr(text):
     return 'ocr' not in text and 'rawtext' not in text and 'unicode' not in text
 
 def process_body(soup):
+    """
+    :return: [([x1, y1, x2, y2], [scores], [score], [seg_class], content)]
+    """
     html_list = []
     for seg_type in soup.find_all('div', not_ocr):
         seg_class = " ".join(seg_type["class"])
@@ -173,12 +176,32 @@ def get_target(predict, list_map, classes):
 
     return classes.index(gt_cls)
 
+
 def load_data_objs(predict_list, classes):
     features = []
     for predict in predict_list:
         features.append(get_feat_vec(predict, predict_list, classes))
     f = np.asarray(features)
     return f
+
+
+def load_data_train(input_dir, classes):
+    features = []
+    targets = []
+    for f in glob.glob(os.path.join(input_dir, "html/*.html")):
+        predict_list = process_html(f)
+        target_path = os.path.splitext(os.path.basename(f))[0]
+        target_path = os.path.join(input_dir, "target/{}.xml".format(target_path))
+        target_list = xml2list(target_path)
+
+        list_map = match_lists(predict_list, target_list)
+        for predict in predict_list:
+            target = get_target(predict, list_map, classes)
+            if target == -1:
+                continue
+            targets.append(target)
+            features.append(get_feat_vec_train(predict, predict_list, classes))
+    return np.array(features), np.array(targets)
 
 #Use this function to load data for training the model
 def load_data(input_dir, classes):
@@ -198,3 +221,4 @@ def load_data(input_dir, classes):
             targets.append(target)
             features.append(get_feat_vec_train(predict, predict_list, classes))
     return np.array(features), np.array(targets)
+
