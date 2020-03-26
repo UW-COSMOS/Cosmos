@@ -6,7 +6,7 @@ networks:
       name: cosmos_swarm_network 
 services:
     preprocess:
-        image: ankurgos/retrieval:latest
+        image: akshatabhat18/retrieval:latest
         environment:
             - DATASET_ID
             - MYSQL_USER=myuser
@@ -16,22 +16,9 @@ services:
             - ${DATASET_INDEX_DIR}:/index_dir
         command: "python write_dataset.py"
 
-    index:
-        image: ankurgos/retrieval:latest
-        environment:
-            - DATASET_ID
-            - MYSQL_USER=myuser
-            - MYSQL_DATABASE=cosmos
-            - MYSQL_PASSWORD=cosmos123
-        volumes:
-            - ${DATASET_INDEX_DIR}:/index_dir
-        command: "/bin/bash -c ./index.sh"
-
-
     retrieve:
-        image: ankurgos/retrieval:latest
-        environment:
-            - DATASET_ID
+        image: akshatabhat18/retrieval:latest
         volumes:
             - ${DATASET_INDEX_DIR}:/index_dir
+            - .:/develop
 

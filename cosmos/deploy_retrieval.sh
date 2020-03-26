@@ -1,2 +1,2 @@
-export DATASET_INDEX_DIR=/ssd/ankur/retrieval
+export DATASET_INDEX_DIR=/ssd/akshata/cosmos_dataset/retrieval
 docker-compose -f retrieval/docker-compose.yml up
