@@ -54,6 +54,7 @@ RUN conda install dask
 RUN pip install -r /requirements.txt
 
 # Copy /app and work in it
-COPY table_extractions/* /app/
-COPY database/schema.py /app/schema.py
+COPY ./table_extractions/ /app
+COPY database/schema.py /app/tableextractions
 WORKDIR /app
+RUN python setup.py install
