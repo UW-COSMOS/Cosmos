@@ -27,18 +27,18 @@ services:
     command: ["mysqld","--server_id=2","--binlog_checksum=NONE","--gtid_mode=ON","--enforce_gtid_consistency=ON","--log_bin","--log_slave_updates=ON","--master_info_repository=TABLE","--relay_log_info_repository=TABLE","--transaction_write_set_extraction=XXHASH64","--user=mysql","--skip-host-cache","--skip-name-resolve", "--default_authentication_plugin=mysql_native_password", "--max-connections=1024", "--innodb_buffer_pool_size=16g", "--group-concat-max-len=4294967295", "--innodb-log-file-size=1G"]
     ports:
       - "3302:3306"
-  mysql-server-3:
-    networks:
-        cosmos_swarm_network:
-    env_file:
-      - mysql-server.env
-    image: mysql/mysql-server:8.0.12
-    volumes:
-        - ${DB3_PTH}:/var/lib/mysql
-        - ${TMP3_PTH}:/tmp
-    command: ["mysqld","--server_id=3","--binlog_checksum=NONE","--gtid_mode=ON","--enforce_gtid_consistency=ON","--log_bin","--log_slave_updates=ON","--master_info_repository=TABLE","--relay_log_info_repository=TABLE","--transaction_write_set_extraction=XXHASH64","--user=mysql","--skip-host-cache","--skip-name-resolve", "--default_authentication_plugin=mysql_native_password", "--max-connections=1024", "--innodb_buffer_pool_size=16g", "--group-concat-max-len=4294967295", "--innodb-log-file-size=1G"]
-    ports:
-      - "3303:3306"
+  #mysql-server-3:
+  #  networks:
+  #      cosmos_swarm_network:
+  #  env_file:
+  #    - mysql-server.env
+  #  image: mysql/mysql-server:8.0.12
+  #  volumes:
+  #      - ${DB3_PTH}:/var/lib/mysql
+  #      - ${TMP3_PTH}:/tmp
+  #  command: ["mysqld","--server_id=3","--binlog_checksum=NONE","--gtid_mode=ON","--enforce_gtid_consistency=ON","--log_bin","--log_slave_updates=ON","--master_info_repository=TABLE","--relay_log_info_repository=TABLE","--transaction_write_set_extraction=XXHASH64","--user=mysql","--skip-host-cache","--skip-name-resolve", "--default_authentication_plugin=mysql_native_password", "--max-connections=1024", "--innodb_buffer_pool_size=16g", "--group-concat-max-len=4294967295", "--innodb-log-file-size=1G"]
+  #  ports:
+  #    - "3303:3306"
   mysql-shell:
     networks:
         cosmos_swarm_network:
@@ -50,7 +50,6 @@ services:
     depends_on:
       - mysql-server-1
       - mysql-server-2
-      - mysql-server-3
   mysql-router:
     networks:
         cosmos_swarm_network:
@@ -62,7 +61,6 @@ services:
     depends_on:
       - mysql-server-1
       - mysql-server-2
-      - mysql-server-3
       - mysql-shell
     restart: on-failure
   dbwebapp:

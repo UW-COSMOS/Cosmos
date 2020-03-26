@@ -123,9 +123,9 @@ def ingest(obj):
         for fname, pdfn in payload:
             obj = process_page(fname, pdfn, Session(), client)
             objs.append(obj)
-        processed = [client.submit(pp, obj, resources={'process': 1}) for obj in objs]
-        detected_processed = client.map(detect, processed, resources={'GPU': 1})
-        postprocessed_pages = client.map(postprocess_page, detected_processed, resources={'process': 1})
+        processed = [client.submit(pp, obj, resources={'process': 1}, priority=8) for obj in objs]
+        detected_processed = client.map(detect, processed, resources={'GPU': 1}, priority=9)
+        postprocessed_pages = client.map(postprocess_page, detected_processed, resources={'process': 1}, priority=10)
         job_keys = [p.key for p in postprocessed_pages]
         for p in postprocessed_pages:
             fire_and_forget(p)

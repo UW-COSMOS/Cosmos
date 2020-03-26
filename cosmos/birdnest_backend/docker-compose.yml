@@ -1,20 +1,24 @@
-
-version: "2.3"
+version: "3"
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network 
 services:
     birdnest_backend:
-        build: .
+        image: ankurgos/backend:latest
         ipc: host
-        container_name: birdnest_backend
         command: "flask run --host=0.0.0.0 --port=5010"
         volumes:
-            - .:/develop
+            - ${DATASET_INDEX_DIR}:/index_dir/
+            - /ssd/ankur/Cosmos/cosmos:/vol
         #command: "tail -F /dev/null"
         environment:
+            - DATASET_ID
             - FLASK_APP=app.py
             - FLASK_ENV=development
+            - LC_ALL=C.UTF-8
+            - LANG=C.UTF-8
+            - MYSQL_USER=myuser
+            - MYSQL_PASSWORD=cosmos123
         ports:
             - 5010:5010
-# networks:
-#   default:
-#     external:
-#       name: cosmos_swarm_network 

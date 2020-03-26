@@ -40,7 +40,7 @@ class PreprocessedPDF(object):
         if 'dataset_id' not in obj or 'pdf_name' not in obj or 'pdf' not in obj:
             resp.status = falcon.HTTP_400
             raise falcon.HTTPBadRequest('dataset_id or pdf_name not in request params', 'dataset_id or pdf_name not in request params')
-        ingested_objs_future = client.submit(ingest, obj, resources={'process': 1})
+        ingested_objs_future = client.submit(ingest, obj, resources={'process': 1}, priority=-10)
         key = ingested_objs_future.key
         fire_and_forget(ingested_objs_future)
         #pp_chain = (process_page.s() | detect.s())

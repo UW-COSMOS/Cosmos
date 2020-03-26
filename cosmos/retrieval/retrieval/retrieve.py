@@ -30,7 +30,7 @@ class Retrieval:
 
         for i in range(0, min(len(context_hits), self.k2)):
             index = context_hits[i].docid
-            content = context_hits[i].content
+            content = context_hits[i].raw
             score = context_hits[i].score
             actual_context_id = self.ctx2octx_map[int(index)]
             actual_doc_id = self.octx2odoc_map[int(actual_context_id)]
