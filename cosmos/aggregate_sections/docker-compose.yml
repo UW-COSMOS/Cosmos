@@ -19,15 +19,15 @@ services:
             - scheduler
 
     scheduler:
-        image: iaross/aggregate_sections_test:latest
+        image: ankurgos/aggregate_sections:latest
         #networks:
         #    cosmos_swarm_network:
-        command: "dask-scheduler --port 8788"
+        command: "dask-scheduler --port 8786"
         ports:
-            - 8788:8786
+            - 8788:8787
 
     worker1:
-        image: iaross/aggregate_sections_test:latest
+        image: ankurgos/aggregate_sections:latest
         #networks:
         #    cosmos_swarm_network:
         environment:
@@ -37,5 +37,8 @@ services:
             - CUDA_VISIBLE_DEVICES=''
         depends_on:
             - scheduler
+        command: "dask-worker tcp://scheduler:8786 --nprocs 5"
+        volumes:
+            - ${TMP_DIR}:/tmp
 
 

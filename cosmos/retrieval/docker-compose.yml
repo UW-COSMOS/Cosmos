@@ -5,7 +5,7 @@ networks:
     external:
       name: cosmos_swarm_network 
 services:
-    index:
+    preprocess:
         image: ankurgos/retrieval:latest
         environment:
             - DATASET_ID
@@ -18,8 +18,7 @@ services:
 
     retrieve:
         image: ankurgos/retrieval:latest
-        environment:
-            - DATASET_ID
         volumes:
             - ${DATASET_INDEX_DIR}:/index_dir
+            - .:/develop
 
