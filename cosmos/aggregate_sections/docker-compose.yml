@@ -37,7 +37,7 @@ services:
             - CUDA_VISIBLE_DEVICES=''
         depends_on:
             - scheduler
-        command: "dask-worker tcp://scheduler:8786 --nprocs 120 "
+        command: "dask-worker tcp://scheduler:8786 --nprocs 5"
         volumes:
             - ${TMP_DIR}:/tmp
 

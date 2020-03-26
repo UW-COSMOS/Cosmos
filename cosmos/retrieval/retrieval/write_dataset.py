@@ -2,6 +2,7 @@ import json
 import shutil
 import argparse
 import os
+import subprocess
 from schema import ObjectContext, Pdf
 from sqlalchemy.sql import text
 import pickle
@@ -19,13 +20,15 @@ def convert(did, session, conn):
         logger.warning(f'Found the dataset directory already created {dataset_pth}. Deleting contents to repopulate')
         shutil.rmtree(dataset_pth)
     os.makedirs(dataset_pth)
+    os.makedirs(os.path.join(dataset_pth, 'documents_jsonl'))
+    os.makedirs(os.path.join(dataset_pth, 'contexts_jsonl'))
 
     id_map = {}
     id_context_map = {}
     i = 0
     # Full contexts
     r = session.query(ObjectContext.id, ObjectContext.content, ObjectContext.pdf_id).filter(ObjectContext.id, ObjectContext.pdf_id == Pdf.id).filter(Pdf.dataset_id == did)
-    with open(os.path.join(dataset_pth, 'full_contexts.jsonl'), 'w') as wf, open(os.path.join(dataset_pth, 'raw.txt'), 'w') as rawf, open(os.path.join(dataset_pth, 'split_contexts.jsonl'), 'w') as splf:
+    with open(os.path.join(dataset_pth, 'contexts_jsonl', 'full_contexts.jsonl'), 'w') as wf, open(os.path.join(dataset_pth, 'raw.txt'), 'w') as rawf, open(os.path.join(dataset_pth, 'split_contexts.jsonl'), 'w') as splf:
         for id, content, pdfid in r:
             id_map[id] = pdfid
 
@@ -65,7 +68,7 @@ def convert(did, session, conn):
     r2 = conn.execute(q)
     i = 0
     id_to_pdf = {}
-    with open(os.path.join(dataset_pth, 'documents.txt'), 'w') as wf:
+    with open(os.path.join(dataset_pth, 'documents_jsonl', 'documents.jsonl'), 'w') as wf:
         for pdf_id, content in r2:
             example = {'id': i, 'contents': content}
             id_to_pdf[i] = str(pdf_id)
@@ -75,6 +78,10 @@ def convert(did, session, conn):
     with open(os.path.join(dataset_pth, 'id_to_pdf.pkl'), 'wb') as wp1:
         pickle.dump(id_to_pdf, wp1)
     logger.info('done writing files')
+    logger.info('Starting indexing')
+    subprocess.run(['/bin/bash', '-c', f'./index.sh {os.path.join(dataset_pth, "documents_jsonl")}'])
+    subprocess.run(['/bin/bash', '-c', f'./index.sh {os.path.join(dataset_pth, "contexts_jsonl")}'])
+
 
 
 if __name__ == '__main__':

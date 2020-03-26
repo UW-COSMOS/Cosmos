@@ -6,7 +6,7 @@ networks:
       name: cosmos_swarm_network 
 services:
     preprocess:
-        image: akshatabhat18/retrieval:latest
+        image: ankurgos/retrieval:latest
         environment:
             - DATASET_ID
             - MYSQL_USER=myuser
@@ -17,7 +17,7 @@ services:
         command: "python write_dataset.py"
 
     retrieve:
-        image: akshatabhat18/retrieval:latest
+        image: ankurgos/retrieval:latest
         volumes:
             - ${DATASET_INDEX_DIR}:/index_dir
             - .:/develop
