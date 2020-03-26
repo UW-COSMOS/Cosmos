@@ -124,6 +124,7 @@ def aggregate_equations(objs):
                     if obj['po_cls'] == 'Equation':
                         # Try to grab nearest body texts
                         assoc_text = []
+                        # TODO: Associate previous page's context
                         if ind-1 >= 0 and group[1][ind-1]['po_cls'] == 'Body Text':
                             assoc_text.append(group[1][ind-1])
                         if ind+1 < len(group[1]):
@@ -137,8 +138,10 @@ def aggregate_equations(objs):
         final_objs = []
         for eq_contexts in equations:
             eq, contexts = eq_contexts
+            update_ids = [eq['po_id']]
             aggregated_context = ''
             for context in contexts:
+                update_ids.append(context['po_id'])
                 aggregated_context += f'\n{context["po_content"]}\n'
             if aggregated_context.strip() == '' or len(aggregated_context.strip()) < MIN_SECTION_LEN:
                 continue
@@ -147,8 +150,13 @@ def aggregate_equations(objs):
                                header_id=eq["po_id"],
                                header_content=eq["po_content"],
                                content=aggregated_context)
+            final_objects.append(oc)
             session.add(oc)
-        session.commit()
+            session.commit()
+            session.refresh(oc)
+            for update_id in update_ids:
+                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False) 
+            session.commit()
     except Exception as e:
         logger.error(str(e), exc_info=True)
         session.rollback()
@@ -203,6 +211,7 @@ def aggregate_figures(objs):
         final_objs = []
         for fig_fig_caption in figures:
             fig, fig_caption = fig_fig_caption
+            update_ids = [fig['po_id'], fig_caption['po_id']]
             aggregated_context = fig_caption['po_content']
             if aggregated_context.strip() == '':
                 continue
@@ -212,7 +221,11 @@ def aggregate_figures(objs):
                                header_content=fig["po_content"],
                                content=aggregated_context)
             session.add(oc)
-        session.commit()
+            session.commit()
+            session.refresh(oc)
+            for update_id in update_ids:
+                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False) 
+            session.commit()
     except Exception as e:
         logger.error(str(e), exc_info=True)
         session.rollback()
@@ -277,6 +290,10 @@ def aggregate_tables(objs):
         final_objs = []
         for tab_tab_caption in tables:
             tab, tab_caption = tab_tab_caption
+            update_ids = [tab['po_id']]
+            if tab_caption is not None:
+                update_ids.append(tab_caption['po_id'])
+            update_ids = [fig['po_id'], fig_caption['po_id']]
             aggregated_context = f"{tab['po_content']}\n{tab_caption['po_content']}" if tab_caption is not None else tab['po_content']
             if aggregated_context.strip() == '':
                 continue
@@ -286,7 +303,11 @@ def aggregate_tables(objs):
                                header_content=tab["po_content"],
                                content=aggregated_context)
             session.add(oc)
-        session.commit()
+            session.commit()
+            session.refresh(oc)
+            for update_id in update_ids:
+                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False) 
+            session.commit()
     except Exception as e:
         logger.error(str(e), exc_info=True)
         session.rollback()
@@ -336,14 +357,17 @@ def aggregate_sections(objs):
         final_objs = []
         for section in sections:
             header, objs = section
+            update_ids = []
             aggregated_context = ''
             pdf_id = ''
             if header is not None:
+                update_ids.append(header['po_id'])
                 aggregated_context = f'{header["po_content"]}\n'
                 pdf_id = header['pdf_id']
             else:
                 pdf_id = objs[0]['pdf_id']
             for obj in objs:
+                update_ids.append(obj['po_id'])
                 aggregated_context += f'\n{obj["po_content"]}\n'
             if aggregated_context.strip() == '' or len(aggregated_context.strip()) < MIN_SECTION_LEN:
                 continue
@@ -361,7 +385,11 @@ def aggregate_sections(objs):
                                    header_content=None,
                                    content=aggregated_context)
             session.add(oc)
-        session.commit()
+            session.commit()
+            session.refresh(oc)
+            for update_id in update_ids:
+                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False) 
+            session.commit()
     except Exception as e:
         logger.error(str(e), exc_info=True)
         session.rollback()
