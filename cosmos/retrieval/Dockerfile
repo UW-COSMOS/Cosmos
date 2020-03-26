@@ -29,6 +29,10 @@ RUN pip install -r /requirements.txt
 RUN mkdir /app
 COPY database/schema.py /app
 COPY retrieval/retrieval /app
+COPY retrieval/setup.py /app
 WORKDIR /app
 
-CMD ["mvn clean package appassembler:assemble"]
+RUN python setup.py install
+
+#WORKDIR /develop
+#CMD ["mvn clean package appassembler:assemble"]
