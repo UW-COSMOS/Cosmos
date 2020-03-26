@@ -174,9 +174,20 @@ def search():
 #                content_set.add(res['content'])
 #                result_list.append(res)
         else:  # passed in a specific object id
-            logging.info("no id specified, skipping ES junk")
-            obj_id = ObjectId(_id)
-            res = db.objects.find_one({'_id': obj_id})
+            logging.info("id specified, skipping ES junk")
+            po, page_number, pdf_name = session.query(PageObject, Page.page_number, Pdf.pdf_name).filter(PageObject.id == _id).filter(PageObject.page_id == Page.id).filter(Page.pdf_id == Pdf.id).first()
+            res = {
+                    '_id' : po.id,
+                    'bounding_box' : po.bounding_box,
+                    'bytes' : po.bytes,
+                    'class' : po.cls,
+                    'content' : po.content,
+                    'page_num' : page_number,
+                    'pdf_name' : pdf_name,
+                    }
+            if res['class'] == 'Table':
+                res['table_df'] = session.query(Table).filter(Table.page_object_id == _id).first().df
+
             result_list.append(res)
 
         result_list = [postprocess_result(r) for r in result_list]

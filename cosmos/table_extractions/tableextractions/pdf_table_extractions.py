@@ -20,12 +20,13 @@ from typing import TypeVar, Callable
 import click
 from PyPDF2 import PdfFileReader
 from sqlalchemy import create_engine
+from sqlalchemy.sql import text
 from sqlalchemy.orm import sessionmaker
-from dask.distributed import Client, progress
-from schema import Pdf, Page, PageObject, Table
+from dask.distributed import Client, progress, fire_and_forget
+from .schema import Pdf, Page, PageObject, Table
 
 import camelot
-from utils import grouper
+from .utils import grouper
 
 # Logging config
 logging.basicConfig(
@@ -60,104 +61,6 @@ def create_pdf(pdf_name: str, pdf_bytes: bytes) -> None:
         temp_file.close()
         return temp_file.name
 
-
-#def run_table_extraction(get_metadata: Callable, insert_tables: Callable, n_jobs: int, skip: bool) -> None:
-#    """
-#    Entry point for extracting tables from ingested PDFs
-#    """
-#
-#    logging.info('Running table extraction')
-#    start_time = time.time()
-#
-#    client = MongoClient(os.environ["DBCONNECT"])
-#    db = client.pdfs
-#
-#    buffer_size = n_jobs
-#    tables_per_job = 10
-#    total_tables = 0
-#
-#    for batch in get_metadata(db, buffer_size, tables_per_job):
-#        t1 = time.time()
-#        logs = Parallel(n_jobs=n_jobs)(delayed(table_extraction)(insert_tables, table_metadata, skip) for table_metadata in batch)
-#
-#        for log_list in logs:
-#            for log in log_list:
-#                logging.info(log)
-#
-#        t2 = time.time()
-#        batch_size = sum([len(a) for a in batch])
-#        batch_time = t2-t1
-#        batch_rate = batch_size/(batch_time/60)
-#
-#        logging.info(f'Batch size: {batch_size} tables')
-#        logging.info(f'Batch time: {batch_time} s')
-#        logging.info(f'Batch extraction rate: {batch_rate} tables/min')
-#
-#        total_tables += batch_size
-#
-#    try:
-#        shutil.rmtree(filedir_pdfs)
-#    except OSError as e:
-#        if e.errno != errno.ENOENT:
-#            logging.info(f'Error: Could not delete tempfolder. {e}')
-#
-#    end_time = time.time()
-#
-#    total_time = end_time - start_time
-#    total_rate = total_tables/(total_time/60)
-#
-#    logging.info(f'Completed table extractions')
-#    logging.info(f'Number of tables processed: {total_tables} tables')
-#    logging.info(f'Total time: {total_time} s')
-#    logging.info(f'Table extraction rate: {total_rate} tables/min')
-#    return
-#
-#
-#def table_extraction(insert_tables: Callable, table_metadata: list, skip: bool) -> list:
-#    """
-#    Retrieve the tables from each table, and store them in mongodb.
-#    """
-#
-#    client = MongoClient(os.environ["DBCONNECT"])
-#    db = client.pdfs
-#    coll_tables = db.tables
-#
-#    logs = []
-#
-#    try:
-#        for table in table_metadata:
-#            pdf_name = table['pdf_name']
-#            table_page = table['page_num']
-#            table_coords = table['coords']
-#            table_coords2 = table['camelot_coords']
-#
-#            logs.append(f'Processing {pdf_name}, page {table_page}, coords {table_coords} and {table_coords2}')
-#            # If document has already been scanned, ignore it based on skip settings
-#            if skip & do_skip(coll_tables, pdf_name, table_page, table_coords):
-#                logs.append('Document previously extracted. Skipping')
-#            else:
-#                # Extract the tables
-#                df, flavor, extract_tables_logs = extract_tables(pdf_loc[pdf_name], table_coords2, table_page, "camelot_lattice_params.txt", "camelot_stream_params.txt")
-#
-#                prepare_table_data(table, df, flavor)
-#
-#                # Insert the data into mongodb
-#                insert_tables_logs = insert_tables(coll_tables, table)
-#
-#                logs.extend(extract_tables_logs)
-#                logs.extend(insert_tables_logs)
-#    except Exception as e:
-#        logs.append(f'An error occurred: {e}')
-#    return logs
-#
-#
-#def do_skip(coll_tables: pymongo.collection.Collection, raw_pdf_name: str, page_num: str, coords: str) -> bool:
-#    """
-#    Check if document is already scanned or not. If yes, skip it
-#    """
-#    return coll_tables.count_documents({'pdf_name': raw_pdf_name, 'page_num': page_num, 'coords': coords}, limit=1) != 0
-
-
 def prepare_table_data(table: dict, df: bytes, flavor: str) -> list:
     '''
     Prepare data for mango extraction
@@ -168,8 +71,7 @@ def prepare_table_data(table: dict, df: bytes, flavor: str) -> list:
 
     return table
 
-
-def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_page: str, lattice_params: str, stream_params: str, object_id: int, page_id: int, pkl=True) -> list:
+def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_page: str, stream_params: str, object_id: int, page_id: int, pkl=True) -> list:
     """
     Extract tables from pages.
     Needs:
@@ -179,17 +81,16 @@ def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_pa
     Improvements:
         Currently this gets called for each page of the PDF. It should be pretty easy to make it cover all pages in the PDF instead..
     """
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    Session = sessionmaker()
+    Session.configure(bind=engine)
+    tsession = Session()
+
     logs = []
 
-    logs.append('Extracting tables')
-    logging.info("Creating PDF")
-    logging.info(pdf_name)
-    logging.info(type(pdf_bytes))
     temp_pdf_name = create_pdf(pdf_name, pdf_bytes)
-    logging.info("Created PDF")
 
-# convert to camelot coords
-    logging.info("Remapping coordinates")
+    # convert to camelot coords
     PDFfile = PdfFileReader(open(temp_pdf_name, 'rb'))
     if PDFfile.isEncrypted:
         PDFfile.decrypt('')
@@ -213,15 +114,16 @@ def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_pa
     coords_table = str(coords)[1:-1]
     coords_camelot = str(coords_pdf)[1:-1]
 
-
-    stream_params = json.load(open(stream_params))
-    logging.info(f"camelot.read_pdf({temp_pdf_name}, pages={table_page}, table_regions=[{coords_camelot}])")
-    tables = camelot.read_pdf(temp_pdf_name,
-                                     pages=str(table_page),
-                                     table_regions=[coords_camelot],
-                                     **stream_params
-                                     )
-
+#    stream_params = json.load(open(stream_params))
+    try:
+        tables = camelot.read_pdf(temp_pdf_name,
+                                         pages=str(table_page),
+                                         table_regions=[coords_camelot],
+                                         **stream_params
+                                         )
+    except:
+        logs.append('Issue extracting tables')
+        return [None, None, logs, None, None]
     if len(tables) == 0:
         logs.append('No tables found')
         return [None, None, logs, None, None]
@@ -234,18 +136,10 @@ def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_pa
     if pkl:
         table_df = pickle.dumps(table_df)
     os.remove(temp_pdf_name)
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
-    Session = sessionmaker()
-    Session.configure(bind=engine)
-    session = Session()
     table = Table(page_object_id=object_id, page_id=page_id, df=table_df)
-    session.add(table)
-    session.commit()
-    session.close()
-    # TODO: don't open a session every object. Sigh.
-
-
-    return [table_df, flavor, logs, acc, whitespace]
+    tsession.add(table)
+    tsession.commit()
+    tsession.close()
 
 def process_dataset(client):
     engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
@@ -262,30 +156,16 @@ def process_dataset(client):
             # TODO: poach byte reading + looping from ingest.
             pdf_name = os.path.basename(filename)
             logging.info(f"Working on {filename}")
-
-            res = session.execute(
-                    """
-                    SELECT *, po.id as object_id FROM page_objects po
-                        INNER JOIN (SELECT page_number, pdf_id, id FROM pages) AS p ON po.page_id = p.id
-                        INNER JOIN (SELECT id, pdf_name FROM pdfs) AS d ON p.pdf_id = d.id
-                      WHERE po.cls='Table' AND d.pdf_name=:pdf_name;'
-                    """
-                    , {'pdf_name' : pdf_name})
-
+            q = text("SELECT *, po.id as object_id FROM page_objects po INNER JOIN (SELECT page_number, pdf_id, id FROM pages) AS p ON po.page_id = p.id INNER JOIN (SELECT id, pdf_name FROM pdfs) AS d ON p.pdf_id = d.id WHERE po.cls='Table' AND d.pdf_name=:pdf_name")
+            res = conn.execute(q, pdf_name=pdf_name)
             for obj in res:
-                logging.info("Object found!")
                 pdf_name = obj['pdf_name']
                 page_num = obj['page_number']
                 coords = json.loads(obj['bounding_box'])
                 object_id = obj['object_id']
                 page_id = obj['page_id']
-
-                logging.info(f"Extracting table from page {page_num} of {pdf_name}.")
-
-                # TODO: this is a job per table.. passing lots of crap around when we should do it at the PDF level
-
-
-                extract_tables(pdf_bytes, pdf_name, coords, page_num, "camelot_lattice_params.txt", "camelot_stream_params.txt", object_id, page_id)
+                r1 = client.submit(extract_tables, pdf_bytes, pdf_name, coords, page_num, json.load(open("tableextractions/camelot_stream_params.txt")), object_id, page_id, resources={'extract_tables' : 1})
+                fire_and_forget(r1)
                 #final_table_futures.append(client.submit(extract_tables, pdf_bytes, pdf_name, coords, page_num, "camelot_lattice_params.txt", "camelot_stream_params.txt", resources={'extract_tables': 1}))
 #                progress(final_table_futures)
 #                client.gather(final_table_futures)
@@ -298,7 +178,7 @@ def process_dataset(client):
 
 
 def run():
-    client = Client('scheduler:8786')
+    client = Client('scheduler:8788')
     process_dataset(client)
 
 
