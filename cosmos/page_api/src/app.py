@@ -26,7 +26,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, defer
 from sqlalchemy.sql.expression import func
 
-engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True, pool_size=50, max_overflow=0)
 Session = sessionmaker()
 Session.configure(bind=engine)
 
@@ -88,11 +88,11 @@ def search():
         area = request.args.get('area', '')
         base_confidence = request.args.get('base_confidence', '')
         postprocess_confidence = request.args.get('postprocess_confidence', '')
-        page_num = int(request.args.get('pageNumber', 0))
+        page_num = int(request.args.get('page', 0))
         offset = int(request.args.get('offset', 0))
         logging.info(f"offset is {offset} and page_num is {page_num}")
         if offset != 0 and page_num == 0:
-            page_num = offset/20
+            page_num = int(offset/20)
         logging.info(f"and now offset is {offset} and page_num is {page_num}")
         s = Search()
         q = Q()
@@ -120,12 +120,163 @@ def search():
                 q = q & Q('range', postprocessing_confidence={'gte': postprocess_confidence})
 
             s = Search(index='object').query(q)
+            n_results = s.count()
+            cur_page = page_num
+            logging.info(f"{n_results} total results")
 
             logging.info(f"Getting results {page_num*20} to {(page_num+1)*20}")
             s = s[page_num*20:(page_num+1)*20]
 
-            logging.info(q)
-            logging.info(s)
+            response = s.execute()
+            for result in response:
+                id = result.meta.id
+                res = {}
+                logging.info(result['cls'])
+                # TODO: don't have the necessarily handle to group by header, etc right now. Just placeholder for the time being.
+                tobj = {
+                        'header_id' : None,
+                        'header_bytes' : None,
+                        'content' : None,
+                        'children' : [],
+                        }
+                obj_id = result.meta['id']
+                po, page_number, pdf_name = session.query(PageObject, Page.page_number, Pdf.pdf_name).filter(PageObject.id == obj_id).filter(PageObject.page_id == Page.id).filter(Page.pdf_id == Pdf.id).first()
+                logging.info(po)
+                res['id'] = obj_id
+                res['bytes'] = po.bytes
+                res['content'] = po.content
+                res['cls'] = po.cls
+#                res['bounding_box'] = po.bounding_box
+                res['page_number'] = page_number
+                res = postprocess_result(res)
+                tobj['children'].append(res)
+                tobj['pdf_name'] = pdf_name
+                result_list.append(tobj)
+        else:  # passed in a specific object id
+            logging.info("id specified, skipping ES junk")
+            po, page_number, pdf_name = session.query(PageObject, Page.page_number, Pdf.pdf_name).filter(PageObject.id == _id).filter(PageObject.page_id == Page.id).filter(Page.pdf_id == Pdf.id).first()
+            tobj = {
+                    'header_id' : None,
+                    'header_bytes' : None,
+                    'content' : None,
+                    'children' : [],
+                    }
+            res = {
+                    'id' : po.id,
+#                    'bounding_box' : po.bounding_box,
+                    'bytes' : po.bytes,
+                    'content' : po.content,
+                    'cls' : po.cls,
+                    'page_number' : page_number
+                    }
+            res = postprocess_result(res)
+#            if res['cls'] == 'Table':
+#                res['table_df'] = session.query(Table).filter(Table.page_object_id == _id).first().df
+            tobj['children'].append(res)
+            tobj['pdf_name'] = pdf_name
+
+            result_list.append(tobj)
+            n_results = len(tobj['children'])
+            cur_page = 0
+
+        result_list = [postprocess_result(r) for r in result_list]
+
+
+        results_obj = {'total_results' : n_results, 'result_page': cur_page, 'results': result_list}
+        session.close()
+        return jsonify(results_obj)
+    except TypeError as e:
+        session.close()
+        logging.info(f'{e}')
+        abort(400)
+
+@app.route('/search_context')
+def search_context():
+    session = Session()
+    try:
+        _id = request.args.get('id', '')
+        obj_type = request.args.get('type', '')
+        query = request.args.get('query', '')
+        area = request.args.get('area', '')
+        base_confidence = request.args.get('base_confidence', '')
+        postprocess_confidence = request.args.get('postprocess_confidence', '')
+        page_num = int(request.args.get('page', 0))
+        offset = int(request.args.get('offset', 0))
+        logging.info(f"offset is {offset} and page_num is {page_num}")
+        if offset != 0 and page_num == 0:
+            page_num = int(offset/20)
+        logging.info(f"and now offset is {offset} and page_num is {page_num}")
+        s = Search()
+        q = Q()
+
+        result_list = []
+        if _id == '':
+            logging.info("no id specified")
+            if query != '':
+                logging.info(f"querying for content: {query}")
+                q = q & Q('match', content=query)
+
+            if obj_type != '':
+#                if not obj_type.endswith("Context"):
+#                    obj_type += "Context"
+                logging.info(f"querying for cls: {obj_type}")
+                q = q & Q('match_phrase', cls=obj_type)
+            if area != '':
+                logging.info(f"querying for area: gte {area}")
+                q = q & Q('range', area={'gte': area})
+            if base_confidence != '':
+                logging.info(f"querying for base_confidence: gte {base_confidence}")
+                q = q & Q('range', base_confidence={'gte': base_confidence})
+            if postprocess_confidence != '':
+                logging.info(f"querying for postprocessing_confidence: gte {postprocess_confidence}")
+                q = q & Q('range', postprocessing_confidence={'gte': postprocess_confidence})
+
+            s = Search(index='context').query(q)
+            n_results = s.count()
+            cur_page = page_num
+            logging.info(f"{n_results} total results")
+            logging.info(f"Getting results {page_num*20} to {(page_num+1)*20}")
+            s = s[page_num*20:(page_num+1)*20]
+            object_ids = [result.meta.id for result in response]
+
+            for ind, obj in enumerate(obj_ids):
+                header_q = text('select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, pages.page_number, pdfs.pdf_name from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.id=oc.header_id and page_objects.page_id=pages.id and pdfs.id=oc.pdf_id;')
+                res1 = conn.execute(header_q, oid=obj)
+                header_id = None
+                header_bytes = None
+                header_content = None
+                header_page_number = None
+                header_cls = None
+                pdf_name = None
+                context_id = obj
+                for id, bytes, content, cls, page_number, pdf_name in res1:
+                    header_id = id
+                    header_bytes = base64.b64encode(bytes).decode('utf-8')
+                    header_content = content
+                    header_page_number = page_number
+                    header_cls = cls
+                    pdf_name = pdf_name
+                    break
+                children = []
+                q = text('select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, pages.page_number from pages, page_objects, object_contexts as oc where oc.id = :oid and page_objects.context_id=oc.id and page_objects.page_id=pages.id;')
+                res2 = conn.execute(q, oid=obj)
+                for id, bytes, content, cls, page_number in res2:
+                    if id == header_id:
+                        continue
+                    o = {'id': id, 'bytes': base64.b64encode(bytes).decode('utf-8'), 'content': content, 'page_number': page_number, 'cls': cls}
+                    if pdf_name is None:
+                        pdf_name = pname
+                    children.append(o)
+                objects.append({'header_id': header_id,
+                                'header_bytes': header_bytes,
+                                'header_content': header_content,
+                                'header_cls': header_cls,
+                                'pdf_name': pdf_name,
+                                'children': children,
+                                'context_id': context_id})
+            final_obj = {'page': 0,
+                         'objects': objects}
+
             response = s.execute()
             for result in response:
                 id = result.meta.id
@@ -145,6 +296,7 @@ def search():
                 res['bytes'] = po.bytes
                 res['content'] = po.content
                 res['page_number'] = page_number
+                res['cls'] = po.cls
                 res = postprocess_result(res)
                 tobj['children'].append(res)
                 tobj['pdf_name'] = pdf_name
@@ -175,27 +327,39 @@ def search():
 #                result_list.append(res)
         else:  # passed in a specific object id
             logging.info("id specified, skipping ES junk")
+            tobj = {
+                    'header_id' : None,
+                    'header_bytes' : None,
+                    'content' : None,
+                    'children' : [],
+                    }
             po, page_number, pdf_name = session.query(PageObject, Page.page_number, Pdf.pdf_name).filter(PageObject.id == _id).filter(PageObject.page_id == Page.id).filter(Page.pdf_id == Pdf.id).first()
             res = {
-                    '_id' : po.id,
-                    'bounding_box' : po.bounding_box,
+                    'id' : po.id,
+#                    'bounding_box' : po.bounding_box,
                     'bytes' : po.bytes,
-                    'class' : po.cls,
                     'content' : po.content,
-                    'page_num' : page_number,
-                    'pdf_name' : pdf_name,
+                    'page_number' : page_number,
+                    'cls' : po.cls,
+#                    'pdf_name' : pdf_name,
                     }
+            res = postprocess_result(res)
+            tobj['children'].append(res)
+            tobj['pdf_name'] = pdf_name
+
             if res['class'] == 'Table':
                 res['table_df'] = session.query(Table).filter(Table.page_object_id == _id).first().df
 
-            result_list.append(res)
+            result_list.append(tobj)
 
         result_list = [postprocess_result(r) for r in result_list]
 
 
-        results_obj = {'results': result_list}
+        results_obj = {'total_results' : n_results, 'result_page': cur_page, 'results': result_list}
+        session.close()
         return jsonify(results_obj)
     except TypeError as e:
+        session.close()
         logging.info(f'{e}')
         abort(400)
 
@@ -207,9 +371,13 @@ def page_by_id(page_id):
     session = Session()
     if page_id == "next_prediction":
         # Hacky way to get a random, because sorting by rand().limit(1) is real slow
-        rowCount = int(session.query(Page).count())
-        rand = random.randrange(0, rowCount)
-        page = session.query(Page).filter(Page.id==int(rand)).first()
+#        rowCount = int(session.query(Page).count())
+#        rand = random.randrange(0, rowCount)
+#        page = session.query(Page).filter(Page.id==int(rand)).first()
+#        page = session.query(Page, Pdf).filter(Page.pdf_id==).filter(Page.id==int(rand)).first()
+
+        # Hardcode dataset to the a set of 391 "good" ones for DARPA screenshots + quality measurements
+        page = session.execute('SELECT p.* FROM pages p JOIN pdfs d ON d.id=p.pdf_id WHERE dataset_id=:dataset_id AND p.id not in (SELECT DISTINCT(page_id) FROM page_objects WHERE classification_success IS NOT NULL) ORDER BY RAND() LIMIT 1;', {'dataset_id' : 'baa7f3b2-4381-47a9-98fd-5b5bfd19205e'}).first()
     else:
         page, pdf = session.query(Page, Pdf).filter(Page.id == page_id).first()
     # temp hack -- bringing back the full model sucks for large docs because of the metadata field, so just bring back the column we care about IAR - 10.Mar.2020
@@ -398,4 +566,5 @@ def object_annotate():
                 success=True
             except:
                 logging.warning(f"Could not update object {object_id} with {k} : {v}!")
+        session.close()
         return json.dumps({'success':success}), 200, {'ContentType':'application/json'}
