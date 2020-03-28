@@ -42,6 +42,9 @@ def search():
         query = request.args.get('query', type=str)
         obj_type = request.args.get('type', type=str)
         area = request.args.get('area', type=int)
+        page_num = request.args.get('page', type=int)
+        if page_num is None:
+            page_num = 0
         base_confidence = request.args.get('base_confidence', type=float)
         postprocessing_confidence = request.args.get('postprocessing_confidence', type=float)
         logging.info(f"Using {objtype_index_map.get(obj_type, 'Combined')} retriever")
@@ -82,6 +85,7 @@ def search():
                 where.append("JSON_EXTRACT(page_objects.init_cls_confidences, '$[0][0]')>=:base_confidence")
             if len(where) > 0:
                 where_clause = ' and ' + ' and '.join(where)
+            logging.info(where_clause)
             q = text(base_query + where_clause)
             res2 = conn.execute(q, oid=obj, obj_type=obj_type, postprocessing_confidence=postprocessing_confidence, base_confidence=base_confidence)
             for id, bytes, content, cls, page_number, pname, bounding_box in res2:
@@ -106,11 +110,11 @@ def search():
                                 'pdf_name': pdf_name,
                                 'children': children,
                                 'context_id': context_id})
-            if len(objects) >= 20:
-                break
-        # TODO: pagination based on these objects?
+        logging.info(f"{len(objects)} total results")
+        logging.info(f"Getting results {page_num*20} to {(page_num+1)*20}")
         final_obj = {'page': 0,
-                     'objects': objects}
+                'objects': objects[page_num*20:(page_num+1)*20],
+                'total__results': len(objects)}
         return jsonify(final_obj)
     except TypeError as e:
         logging.info(f'{e}')
