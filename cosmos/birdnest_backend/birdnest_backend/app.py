@@ -14,12 +14,26 @@ logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=
 app = Flask(__name__)
 engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
 dataset_id = os.environ['DATASET_ID']
-doc_idx_path = '/index_dir/' + dataset_id + '/documents_jsonl/lucene-index'
-context_idx_pth = '/index_dir/' + dataset_id + '/contexts_jsonl/lucene-index'
-doc2odoc_pth = '/index_dir/' + dataset_id + '/id_to_pdf.pkl'
-ctx2octx_pth = '/index_dir/' + dataset_id + '/id_to_context.pkl'
-octx2odoc_pth = '/index_dir/'+ dataset_id + '/context_to_doc.pkl'
-retriever = Retrieval(doc_idx_path, context_idx_pth, doc2odoc_pth, ctx2octx_pth, octx2odoc_pth, k1=1000, k2=1000)
+
+retrievers = {}
+
+for ctype in ["Section", "FigureContext", "TableContext", "EquationContext", "Combined"]:
+    doc_idx_path = os.path.join('/index_dir/', dataset_id, ctype, 'documents_jsonl/lucene-index')
+    logging.info('/index_dir/' + dataset_id +  ctype + 'documents_jsonl/lucene-index')
+    logging.info(os.path.join('/index_dir/', dataset_id, ctype, 'documents_jsonl/lucene-index'))
+    context_idx_pth = os.path.join('/index_dir/', dataset_id, ctype, 'contexts_jsonl/lucene-index')
+    doc2odoc_pth = os.path.join('/index_dir/', dataset_id, ctype, 'id_to_pdf.pkl')
+    ctx2octx_pth = os.path.join('/index_dir/', dataset_id, ctype, 'id_to_context.pkl')
+    octx2odoc_pth = os.path.join('/index_dir/', dataset_id, ctype, 'context_to_doc.pkl')
+    logging.info(f"Loading retriever for {dataset_id} -- {ctype} ({doc_idx_path}, {context_idx_pth}, {doc2odoc_pth}, {ctx2octx_pth}, {octx2odoc_pth}, k1=1000, k2=1000)")
+    retrievers[ctype] = Retrieval(doc_idx_path, context_idx_pth, doc2odoc_pth, ctx2octx_pth, octx2odoc_pth, k1=1000, k2=1000)
+
+objtype_index_map = {
+        "Figure" : "FigureContext",
+        "Equation" : "EquationContext",
+        "Table" : "TableContext",
+        "Body Text" : "Section",
+        }
 
 @app.route('/api/v1/search')
 def search():
@@ -30,13 +44,11 @@ def search():
         area = request.args.get('area', type=int)
         base_confidence = request.args.get('base_confidence', type=float)
         postprocessing_confidence = request.args.get('postprocessing_confidence', type=float)
-
-#        logging.info(f"Searching for {query}")
-#        logging.info(f"Object type: {obj_type}")
-#        logging.info(f"Object type: {obj_type}")
-
+        logging.info(f"Using {objtype_index_map.get(obj_type, 'Combined')} retriever")
+        retriever = retrievers[objtype_index_map.get(obj_type, "Combined")]
         results = retriever.search(query)
         obj_ids = [r[1] for r in results]
+        logging.info(f"{len(obj_ids)} matching contexts found!")
         if len(obj_ids) == 0:
             return {'page': 0, 'objects': []}
         objects = []
@@ -73,7 +85,6 @@ def search():
             q = text(base_query + where_clause)
             res2 = conn.execute(q, oid=obj, obj_type=obj_type, postprocessing_confidence=postprocessing_confidence, base_confidence=base_confidence)
             for id, bytes, content, cls, page_number, pname, bounding_box in res2:
-
                 # Filter area because doing the area calculation to the bounding_boxes within mysql is causing me headaches
                 if area is not None:
                     bounding_box = json.loads(bounding_box)
@@ -81,9 +92,6 @@ def search():
                     obj_area = (brx - tlx) * (bry - tly)
                     if obj_area < area:
                         continue
-
-                if id == header_id:
-                    continue
                 o = {'id': id, 'bytes': base64.b64encode(bytes).decode('utf-8'), 'content': content, 'page_number': page_number, 'cls': cls}
                 if pdf_name is None:
                     pdf_name = pname
