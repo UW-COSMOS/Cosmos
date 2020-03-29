@@ -87,7 +87,7 @@ def search():
         query = request.args.get('query', '')
         area = request.args.get('area', '')
         base_confidence = request.args.get('base_confidence', '')
-        postprocess_confidence = request.args.get('postprocess_confidence', '')
+        postprocess_confidence = request.args.get('postprocessing_confidence', '')
         page_num = int(request.args.get('page', 0))
         offset = int(request.args.get('offset', 0))
         logging.info(f"offset is {offset} and page_num is {page_num}")
@@ -122,7 +122,7 @@ def search():
             s = Search(index='object').query(q)
             n_results = s.count()
             cur_page = page_num
-            logging.info(f"{n_results} total results")
+            logging.info(f"{len(objects)} total results")
 
             logging.info(f"Getting results {page_num*20} to {(page_num+1)*20}")
             s = s[page_num*20:(page_num+1)*20]
@@ -199,7 +199,7 @@ def search_context():
         query = request.args.get('query', '')
         area = request.args.get('area', '')
         base_confidence = request.args.get('base_confidence', '')
-        postprocess_confidence = request.args.get('postprocess_confidence', '')
+        postprocess_confidence = request.args.get('postprocessing_confidence', '')
         page_num = int(request.args.get('page', 0))
         offset = int(request.args.get('offset', 0))
         logging.info(f"offset is {offset} and page_num is {page_num}")
@@ -237,7 +237,10 @@ def search_context():
             logging.info(f"{n_results} total results")
             logging.info(f"Getting results {page_num*20} to {(page_num+1)*20}")
             s = s[page_num*20:(page_num+1)*20]
-            object_ids = [result.meta.id for result in response]
+            response = s.execute()
+            obj_ids = [result.meta.id for result in response]
+
+            # TODO: align the objects we're getting back from these contexts to the way we do it on the custom retrieval side
 
             for ind, obj in enumerate(obj_ids):
                 header_q = text('select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, pages.page_number, pdfs.pdf_name from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.id=oc.header_id and page_objects.page_id=pages.id and pdfs.id=oc.pdf_id;')
