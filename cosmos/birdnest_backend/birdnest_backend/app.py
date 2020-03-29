@@ -9,11 +9,18 @@ import os
 import json
 import base64
 from retrieval.retrieve import Retrieval
+from elasticsearch_dsl import Search, connections, Q
+from schema import Pdf, Page, PageObject, Table
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 
 app = Flask(__name__)
-engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
 dataset_id = os.environ['DATASET_ID']
+
+engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True, pool_size=50, max_overflow=0)
+Session = sessionmaker()
+Session.configure(bind=engine)
+
+connections.create_connection(hosts=['es01'], timeout=20)
 
 retrievers = {}
 
@@ -34,6 +41,22 @@ objtype_index_map = {
         "Table" : "TableContext",
         "Body Text" : "Section",
         }
+
+def postprocess_result(result):
+    if "_id" in result:
+        result['_id'] = str(result['_id'])
+    if 'bytes' in result and result['bytes'] is not None:
+        encoded = base64.encodebytes(result['bytes'])
+        result['bytes'] = encoded.decode('ascii')
+    if 'page_ocr_df' in result:
+        del result['page_ocr_df']
+    if 'table_df' in result and result['table_df'] is not None:
+        encoded = base64.encodebytes(result['table_df'])
+        result['table_df_str'] = pickle.loads(result['table_df']).to_string()
+        result['table_df_csv'] = pickle.loads(result['table_df']).to_csv()
+        result['table_df_tabulate'] = tabulate(pickle.loads(result['table_df']), headers='keys', tablefmt='psql')
+        result['table_df'] = encoded.decode('ascii')
+    return result
 
 @app.route('/api/v1/search')
 def search():
@@ -138,6 +161,119 @@ def get_table(table_id):
     #TODO: Body
     results_obj = {"table_id" : table_id} #dummy
     return jsonify(results_obj)
+
+@app.route('/api/v1/search_es_objects')
+def search_es():
+    session = Session()
+    try:
+        _id = request.args.get('id', '')
+        obj_type = request.args.get('type', '')
+        query = request.args.get('query', '')
+        area = request.args.get('area', '')
+        base_confidence = request.args.get('base_confidence', '')
+        postprocess_confidence = request.args.get('postprocessing_confidence', '')
+        page_num = int(request.args.get('page', 0))
+        offset = int(request.args.get('offset', 0))
+        logging.info(f"offset is {offset} and page_num is {page_num}")
+        if offset != 0 and page_num == 0:
+            page_num = int(offset/20)
+        logging.info(f"and now offset is {offset} and page_num is {page_num}")
+        s = Search()
+        q = Q()
+
+        result_list = []
+        if _id == '':
+            logging.info("no id specified")
+            if query != '':
+                logging.info(f"querying for content: {query}")
+                q = q & Q('match', content=query)
+
+            if obj_type != '':
+#                if not obj_type.endswith("Context"):
+#                    obj_type += "Context"
+                logging.info(f"querying for cls: {obj_type}")
+                q = q & Q('match_phrase', cls=obj_type)
+            if area != '':
+                logging.info(f"querying for area: gte {area}")
+                q = q & Q('range', area={'gte': area})
+            if base_confidence != '':
+                logging.info(f"querying for base_confidence: gte {base_confidence}")
+                q = q & Q('range', base_confidence={'gte': base_confidence})
+            if postprocess_confidence != '':
+                logging.info(f"querying for postprocessing_confidence: gte {postprocess_confidence}")
+                q = q & Q('range', postprocessing_confidence={'gte': postprocess_confidence})
+
+            s = Search(index='object').query(q)
+            n_results = s.count()
+            cur_page = page_num
+
+            logging.info(f"{n_results} total results")
+
+            logging.info(f"Getting results {page_num*20} to {(page_num+1)*20}")
+            s = s[page_num*20:(page_num+1)*20]
+
+            response = s.execute()
+            for result in response:
+                id = result.meta.id
+                res = {}
+                logging.info(result['cls'])
+                # TODO: don't have the necessarily handle to group by header, etc right now. Just placeholder for the time being.
+                tobj = {
+                        'header_id' : None,
+                        'header_bytes' : None,
+                        'content' : None,
+                        'children' : [],
+                        }
+                obj_id = result.meta['id']
+                po, page_number, pdf_name = session.query(PageObject, Page.page_number, Pdf.pdf_name).filter(PageObject.id == obj_id).filter(PageObject.page_id == Page.id).filter(Page.pdf_id == Pdf.id).first()
+                logging.info(po)
+                res['id'] = obj_id
+                res['bytes'] = po.bytes
+                res['content'] = po.content
+                res['cls'] = po.cls
+#                res['bounding_box'] = po.bounding_box
+                res['page_number'] = page_number
+                res = postprocess_result(res)
+                tobj['children'].append(res)
+                tobj['pdf_name'] = pdf_name
+                result_list.append(tobj)
+        else:  # passed in a specific object id
+            logging.info("id specified, skipping ES junk")
+            po, page_number, pdf_name = session.query(PageObject, Page.page_number, Pdf.pdf_name).filter(PageObject.id == _id).filter(PageObject.page_id == Page.id).filter(Page.pdf_id == Pdf.id).first()
+            tobj = {
+                    'header_id' : None,
+                    'header_bytes' : None,
+                    'content' : None,
+                    'children' : [],
+                    }
+            res = {
+                    'id' : po.id,
+#                    'bounding_box' : po.bounding_box,
+                    'bytes' : po.bytes,
+                    'content' : po.content,
+                    'cls' : po.cls,
+                    'page_number' : page_number
+                    }
+            res = postprocess_result(res)
+#            if res['cls'] == 'Table':
+#                res['table_df'] = session.query(Table).filter(Table.page_object_id == _id).first().df
+            tobj['children'].append(res)
+            tobj['pdf_name'] = pdf_name
+
+            result_list.append(tobj)
+            n_results = len(tobj['children'])
+            cur_page = 0
+
+        result_list = [postprocess_result(r) for r in result_list]
+
+
+        results_obj = {'total_results' : n_results, 'result_page': cur_page, 'results': result_list}
+        session.close()
+        return jsonify(results_obj)
+    except TypeError as e:
+        session.close()
+        logging.info(f'{e}')
+        abort(400)
 
 # Testing
 # @app.route('/index')

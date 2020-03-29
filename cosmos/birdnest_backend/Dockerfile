@@ -43,4 +43,5 @@ COPY birdnest_backend/requirements.txt /
 RUN pip install -r /requirements.txt
 
 COPY birdnest_backend/birdnest_backend /app
+COPY database/schema.py /app/
 WORKDIR /app
