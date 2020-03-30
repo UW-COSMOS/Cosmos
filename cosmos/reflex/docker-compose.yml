@@ -1,0 +1,15 @@
+version: "3.4"
+services:
+    lm:
+        build: .
+        #image: reflex:latest
+        ipc: host
+        volumes:
+            - type: bind
+              source: ./reflex.py
+              target: /reflex.py
+            - ./src/:/src/
+            - ./data:/data/
+            - ./tests:/tests/
+        working_dir: /tests
+
