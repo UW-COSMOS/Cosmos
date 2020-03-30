@@ -32,8 +32,7 @@ for ctype in ["Section", "FigureContext", "TableContext", "EquationContext", "Co
     doc2odoc_pth = os.path.join('/index_dir/', dataset_id, ctype, 'id_to_pdf.pkl')
     ctx2octx_pth = os.path.join('/index_dir/', dataset_id, ctype, 'id_to_context.pkl')
     octx2odoc_pth = os.path.join('/index_dir/', dataset_id, ctype, 'context_to_doc.pkl')
-    logging.info(f"Loading retriever for {dataset_id} -- {ctype} ({doc_idx_path}, {context_idx_pth}, {doc2odoc_pth}, {ctx2octx_pth}, {octx2odoc_pth}, k1=1000, k2=1000)")
-    retrievers[ctype] = Retrieval(doc_idx_path, context_idx_pth, doc2odoc_pth, ctx2octx_pth, octx2odoc_pth, k1=1000, k2=1000)
+    retrievers[ctype] = Retrieval(doc_idx_path, context_idx_pth, doc2odoc_pth, ctx2octx_pth, octx2odoc_pth, k1=500, k2=100)
 
 objtype_index_map = {
         "Figure" : "FigureContext",
@@ -66,6 +65,8 @@ def search():
         obj_type = request.args.get('type', type=str)
         area = request.args.get('area', type=int)
         page_num = request.args.get('page', type=int)
+        ignore_bytes = request.args.get('ignore_bytes', type=bool)
+        logging.info(f"Ignore bytes: {ignore_bytes}")
         if page_num is None:
             page_num = 0
         base_confidence = request.args.get('base_confidence', type=float)
@@ -78,7 +79,7 @@ def search():
         if len(obj_ids) == 0:
             return {'page': 0, 'objects': []}
         objects = []
-        for ind, obj in enumerate(obj_ids):
+        for ind, obj in enumerate(obj_ids): # TODO: we don't actually want to loop over all of these. But we DO want to make sure we get at least N results
             header_q = text('select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, pages.page_number, pdfs.pdf_name from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.id=oc.header_id and page_objects.page_id=pages.id and pdfs.id=oc.pdf_id;')
             res1 = conn.execute(header_q, oid=obj)
             header_id = None
@@ -108,7 +109,7 @@ def search():
                 where.append("JSON_EXTRACT(page_objects.init_cls_confidences, '$[0][0]')>=:base_confidence")
             if len(where) > 0:
                 where_clause = ' and ' + ' and '.join(where)
-            logging.info(where_clause)
+#            logging.info(where_clause)
             q = text(base_query + where_clause)
             res2 = conn.execute(q, oid=obj, obj_type=obj_type, postprocessing_confidence=postprocessing_confidence, base_confidence=base_confidence)
             for id, bytes, content, cls, page_number, pname, bounding_box in res2:
@@ -120,24 +121,27 @@ def search():
                     if obj_area < area:
                         continue
                 o = {'id': id, 'bytes': base64.b64encode(bytes).decode('utf-8'), 'content': content, 'page_number': page_number, 'cls': cls}
+                if ignore_bytes: del(o['bytes'])
                 if pdf_name is None:
                     pdf_name = pname
                 children.append(o)
             if header_id is None and children == []:
                 continue
             if children != []: # Don't add headers with no children of interest.
-                objects.append({'header_id': header_id,
+                t = {'header_id': header_id,
                                 'header_bytes': header_bytes,
                                 'header_content': header_content,
                                 'header_cls': header_cls,
                                 'pdf_name': pdf_name,
                                 'children': children,
-                                'context_id': context_id})
+                                'context_id': context_id}
+                if ignore_bytes: del(t['header_bytes'])
+                objects.append(t)
         logging.info(f"{len(objects)} total results")
-        logging.info(f"Getting results {page_num*20} to {(page_num+1)*20}")
+        logging.info(f"Getting results {page_num*10} to {(page_num+1)*10}")
         final_obj = {'page': 0,
-                'objects': objects[page_num*20:(page_num+1)*20],
-                'total__results': len(objects)}
+                'objects': objects[page_num*10:(page_num+1)*10],
+                'total_results': len(objects)}
         return jsonify(final_obj)
     except TypeError as e:
         logging.info(f'{e}')
@@ -170,13 +174,14 @@ def search_es():
         obj_type = request.args.get('type', '')
         query = request.args.get('query', '')
         area = request.args.get('area', '')
+        ignore_bytes = request.args.get('ignore_bytes', type=bool)
         base_confidence = request.args.get('base_confidence', '')
         postprocess_confidence = request.args.get('postprocessing_confidence', '')
         page_num = int(request.args.get('page', 0))
         offset = int(request.args.get('offset', 0))
         logging.info(f"offset is {offset} and page_num is {page_num}")
         if offset != 0 and page_num == 0:
-            page_num = int(offset/20)
+            page_num = int(offset/10)
         logging.info(f"and now offset is {offset} and page_num is {page_num}")
         s = Search()
         q = Q()
@@ -193,6 +198,8 @@ def search_es():
 #                    obj_type += "Context"
                 logging.info(f"querying for cls: {obj_type}")
                 q = q & Q('match_phrase', cls=obj_type)
+                if obj_type in ["Figure", "Table"]:
+                    q = q & ~Q('match_phrase', cls="Caption")
             if area != '':
                 logging.info(f"querying for area: gte {area}")
                 q = q & Q('range', area={'gte': area})
@@ -203,14 +210,17 @@ def search_es():
                 logging.info(f"querying for postprocessing_confidence: gte {postprocess_confidence}")
                 q = q & Q('range', postprocessing_confidence={'gte': postprocess_confidence})
 
+            logging.info(f"Filtering to dataset_id {dataset_id}")
+            q = q & Q("match_phrase", dataset_id=dataset_id)
+
             s = Search(index='object').query(q)
             n_results = s.count()
             cur_page = page_num
 
             logging.info(f"{n_results} total results")
 
-            logging.info(f"Getting results {page_num*20} to {(page_num+1)*20}")
-            s = s[page_num*20:(page_num+1)*20]
+            logging.info(f"Getting results {page_num*10} to {(page_num+1)*10}")
+            s = s[page_num*10:(page_num+1)*10]
 
             response = s.execute()
             for result in response:
@@ -228,7 +238,8 @@ def search_es():
                 po, page_number, pdf_name = session.query(PageObject, Page.page_number, Pdf.pdf_name).filter(PageObject.id == obj_id).filter(PageObject.page_id == Page.id).filter(Page.pdf_id == Pdf.id).first()
                 logging.info(po)
                 res['id'] = obj_id
-                res['bytes'] = po.bytes
+                if not ignore_bytes:
+                    res['bytes'] = po.bytes
                 res['content'] = po.content
                 res['cls'] = po.cls
 #                res['bounding_box'] = po.bounding_box
