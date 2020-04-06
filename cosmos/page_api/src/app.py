@@ -34,6 +34,16 @@ connections.create_connection(hosts=['es01'], timeout=20)
 
 app = Flask(__name__)
 
+def get_bibjson(pdf_name):
+    xdd_docid = pdf_name.replace(".pdf", "")
+    resp = requests.get(f"https://geodeepdive.org/api/articles?docid={xdd_docid}")
+    if resp.status_code == 200:
+        data = resp.json()
+        bibjson = data["success"]["data"][0]
+    else:
+        bibjson = {"Error" : "Could not retrieve article data"}
+    return bibjson
+
 def postprocess_result(result):
     if "_id" in result:
         result['_id'] = str(result['_id'])
@@ -56,6 +66,8 @@ def download():
     try:
         _id = request.args.get('id', '')
         res = session.query(Table).filter(Table.page_object_id == _id).first()
+        if res is None:
+            return jsonify({"Error": "Table not extracted into database"})
         table = tabulate(pickle.loads(res.df), tablefmt='psql')
         table = html.escape(table)
         return f"<div><pre>{table}</pre></div>"
@@ -70,6 +82,8 @@ def get_dataframe():
     try:
         _id = request.args.get('id', '')
         res = session.query(Table).filter(Table.page_object_id == _id).first()
+        if res is None:
+            return jsonify({"Error": "Table not extracted into database"})
         buffer = BytesIO()
         buffer.write(res.df)
         buffer.seek(0)
@@ -122,7 +136,7 @@ def search():
             s = Search(index='object').query(q)
             n_results = s.count()
             cur_page = page_num
-            logging.info(f"{len(objects)} total results")
+#            logging.info(f"{len(objects)} total results")
 
             logging.info(f"Getting results {page_num*20} to {(page_num+1)*20}")
             s = s[page_num*20:(page_num+1)*20]
@@ -151,6 +165,7 @@ def search():
                 res = postprocess_result(res)
                 tobj['children'].append(res)
                 tobj['pdf_name'] = pdf_name
+                tobj['bibjson'] = get_bibjson(pdf_name)
                 result_list.append(tobj)
         else:  # passed in a specific object id
             logging.info("id specified, skipping ES junk")
@@ -169,11 +184,14 @@ def search():
                     'cls' : po.cls,
                     'page_number' : page_number
                     }
+            if res['cls'] == 'Table':
+                tb = session.query(Table).filter(Table.page_object_id == _id).first()
+                if tb is not None:
+                    res['table_df'] = tb.df
             res = postprocess_result(res)
-#            if res['cls'] == 'Table':
-#                res['table_df'] = session.query(Table).filter(Table.page_object_id == _id).first().df
             tobj['children'].append(res)
             tobj['pdf_name'] = pdf_name
+            tobj['bibjson'] = get_bibjson(pdf_name)
 
             result_list.append(tobj)
             n_results = len(tobj['children'])
@@ -380,6 +398,7 @@ def page_by_id(page_id):
 #        page = session.query(Page, Pdf).filter(Page.pdf_id==).filter(Page.id==int(rand)).first()
 
         # Hardcode dataset to the a set of 391 "good" ones for DARPA screenshots + quality measurements
+#        page = session.execute('SELECT p.* FROM pages p JOIN pdfs d ON d.id=p.pdf_id WHERE dataset_id=:dataset_id AND p.id not in (SELECT DISTINCT(page_id) FROM page_objects WHERE classification_success IS NOT NULL) ORDER BY RAND() LIMIT 1;', {'dataset_id' : 'ff9c0668-8fd5-4e5b-8fa9-b7890615d34b'}).first()
         page = session.execute('SELECT p.* FROM pages p JOIN pdfs d ON d.id=p.pdf_id WHERE dataset_id=:dataset_id AND p.id not in (SELECT DISTINCT(page_id) FROM page_objects WHERE classification_success IS NOT NULL) ORDER BY RAND() LIMIT 1;', {'dataset_id' : 'baa7f3b2-4381-47a9-98fd-5b5bfd19205e'}).first()
     else:
         page, pdf = session.query(Page, Pdf).filter(Page.id == page_id).first()

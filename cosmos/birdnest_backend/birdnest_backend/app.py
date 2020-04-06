@@ -11,9 +11,12 @@ import base64
 from retrieval.retrieve import Retrieval
 from elasticsearch_dsl import Search, connections, Q
 from schema import Pdf, Page, PageObject, Table
+from flask_cors import CORS
+import requests
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 
 app = Flask(__name__)
+CORS(app)
 dataset_id = os.environ['DATASET_ID']
 
 engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True, pool_size=50, max_overflow=0)
@@ -40,6 +43,16 @@ objtype_index_map = {
         "Table" : "TableContext",
         "Body Text" : "Section",
         }
+
+def get_bibjson(pdf_name):
+    xdd_docid = pdf_name.replace(".pdf", "")
+    resp = requests.get(f"https://geodeepdive.org/api/articles?docid={xdd_docid}")
+    if resp.status_code == 200:
+        data = resp.json()
+        bibjson = data["success"]["data"][0]
+    else:
+        bibjson = {"Error" : "Could not retrieve article data"}
+    return bibjson
 
 def postprocess_result(result):
     if "_id" in result:
@@ -100,9 +113,9 @@ def search():
             children = []
             where_clause = ''
             where=[]
-            base_query = 'select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, pages.page_number, pdfs.pdf_name, page_objects.bounding_box from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.context_id=oc.id and page_objects.page_id=pages.id and pages.pdf_id=pdfs.id '
+            base_query = "select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, pages.page_number, pdfs.pdf_name, page_objects.bounding_box, page_objects.confidence, JSON_EXTRACT(page_objects.init_cls_confidences, '$[0][0]') from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.context_id=oc.id and page_objects.page_id=pages.id and pages.pdf_id=pdfs.id "
             if obj_type is not None:
-                where.append('page_objects.cls=:obj_type')
+                where.append("(page_objects.cls=:obj_type or page_objects.cls='Figure Caption' or page_objects.cls='Table Caption')")
             if postprocessing_confidence is not None:
                 where.append('page_objects.confidence>=:postprocessing_confidence')
             if base_confidence is not None:
@@ -110,17 +123,20 @@ def search():
             if len(where) > 0:
                 where_clause = ' and ' + ' and '.join(where)
 #            logging.info(where_clause)
+
+            # OOF TODO: this ignores other children (e.g. throws out captions for figures)
+            logging.info(f"Checking for things with context_id={obj}")
             q = text(base_query + where_clause)
             res2 = conn.execute(q, oid=obj, obj_type=obj_type, postprocessing_confidence=postprocessing_confidence, base_confidence=base_confidence)
-            for id, bytes, content, cls, page_number, pname, bounding_box in res2:
+            for id, bytes, content, cls, page_number, pname, bounding_box, o_postprocessing_confidence, o_base_confidence in res2:
                 # Filter area because doing the area calculation to the bounding_boxes within mysql is causing me headaches
-                if area is not None:
+                if area is not None and 'Caption' not in cls: # don't filter out small captions
                     bounding_box = json.loads(bounding_box)
                     tlx, tly, brx, bry = bounding_box
                     obj_area = (brx - tlx) * (bry - tly)
                     if obj_area < area:
                         continue
-                o = {'id': id, 'bytes': base64.b64encode(bytes).decode('utf-8'), 'content': content, 'page_number': page_number, 'cls': cls}
+                o = {'id': id, 'bytes': base64.b64encode(bytes).decode('utf-8'), 'content': content, 'page_number': page_number, 'cls': cls, 'postprocessing_confidence' : float(o_postprocessing_confidence), 'base_confidence' : float(o_base_confidence)}
                 if ignore_bytes: del(o['bytes'])
                 if pdf_name is None:
                     pdf_name = pname
@@ -142,6 +158,9 @@ def search():
         final_obj = {'page': 0,
                 'objects': objects[page_num*10:(page_num+1)*10],
                 'total_results': len(objects)}
+        for obj in final_obj['objects']:
+            obj['bibjson'] = get_bibjson(obj['pdf_name'])
+
         return jsonify(final_obj)
     except TypeError as e:
         logging.info(f'{e}')
@@ -244,9 +263,12 @@ def search_es():
                 res['cls'] = po.cls
 #                res['bounding_box'] = po.bounding_box
                 res['page_number'] = page_number
+                res['postprocessing_confidence'] = float(po.confidence)
+                res['base_confidence'] = float(po.init_cls_confidences[0][0])
                 res = postprocess_result(res)
                 tobj['children'].append(res)
                 tobj['pdf_name'] = pdf_name
+                tobj['bibjson'] = get_bibjson(pdf_name)
                 result_list.append(tobj)
         else:  # passed in a specific object id
             logging.info("id specified, skipping ES junk")
@@ -263,13 +285,18 @@ def search_es():
                     'bytes' : po.bytes,
                     'content' : po.content,
                     'cls' : po.cls,
-                    'page_number' : page_number
+                    'page_number' : page_number,
+                    'postprocessing_confidence' : float(po.confidence),
+                    'base_confidence' : float(po.init_cls_confidences[0][0])
                     }
+            if res['cls'] == 'Table':
+                tb = session.query(Table).filter(Table.page_object_id == _id).first()
+                if tb is not None:
+                    res['table_df'] = tb.df
             res = postprocess_result(res)
-#            if res['cls'] == 'Table':
-#                res['table_df'] = session.query(Table).filter(Table.page_object_id == _id).first().df
             tobj['children'].append(res)
             tobj['pdf_name'] = pdf_name
+            tobj['bibjson'] = get_bibjson(pdf_name)
 
             result_list.append(tobj)
             n_results = len(tobj['children'])
