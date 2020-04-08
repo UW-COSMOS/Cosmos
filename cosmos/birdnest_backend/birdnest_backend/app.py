@@ -305,7 +305,7 @@ def search_es():
         result_list = [postprocess_result(r) for r in result_list]
 
 
-        results_obj = {'total_results' : n_results, 'page': cur_page, 'results': result_list}
+        results_obj = {'total_results' : n_results, 'page': cur_page, 'objects': result_list}
         session.close()
         return jsonify(results_obj)
     except TypeError as e:
