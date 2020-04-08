@@ -155,7 +155,7 @@ def search():
                 objects.append(t)
         logging.info(f"{len(objects)} total results")
         logging.info(f"Getting results {page_num*10} to {(page_num+1)*10}")
-        final_obj = {'page': 0,
+        final_obj = {'page': page_num,
                 'objects': objects[page_num*10:(page_num+1)*10],
                 'total_results': len(objects)}
         for obj in final_obj['objects']:
