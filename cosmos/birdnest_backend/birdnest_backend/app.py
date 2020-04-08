@@ -93,21 +93,27 @@ def search():
             return {'page': 0, 'objects': []}
         objects = []
         for ind, obj in enumerate(obj_ids): # TODO: we don't actually want to loop over all of these. But we DO want to make sure we get at least N results
-            header_q = text('select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, pages.page_number, pdfs.pdf_name from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.id=oc.header_id and page_objects.page_id=pages.id and pdfs.id=oc.pdf_id;')
+            header_q = text("select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, JSON_EXTRACT(page_objects.init_cls_confidences, '$[0][0]'), page_objects.confidence, pages.page_number, pdfs.pdf_name from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.id=oc.header_id and page_objects.page_id=pages.id and pdfs.id=oc.pdf_id;")
             res1 = conn.execute(header_q, oid=obj)
-            header_id = None
-            header_bytes = None
-            header_content = None
-            header_page_number = None
-            header_cls = None
             pdf_name = None
             context_id = obj
-            for id, bytes, content, cls, page_number, pdf_name in res1:
-                header_id = id
-                header_bytes = base64.b64encode(bytes).decode('utf-8')
-                header_content = content
-                header_page_number = page_number
-                header_cls = cls
+            header = {
+                    'id': None,
+                    'bytes' : None,
+                    'content' : None,
+                    'page_number' : None,
+                    'cls': None,
+                    'postprocessing_confidence' : None,
+                    'base_confidence' : None
+                    }
+            for id, bytes, content, cls, h_base_confidence, h_postprocessing_confidence, page_number, pdf_name in res1:
+                header['id'] = id
+                header['bytes'] = base64.b64encode(bytes).decode('utf-8')
+                header['content'] = content
+                header['page_number'] = page_number
+                header['base_confidence'] = float(h_base_confidence)
+                header['postprocessing_confidence'] = float(h_postprocessing_confidence)
+                header['cls'] = cls
                 pdf_name = pdf_name
                 break
             children = []
@@ -124,8 +130,6 @@ def search():
                 where_clause = ' and ' + ' and '.join(where)
 #            logging.info(where_clause)
 
-            # OOF TODO: this ignores other children (e.g. throws out captions for figures)
-            logging.info(f"Checking for things with context_id={obj}")
             q = text(base_query + where_clause)
             res2 = conn.execute(q, oid=obj, obj_type=obj_type, postprocessing_confidence=postprocessing_confidence, base_confidence=base_confidence)
             for id, bytes, content, cls, page_number, pname, bounding_box, o_postprocessing_confidence, o_base_confidence in res2:
@@ -135,23 +139,21 @@ def search():
                     tlx, tly, brx, bry = bounding_box
                     obj_area = (brx - tlx) * (bry - tly)
                     if obj_area < area:
+                        logging.info("Object too small")
                         continue
                 o = {'id': id, 'bytes': base64.b64encode(bytes).decode('utf-8'), 'content': content, 'page_number': page_number, 'cls': cls, 'postprocessing_confidence' : float(o_postprocessing_confidence), 'base_confidence' : float(o_base_confidence)}
                 if ignore_bytes: del(o['bytes'])
                 if pdf_name is None:
                     pdf_name = pname
                 children.append(o)
-            if header_id is None and children == []:
+            if header['id'] is None and children == []:
                 continue
             if children != []: # Don't add headers with no children of interest.
-                t = {'header_id': header_id,
-                                'header_bytes': header_bytes,
-                                'header_content': header_content,
-                                'header_cls': header_cls,
-                                'pdf_name': pdf_name,
-                                'children': children,
-                                'context_id': context_id}
-                if ignore_bytes: del(t['header_bytes'])
+                t = {'header': header,
+                        'pdf_name': pdf_name,
+                        'children': children,
+                        'context_id': context_id}
+                if ignore_bytes: del(t['header']['bytes'])
                 objects.append(t)
         logging.info(f"{len(objects)} total results")
         logging.info(f"Getting results {page_num*10} to {(page_num+1)*10}")
@@ -248,9 +250,15 @@ def search_es():
                 logging.info(result['cls'])
                 # TODO: don't have the necessarily handle to group by header, etc right now. Just placeholder for the time being.
                 tobj = {
-                        'header_id' : None,
-                        'header_bytes' : None,
-                        'content' : None,
+                        "header" : {
+                            'id': None,
+                            'bytes' : None,
+                            'content' : None,
+                            'page_number' : None,
+                            'cls': None,
+                            'postprocessing_confidence' : None,
+                            'base_confidence' : None
+                            },
                         'children' : [],
                         }
                 obj_id = result.meta['id']
@@ -274,9 +282,15 @@ def search_es():
             logging.info("id specified, skipping ES junk")
             po, page_number, pdf_name = session.query(PageObject, Page.page_number, Pdf.pdf_name).filter(PageObject.id == _id).filter(PageObject.page_id == Page.id).filter(Page.pdf_id == Pdf.id).first()
             tobj = {
-                    'header_id' : None,
-                    'header_bytes' : None,
-                    'content' : None,
+                    "header" : {
+                        'id': None,
+                        'bytes' : None,
+                        'content' : None,
+                        'page_number' : None,
+                        'cls': None,
+                        'postprocessing_confidence' : None,
+                        'base_confidence' : None
+                        },
                     'children' : [],
                     }
             res = {
