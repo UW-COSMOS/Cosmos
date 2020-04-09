@@ -17,7 +17,7 @@ class Retrieval:
         self.k1 = k1
         self.k2 = k2
 
-    def search(self, query):
+    def search(self, query, start_index=0):
         k = 10 # Number of contexts to retrieve
         doc_hits = self.doc_searcher.search(query, k=self.k1)
         results = []
@@ -28,12 +28,12 @@ class Retrieval:
 
         context_hits = self.context_searcher.search(query, k=self.k2)
 
-        for i in range(0, min(len(context_hits), self.k2)):
+        for i in range(start_index, min(len(context_hits), self.k2)):
             index = context_hits[i].docid
             content = context_hits[i].raw
             score = context_hits[i].score
             actual_context_id = self.ctx2octx_map[int(index)]
             actual_doc_id = self.octx2odoc_map[int(actual_context_id)]
             if actual_doc_id in doc_ids:
-                results.append([actual_doc_id, actual_context_id, content, score])
+                results.append([actual_doc_id, actual_context_id, content, score, i])
         return results

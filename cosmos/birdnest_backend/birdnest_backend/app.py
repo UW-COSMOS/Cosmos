@@ -9,6 +9,7 @@ import os
 import json
 import base64
 from retrieval.retrieve import Retrieval
+from collections import defaultdict
 from elasticsearch_dsl import Search, connections, Q
 from schema import Pdf, Page, PageObject, Table
 from flask_cors import CORS
@@ -35,7 +36,7 @@ for ctype in ["Section", "FigureContext", "TableContext", "EquationContext", "Co
     doc2odoc_pth = os.path.join('/index_dir/', dataset_id, ctype, 'id_to_pdf.pkl')
     ctx2octx_pth = os.path.join('/index_dir/', dataset_id, ctype, 'id_to_context.pkl')
     octx2odoc_pth = os.path.join('/index_dir/', dataset_id, ctype, 'context_to_doc.pkl')
-    retrievers[ctype] = Retrieval(doc_idx_path, context_idx_pth, doc2odoc_pth, ctx2octx_pth, octx2odoc_pth, k1=500, k2=100)
+    retrievers[ctype] = Retrieval(doc_idx_path, context_idx_pth, doc2odoc_pth, ctx2octx_pth, octx2odoc_pth, k1=5000, k2=1000)
 
 objtype_index_map = {
         "Figure" : "FigureContext",
@@ -46,6 +47,7 @@ objtype_index_map = {
 
 def get_bibjson(pdf_name):
     xdd_docid = pdf_name.replace(".pdf", "")
+    logging.info(f"Getting bibjson for {xdd_docid}")
     resp = requests.get(f"https://geodeepdive.org/api/articles?docid={xdd_docid}")
     if resp.status_code == 200:
         data = resp.json()
@@ -70,7 +72,9 @@ def postprocess_result(result):
         result['table_df'] = encoded.decode('ascii')
     return result
 
-@app.route('/api/v1/search')
+query_map = {} # keep track of result page_number -> index of last object on that page from anserini context list
+@app.route('/api/v1/count', endpoint='count')
+@app.route('/api/v1/search', endpoint='search')
 def search():
     conn = engine.connect()
     try:
@@ -86,13 +90,35 @@ def search():
         postprocessing_confidence = request.args.get('postprocessing_confidence', type=float)
         logging.info(f"Using {objtype_index_map.get(obj_type, 'Combined')} retriever")
         retriever = retrievers[objtype_index_map.get(obj_type, "Combined")]
-        results = retriever.search(query)
+
+        # if we have a page_number, look up what object_page_number we need
+        query_name = f"{query}_{obj_type}_{area}_{base_confidence}_{postprocessing_confidence}"
+        subselect = False
+        if query_name not in query_map:
+            query_map[query_name] = {}
+        if page_num-1 in query_map[query_name]:
+            start_ind = query_map[query_name][page_num-1] + 1
+        else:
+            # TODO: If not, we'll have to do some logic, if it's not the first page
+            logging.info(f"Couldn't find query ({page_num}, {query_name}). Starting over.")
+            logging.info(query_map)
+            if page_num != 0:
+                subselect = True
+            start_ind = 0
+
+        if request.endpoint == 'count':
+            subselect = True
+
+        logging.info(f"Searching starting at {start_ind}")
+        results = retriever.search(query, start_index=start_ind) # ([actual_doc_id, actual_context_id, content, score, i])
         obj_ids = [r[1] for r in results]
+        context_index = [r[4] for r in results]
         logging.info(f"{len(obj_ids)} matching contexts found!")
         if len(obj_ids) == 0:
             return {'page': 0, 'objects': []}
         objects = []
-        for ind, obj in enumerate(obj_ids): # TODO: we don't actually want to loop over all of these. But we DO want to make sure we get at least N results
+
+        for ind, obj in enumerate(obj_ids):
             header_q = text("select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, JSON_EXTRACT(page_objects.init_cls_confidences, '$[0][0]'), page_objects.confidence, pages.page_number, pdfs.pdf_name from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.id=oc.header_id and page_objects.page_id=pages.id and pdfs.id=oc.pdf_id;")
             res1 = conn.execute(header_q, oid=obj)
             pdf_name = None
@@ -155,20 +181,47 @@ def search():
                         'context_id': context_id}
                 if ignore_bytes: del(t['header']['bytes'])
                 objects.append(t)
-        logging.info(f"{len(objects)} total results")
-        logging.info(f"Getting results {page_num*10} to {(page_num+1)*10}")
-        final_obj = {'page': page_num,
-                'objects': objects[page_num*10:(page_num+1)*10],
-                'total_results': len(objects)}
-        for obj in final_obj['objects']:
-            obj['bibjson'] = get_bibjson(obj['pdf_name'])
-
+                if len(objects) == 10 and not subselect: # shortcircuit -- we have our 10 to return
+                    logging.info(f"10th object for this batch found on context index {context_index[ind]}")
+                    query_map[query_name][page_num] = context_index[ind]
+                    logging.info(query_map)
+                    break
+        logging.info(f"{len(objects)} total results pass filter checks")
+        if request.endpoint == 'count':
+            final_obj = {'total_results' : len(objects)}
+        else:
+            if subselect:
+                final_obj = {'page': page_num,
+                        'objects': objects[page_num*10:(page_num+1)*10],
+                        }
+            else:
+                final_obj = {'page': page_num,
+                        'objects': objects,
+                        }
+            for obj in final_obj['objects']:
+                obj['bibjson'] = get_bibjson(obj['pdf_name'])
         return jsonify(final_obj)
     except TypeError as e:
         logging.info(f'{e}')
         abort(400)
     finally:
         conn.close()
+
+@app.route('/api/v1/statistics')
+def get_stats():
+    try:
+        conn = engine.connect()
+        header_q = text("SELECT count(distinct(page_objects.id)), count(distinct(pages.id)), count(distinct(pdfs.id)) FROM page_objects, pages, pdfs WHERE pages.id=page_objects.page_id AND pdfs.id=pages.pdf_id AND dataset_id=:dataset_id;")
+        res1 = conn.execute(header_q, dataset_id=dataset_id)
+        for n_po, n_pages, n_pdfs in res1:
+            t = {"n_objects" : n_po,
+                    "n_pages" : n_pages,
+                    "n_pdfs" : n_pdfs
+                    }
+        return jsonify(t)
+    except TypeError as e:
+        logging.info(f'{e}')
+        abort(400)
 
 @app.route('/api/v1/get_neighborhoods')
 def get_neighborhoods():
