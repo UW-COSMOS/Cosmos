@@ -23,11 +23,15 @@ def run_request(payload):
     return result
 
 
-def run(directory):
-    did = str(uuid.uuid4())
-    logger.info(f'Dataset id generated: {did}')
+def run(directory, dataset_id=""):
+    if dataset_id == "":
+        did = str(uuid.uuid4())
+        logger.info(f'Dataset id generated: {did}')
+    else:
+        did = dataset_id
     d = directory
     directories = [os.path.join(directory, o) for o in os.listdir(directory) if os.path.isdir(os.path.join(directory,o))]
+    directories.append(directory)
     processed_subdirs = []
     for ind, subdir in enumerate(directories):
         if ind == 4:
@@ -131,11 +135,9 @@ def delete(did):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('directory', help='Path to pdf directory')
+    parser.add_argument('dataset_id', default="", help='dataset_id for bookkeeping + organization')
     args = parser.parse_args()
     stime = time.time()
-    run(args.directory)
+    run(args.directory, args.dataset_id)
     time_up = time.time() - stime
     logger.info(f'TOTAL TIME UP: {time_up} seconds')
-
-    
-
