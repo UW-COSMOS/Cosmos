@@ -10,10 +10,19 @@ from gensim.corpora import Dictionary
 from gensim.models import TfidfModel
 from nltk import word_tokenize
 from nltk.corpus import stopwords
+import os
 stop_words = stopwords.words('english')
 
 from io import BytesIO, StringIO
 import zipfile
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, defer
+from sqlalchemy.sql.expression import func
+
+engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True, pool_size=50, max_overflow=0)
+Session = sessionmaker()
+Session.configure(bind=engine)
 
 import json
 import sys
@@ -29,17 +38,24 @@ def generate_zip(files):
             zf.writestr(f[0], f[1].getvalue())
     return mem_zip
 
-model_path = "./data/model_100_streamed"
-dictionary_path = "./data/model_100_streamed_dictionary"
-tfidf_path = "./data/model_100_streamed_tfidf"
+models = {}
+model_path = "./data/covid_model_streamed"
+bigram_model_path = "./data/covid_model_streamed_bigram"
+trigram_model_path = "./data/covid_model_streamed_trigram"
 
 sys.stdout.write("Loading model from '{}'... ".format(model_path))
 sys.stdout.flush()
 
 try:
-    model = Word2Vec.load(model_path)
-    dct = Dictionary.load(dictionary_path)
-    tfidf = TfidfModel.load(tfidf_path)
+    models['default'] = Word2Vec.load(model_path)
+    sys.stdout.write("Loaded monograms")
+    sys.stdout.flush()
+    models['bigram'] = Word2Vec.load(bigram_model_path)
+    sys.stdout.write("Loaded bigrams")
+    sys.stdout.flush()
+    models['trigram'] = Word2Vec.load(trigram_model_path)
+    sys.stdout.write("Loaded trigrams")
+    sys.stdout.flush()
 
 except:
     sys.stdout.write("Error: not found.\n")
@@ -48,13 +64,14 @@ except:
 
 def preprocess(line):
     line = word_tokenize(line)  # Split into words.
-    line = [w.lower() for w in line]  # Lower the text.
+#    line = [w.lower() for w in line]  # Lower the text.
     line = [w for w in line if not w in stop_words]  # Remove stopwords
     return line
 
 sys.stdout.write("done.\n")
 
 app = Flask(__name__)
+CORS(app)
 
 if __name__ == "__main__":
     app.run()
@@ -64,16 +81,67 @@ def hello_world():
     """Data service node: this is the root node for version 1 of this data service."""
     return node_response('XDD APPLICATION PROGRAM INTERFACE v1')
 
+@app.route('/cosmul', methods=['GET', 'POST'])
+def cosmul():
+    """Data service operation: execute a vector query on the specified word."""
+    pos=preprocess(request.values.get('positive', ''))
+    neg=preprocess(request.values.get('negative', ''))
+    logging.info(f"Cosmul with pos : {pos} and negative: {neg}")
+
+    model_name=request.values.get('model', 'default')
+    n_responses=int(request.values.get('n', '10'))
+
+    if pos or neg:
+        try:
+            a = models[model_name].wv.most_similar_cosmul(positive=pos, negative=neg, topn=n_responses)
+        except KeyError:
+            return data_response([])
+        else:
+            return data_response(a)
+    else:
+        return error_400("You must specify a value for the argument 'word'")
+
+@app.route('/most_similar_to_given', methods=['GET', 'POST'])
+def most_similar_to():
+    entity=preprocess(request.values.get('entity', ''))[0]
+    entities_list=preprocess(request.values.get('entities_list', ''))
+    model_name=request.values.get('model', 'default')
+    if entity=='' or entities_list=='' or isinstance(entity, list):
+        return error_400(f"You must specify valid entity (single term) and entities_list (comma-separated) parameters! {entity}, {entities_list}")
+    try:
+        a = models[model_name].wv.most_similar_to_given(entity, entities_list)
+    except KeyError:
+        return error_400(str(sys.exc_info()[1]))
+    return data_response({'entity': entity, 'most_similar_entity': a})
+
+@app.route('/most_similar', methods=['GET', 'POST'])
+def most_similar():
+    """Data service operation: execute a vector query on the specified word."""
+    pos=preprocess(request.values.get('positive', ''))
+    neg=preprocess(request.values.get('negative', ''))
+    model_name=request.values.get('model', 'default')
+    n_responses=int(request.values.get('n', '10'))
+
+    if pos or neg:
+        try:
+            a = models[model_name].wv.most_similar(positive=pos, negative=neg, topn=n_responses)
+            return data_response(a)
+        except KeyError:
+            return data_response([])
+    else:
+        return error_400("You must specify a value for the argument 'positive' or 'negative'")
+
 @app.route('/word2vec', methods=['GET', 'POST'])
 def word2vec():
     """Data service operation: execute a vector query on the specified word."""
     query_word=preprocess(request.values.get('word'))
+    model_name=request.values.get('model', 'default')
     n_responses=int(request.values.get('n', '10'))
+
     if query_word:
         try:
-            a = model.wv.most_similar(positive=query_word, topn=5*n_responses)
+            a = models[model_name].wv.most_similar(positive=query_word, topn=5*n_responses)
             if request.values.get('idf'):
-                vals = dict(tfidf[dct.doc2bow([i[0] for i in a])])
                 vals = sorted(vals.items(), key=lambda x: -x[1])
                 a_idf = [(dct[i[0]], i[1]) for i in vals[:n_responses]]
             else:
@@ -86,10 +154,27 @@ def word2vec():
     else:
         return error_400("You must specify a value for the argument 'word'")
 
+@app.route('/document_tensors/<pdf_name>', methods=['GET'])
+def document_tensors(pdf_name):
+    session = Session()
+    res = session.execute('SELECT content FROM page_objects, pages, pdfs WHERE pdfs.id=pages.pdf_id AND pages.id=page_objects.page_id AND pdf_name=:pdf_name', {'pdf_name' : pdf_name})
+    unique_words = set([])
+    for obj in res:
+        for word in obj.content.split():
+            unique_words.add(word)
+    products = get_tensors(list(unique_words))
+    zipfile = generate_zip(products)
+    zipfile.seek(0)
+    return send_file(zipfile, attachment_filename=f"{pdf_name.replace('.pdf', 'tensors')}.zip", as_attachment=True)
+
 @app.route('/tensors', methods=['POST'])
 def tensors():
     body = request.json
     terms = body['terms']
+    if "model" in body:
+        model_name = body['model']
+    else:
+        model_name = 'default'
     products = get_tensors(terms)
     zipfile = generate_zip(products)
     zipfile.seek(0)
@@ -124,7 +209,7 @@ def json_response(content, status):
     r.headers["Content-Type"] = "application/json; charset=utf-8"
     return r
 
-def get_tensors(terms):
+def get_tensors(terms, model_name='default'):
     """
     TODO: Docstring for get_products.
 
@@ -137,14 +222,14 @@ def get_tensors(terms):
     """
     metadata = StringIO()
     tensors = StringIO()
-    for word in model.wv.index2word:
+    for word in models[model_name].wv.index2word:
 #            if word == word.lower():
 #                continue
         if word.lower() not in terms:
             continue
 #            encoded=word.encode('utf-8')
         metadata.write(word + '\n')
-        vector_row = '\t'.join(map(str, model[word]))
+        vector_row = '\t'.join(map(str, models['default'][word]))
         tensors.write(vector_row + '\n')
     return [("tensors.tsv", tensors),
             ("metadata.tsv", metadata)]
