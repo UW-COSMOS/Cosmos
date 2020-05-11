@@ -80,7 +80,7 @@ def postprocess_page(self, obj):
             self.classes = yaml.load(stream)["classes"]
 
     logger.error('WHAT WHAT WHAT WHAT')
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()

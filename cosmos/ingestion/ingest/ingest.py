@@ -76,7 +76,7 @@ def process_page(filepath, pdfid, session, client):
 
 #@app.task(bind=True, name='ingest', queue='ingest_q')
 def ingest(obj):
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     Session = sessionmaker()
     Session.configure(bind=engine)
     pdf_file = base64.b64decode(obj['pdf'].encode())

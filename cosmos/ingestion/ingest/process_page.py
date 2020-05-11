@@ -34,7 +34,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 def process_page(inputs):
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()
@@ -84,7 +84,7 @@ def postprocess_page(obj):
                 break
         if dp is None:
             raise Exception('No process plugin registered')
-        engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+        engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
         Session = sessionmaker()
         Session.configure(bind=engine)
         session = Session()

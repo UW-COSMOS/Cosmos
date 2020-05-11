@@ -29,7 +29,7 @@ logging.getLogger("pdfminer").setLevel(logging.WARNING)
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
 Session = sessionmaker()
 Session.configure(bind=engine)
 
@@ -84,7 +84,7 @@ class DeleteDataset(object):
                 session.rollback()
                 pass
         session.close()
-        
+
 
 api = application = falcon.API()
 pre_pdf = PreprocessedPDF()
