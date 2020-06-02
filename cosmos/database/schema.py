@@ -8,6 +8,7 @@ import os
 import time
 from alembic.config import Config
 from alembic import command
+import click
 
 
 Base = declarative_base()
@@ -100,7 +101,13 @@ def ping_healthcheck():
     return result.status_code == 200
 
 
-def main():
+@click.command()
+@click.option('--sqlite/--no-sqlite', default=False, help='Create an empty database using SQLite')
+def main(sqlite):
+    if sqlite:
+        engine = create_engine('sqlite:////db/docs.db')
+        Base.metadata.create_all(engine)
+        return
     while(not ping_healthcheck()):
         logger.info('DB not up')
         time.sleep(1)
