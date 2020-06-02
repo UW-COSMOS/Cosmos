@@ -26,12 +26,15 @@ def detect(obj):
         model = dp.model
         model_config = dp.model_config
         device_str = dp.device_str
+        keep_bytes = dp.keep_bytes
         engine = create_engine('sqlite:///:memory:', echo=False)  
         Session = sessionmaker()
         Session.configure(bind=engine)
         Base.metadata.create_all(engine)
         session = Session()
         obj['img'] = Image.open(io.BytesIO(base64.b64decode(obj['pad_img'].encode('ASCII')))).convert('RGB')
+        if not keep_bytes:
+            del obj['pad_img']
         detected_objs, softmax_detected_objs = run_inference(model, [obj], model_config, device_str, session)
         detected_objs = detected_objs['0']
         softmax_detected_objs = softmax_detected_objs['0']
