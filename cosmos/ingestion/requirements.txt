@@ -45,4 +45,5 @@ pytesseract
 flower
 setuptools
 alembic
+msgpack
 
