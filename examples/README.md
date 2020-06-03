@@ -1,4 +1,4 @@
-# Examples
+#Examples
 
 ## Setup
 
@@ -15,7 +15,7 @@ Then install the requirements in this directory via pip
 pip install -r requirements.txt
 ```
 
-Finally, you'll need (ghostscript)[https://www.ghostscript.com/] installed. On Mac OS X using Homebrew:
+Finally, you'll need [ghostscript](https://www.ghostscript.com/) installed. On Mac OS X using Homebrew:
 
 ```bash
 brew install ghostscript
