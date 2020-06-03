@@ -15,6 +15,12 @@ Then install the requirements in this directory via pip
 pip install -r requirements.txt
 ```
 
+Finally, you'll need (ghostscript)[https://www.ghostscript.com/] installed. On Mac OS X using Homebrew:
+
+```bash
+brew install ghostscript
+```
+
 ## Barebones Detection Pipeline
 
 An example of the detection pipeline up to the deep learning model's output can be found in detection.ipynb.
