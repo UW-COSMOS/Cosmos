@@ -2,3 +2,5 @@ flask
 mysqlclient
 sqlalchemy
 elasticsearch_dsl
+flask-cors
+pyopenssl

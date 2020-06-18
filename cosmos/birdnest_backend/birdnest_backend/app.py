@@ -8,6 +8,7 @@ from sqlalchemy.sql import text
 import os
 import json
 import base64
+from io import BytesIO
 from retrieval.retrieve import Retrieval
 from collections import defaultdict
 from elasticsearch_dsl import Search, connections, Q
@@ -20,12 +21,12 @@ app = Flask(__name__)
 CORS(app)
 dataset_id = os.environ['DATASET_ID']
 
-engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True, pool_size=50, max_overflow=0)
+engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
 Session = sessionmaker()
 Session.configure(bind=engine)
 
 connections.create_connection(hosts=['es01'], timeout=20)
-
+copyright = open("Copyright.png", "rb").read()
 retrievers = {}
 
 for ctype in ["Section", "FigureContext", "TableContext", "EquationContext", "Combined"]:
@@ -36,7 +37,7 @@ for ctype in ["Section", "FigureContext", "TableContext", "EquationContext", "Co
     doc2odoc_pth = os.path.join('/index_dir/', dataset_id, ctype, 'id_to_pdf.pkl')
     ctx2octx_pth = os.path.join('/index_dir/', dataset_id, ctype, 'id_to_context.pkl')
     octx2odoc_pth = os.path.join('/index_dir/', dataset_id, ctype, 'context_to_doc.pkl')
-    retrievers[ctype] = Retrieval(doc_idx_path, context_idx_pth, doc2odoc_pth, ctx2octx_pth, octx2odoc_pth, k1=5000, k2=1000)
+    retrievers[ctype] = Retrieval(doc_idx_path, context_idx_pth, doc2odoc_pth, ctx2octx_pth, octx2odoc_pth, k1=2500, k2=1000)
 
 objtype_index_map = {
         "Figure" : "FigureContext",
@@ -47,7 +48,7 @@ objtype_index_map = {
 
 def get_bibjson(pdf_name):
     xdd_docid = pdf_name.replace(".pdf", "")
-    logging.info(f"Getting bibjson for {xdd_docid}")
+#    logging.info(f"Getting bibjson for {xdd_docid}")
     resp = requests.get(f"https://geodeepdive.org/api/articles?docid={xdd_docid}")
     if resp.status_code == 200:
         data = resp.json()
@@ -101,7 +102,6 @@ def search():
         else:
             # TODO: If not, we'll have to do some logic, if it's not the first page
             logging.info(f"Couldn't find query ({page_num}, {query_name}). Starting over.")
-            logging.info(query_map)
             if page_num != 0:
                 subselect = True
             start_ind = 0
@@ -111,6 +111,7 @@ def search():
 
         logging.info(f"Searching starting at {start_ind}")
         results = retriever.search(query, start_index=start_ind) # ([actual_doc_id, actual_context_id, content, score, i])
+        logging.info(f"Results received from retriever")
         obj_ids = [r[1] for r in results]
         context_index = [r[4] for r in results]
         logging.info(f"{len(obj_ids)} matching contexts found!")
@@ -119,8 +120,10 @@ def search():
         objects = []
 
         for ind, obj in enumerate(obj_ids):
-            header_q = text("select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, JSON_EXTRACT(page_objects.init_cls_confidences, '$[0][0]'), page_objects.confidence, pages.page_number, pdfs.pdf_name from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.id=oc.header_id and page_objects.page_id=pages.id and pdfs.id=oc.pdf_id;")
-            res1 = conn.execute(header_q, oid=obj)
+            header_q = text("select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, JSON_EXTRACT(page_objects.init_cls_confidences, '$[0][0]'), page_objects.confidence, pages.page_number, pdfs.pdf_name from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.id=oc.header_id and page_objects.page_id=pages.id and pdfs.id=oc.pdf_id and pdfs.dataset_id=:dataset_id;")
+            logging.info(header_q)
+            logging.info(dataset_id)
+            res1 = conn.execute(header_q, oid=obj, dataset_id=dataset_id)
             pdf_name = None
             context_id = obj
             header = {
@@ -145,7 +148,7 @@ def search():
             children = []
             where_clause = ''
             where=[]
-            base_query = "select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, pages.page_number, pdfs.pdf_name, page_objects.bounding_box, page_objects.confidence, JSON_EXTRACT(page_objects.init_cls_confidences, '$[0][0]') from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.context_id=oc.id and page_objects.page_id=pages.id and pages.pdf_id=pdfs.id "
+            base_query = "select page_objects.id, page_objects.bytes, page_objects.content, page_objects.cls, pages.page_number, pdfs.pdf_name, page_objects.bounding_box, page_objects.confidence, JSON_EXTRACT(page_objects.init_cls_confidences, '$[0][0]') from pages, page_objects, object_contexts as oc, pdfs where oc.id = :oid and page_objects.context_id=oc.id and page_objects.page_id=pages.id and pages.pdf_id=pdfs.id and pdfs.dataset_id=:dataset_id"
             if obj_type is not None:
                 where.append("(page_objects.cls=:obj_type or page_objects.cls='Figure Caption' or page_objects.cls='Table Caption')")
             if postprocessing_confidence is not None:
@@ -154,10 +157,10 @@ def search():
                 where.append("JSON_EXTRACT(page_objects.init_cls_confidences, '$[0][0]')>=:base_confidence")
             if len(where) > 0:
                 where_clause = ' and ' + ' and '.join(where)
-#            logging.info(where_clause)
+            logging.info(where_clause)
 
             q = text(base_query + where_clause)
-            res2 = conn.execute(q, oid=obj, obj_type=obj_type, postprocessing_confidence=postprocessing_confidence, base_confidence=base_confidence)
+            res2 = conn.execute(q, oid=obj, obj_type=obj_type, postprocessing_confidence=postprocessing_confidence, base_confidence=base_confidence, dataset_id=dataset_id)
             for id, bytes, content, cls, page_number, pname, bounding_box, o_postprocessing_confidence, o_base_confidence in res2:
                 # Filter area because doing the area calculation to the bounding_boxes within mysql is causing me headaches
                 if area is not None and 'Caption' not in cls: # don't filter out small captions
@@ -174,12 +177,23 @@ def search():
                 children.append(o)
             if header['id'] is None and children == []:
                 continue
+
+            summary_q = text("select oc.content, oc.summary, oc.keywords from object_contexts oc  WHERE oc.id = :oid LIMIT 1;")
+            res3 = conn.execute(summary_q, oid=obj)
+            for c, s, k in res3:
+                content, summary, keywords = c, s, k
+
             if children != []: # Don't add headers with no children of interest.
                 t = {'header': header,
                         'pdf_name': pdf_name,
                         'children': children,
-                        'context_id': context_id}
+                        'context_id': context_id,
+                        'context_content': content,
+                        'context_summary': summary,
+                        'context_keywords': keywords.replace('\n', ', ') if keywords is not None else keywords}
                 if ignore_bytes: del(t['header']['bytes'])
+                t = filter_copywritten_figures(t)
+
                 objects.append(t)
                 if len(objects) == 10 and not subselect: # shortcircuit -- we have our 10 to return
                     logging.info(f"10th object for this batch found on context index {context_index[ind]}")
@@ -206,6 +220,24 @@ def search():
         abort(400)
     finally:
         conn.close()
+
+def filter_copywritten_figures(obj):
+    # check content + cls field of children, set bytes if "permission" or "copyright" in content and cls=Figure
+    cr = False
+    total_text = [i["content"] for i in obj['children']]
+    if obj["header"]["content"] is not None:
+        total_text += obj["header"]["content"]
+    total_text = " ".join(total_text)
+    if "permission" in total_text.lower() or "copyright" in total_text.lower() or "reproduced from" in total_text.lower() or "reproduced with" in total_text.lower(): cr=True
+    for child in obj["children"]:
+        if child['cls'] != "Figure" : continue
+        if cr:
+            child["bytes"] = base64.b64encode(copyright).decode('utf-8')
+    if obj['header']['cls'] == 'Figure' and cr:
+        obj['header']["bytes"] = base64.b64encode(copyright).decode('utf-8')
+    return obj
+
+
 
 @app.route('/api/v1/statistics')
 def get_stats():
@@ -247,6 +279,7 @@ def search_es():
         _id = request.args.get('id', '')
         obj_type = request.args.get('type', '')
         query = request.args.get('query', '')
+        search_logic = request.args.get('search_logic', 'all')
         area = request.args.get('area', '')
         ignore_bytes = request.args.get('ignore_bytes', type=bool)
         base_confidence = request.args.get('base_confidence', '')
@@ -264,8 +297,14 @@ def search_es():
         if _id == '':
             logging.info("no id specified")
             if query != '':
-                logging.info(f"querying for content: {query}")
-                q = q & Q('match', content=query)
+                if "," in query:
+                    query_list = query.split(",")
+                else:
+                    query_list = [query]
+                if search_logic.lower() == "any":
+                    q = q & Q('bool', should=[Q('match_phrase', content=i) for i in query_list])
+                else:
+                    q = q & Q('bool', must=[Q('match_phrase', content=i) for i in query_list])
 
             if obj_type != '':
 #                if not obj_type.endswith("Context"):
@@ -330,6 +369,7 @@ def search_es():
                 tobj['children'].append(res)
                 tobj['pdf_name'] = pdf_name
                 tobj['bibjson'] = get_bibjson(pdf_name)
+                tobj = filter_copywritten_figures(tobj)
                 result_list.append(tobj)
         else:  # passed in a specific object id
             logging.info("id specified, skipping ES junk")
@@ -365,6 +405,7 @@ def search_es():
             tobj['pdf_name'] = pdf_name
             tobj['bibjson'] = get_bibjson(pdf_name)
 
+            tobj = filter_copywritten_figures(tobj)
             result_list.append(tobj)
             n_results = len(tobj['children'])
             cur_page = 0

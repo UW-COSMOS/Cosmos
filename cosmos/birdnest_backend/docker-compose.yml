@@ -5,12 +5,12 @@ networks:
       name: cosmos_swarm_network 
 services:
     birdnest_backend:
-        image: ankurgos/backend:latest
+        image: iaross/birdnest_backend:latest
         ipc: host
         command: "flask run --host=0.0.0.0 --port=5010"
         volumes:
             - ${DATASET_INDEX_DIR}:/index_dir/
-            - /ssd/ankur/Cosmos/cosmos:/vol
+#            - /ssd//Cosmos/cosmos:/vol
         #command: "tail -F /dev/null"
         environment:
             - DATASET_ID
