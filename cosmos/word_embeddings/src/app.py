@@ -20,7 +20,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, defer
 from sqlalchemy.sql.expression import func
 
-engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True, pool_size=50, max_overflow=0)
+engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
 Session = sessionmaker()
 Session.configure(bind=engine)
 
@@ -38,10 +38,17 @@ def generate_zip(files):
             zf.writestr(f[0], f[1].getvalue())
     return mem_zip
 
+bibjsons = {}
 models = {}
-model_path = "./data/covid_model_streamed"
-bigram_model_path = "./data/covid_model_streamed_bigram"
-trigram_model_path = "./data/covid_model_streamed_trigram"
+model_path = "./data/model_streamed"
+bigram_model_path = "./data/model_streamed_bigram"
+trigram_model_path = "./data/model_streamed_trigram"
+bibjsons['default'] = "./data/bibjson"
+
+cleaned_model_path = "./data_cleaned/model_streamed"
+bigram_cleaned_model_path = "./data_cleaned/model_streamed_bigram"
+trigram_cleaned_model_path = "./data_cleaned/model_streamed_trigram"
+bibjsons['cleaned'] = "./data_cleaned/bibjson"
 
 sys.stdout.write("Loading model from '{}'... ".format(model_path))
 sys.stdout.flush()
@@ -55,6 +62,16 @@ try:
     sys.stdout.flush()
     models['trigram'] = Word2Vec.load(trigram_model_path)
     sys.stdout.write("Loaded trigrams")
+    sys.stdout.flush()
+
+    models['default_cleaned'] = Word2Vec.load(cleaned_model_path)
+    sys.stdout.write("Loaded cleaned monograms")
+    sys.stdout.flush()
+    models['bigram_cleaned'] = Word2Vec.load(bigram_cleaned_model_path)
+    sys.stdout.write("Loaded cleaned bigrams")
+    sys.stdout.flush()
+    models['trigram_cleaned'] = Word2Vec.load(trigram_cleaned_model_path)
+    sys.stdout.write("Loaded cleaned trigrams")
     sys.stdout.flush()
 
 except:
@@ -84,11 +101,14 @@ def hello_world():
 @app.route('/cosmul', methods=['GET', 'POST'])
 def cosmul():
     """Data service operation: execute a vector query on the specified word."""
-    pos=preprocess(request.values.get('positive', ''))
-    neg=preprocess(request.values.get('negative', ''))
+    pos=request.values.get('positive', '').split(',')
+    neg=request.values.get('negative', '').split(',')
     logging.info(f"Cosmul with pos : {pos} and negative: {neg}")
 
     model_name=request.values.get('model', 'default')
+    cleaned=request.values.get('cleaned', 'false')
+    if cleaned.lower()== "true":
+        model_name += "_cleaned"
     n_responses=int(request.values.get('n', '10'))
 
     if pos or neg:
@@ -103,9 +123,12 @@ def cosmul():
 
 @app.route('/most_similar_to_given', methods=['GET', 'POST'])
 def most_similar_to():
-    entity=preprocess(request.values.get('entity', ''))[0]
-    entities_list=preprocess(request.values.get('entities_list', ''))
+    entity=request.values.get('entity', '')
+    entities_list=request.values.get('entities_list', '').split(',')
     model_name=request.values.get('model', 'default')
+    cleaned=request.values.get('cleaned', 'false')
+    if cleaned.lower()== "true":
+        model_name += "_cleaned"
     if entity=='' or entities_list=='' or isinstance(entity, list):
         return error_400(f"You must specify valid entity (single term) and entities_list (comma-separated) parameters! {entity}, {entities_list}")
     try:
@@ -117,14 +140,20 @@ def most_similar_to():
 @app.route('/most_similar', methods=['GET', 'POST'])
 def most_similar():
     """Data service operation: execute a vector query on the specified word."""
-    pos=preprocess(request.values.get('positive', ''))
-    neg=preprocess(request.values.get('negative', ''))
+    pos=request.values.get('positive', '').split(',')
+    neg=request.values.get('negative', '').split(',')
     model_name=request.values.get('model', 'default')
+    cleaned=request.values.get('cleaned', 'false')
+    if cleaned.lower()== "true":
+        model_name += "_cleaned"
     n_responses=int(request.values.get('n', '10'))
+    logging.info(f"most_similar with positive={pos} and negative={neg}")
 
     if pos or neg:
         try:
             a = models[model_name].wv.most_similar(positive=pos, negative=neg, topn=n_responses)
+            logging.info(model_name)
+            logging.info(a)
             return data_response(a)
         except KeyError:
             return data_response([])
@@ -136,6 +165,9 @@ def word2vec():
     """Data service operation: execute a vector query on the specified word."""
     query_word=preprocess(request.values.get('word'))
     model_name=request.values.get('model', 'default')
+    cleaned=request.values.get('cleaned', 'false')
+    if cleaned.lower()== "true":
+        model_name += "_cleaned"
     n_responses=int(request.values.get('n', '10'))
 
     if query_word:
@@ -153,6 +185,16 @@ def word2vec():
             return data_response(a, data_rw=a_idf)
     else:
         return error_400("You must specify a value for the argument 'word'")
+
+@app.route('/bibjson', methods=['GET'])
+    model_name=request.values.get('model', 'default')
+    cleaned=request.values.get('cleaned', 'false')
+    if cleaned.lower()== "true":
+        model_name += "_cleaned"
+    if "cleaned" in model_name:
+        return send_file(bibjsons['cleaned'])
+    else:
+        return send_file(bibjsons['default'])
 
 @app.route('/document_tensors/<pdf_name>', methods=['GET'])
 def document_tensors(pdf_name):
@@ -175,6 +217,9 @@ def tensors():
         model_name = body['model']
     else:
         model_name = 'default'
+    cleaned=request.values.get('cleaned', 'false')
+    if cleaned.lower()== "true":
+        model_name += "_cleaned"
     products = get_tensors(terms)
     zipfile = generate_zip(products)
     zipfile.seek(0)
@@ -204,6 +249,7 @@ def error_500(message):
     """Return a 500 response with a JSON body indicating an internal error."""
     return json_response('{ "status": "500", "error": "A server error occurred." }', 500)
 
+def bibjson():
 def json_response(content, status):
     r = Response(content, status, mimetype="application/json")
     r.headers["Content-Type"] = "application/json; charset=utf-8"
