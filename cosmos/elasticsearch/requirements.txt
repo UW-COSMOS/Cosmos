@@ -1,0 +1,5 @@
+sqlalchemy
+mysqlclient
+alembic
+elasticsearch_dsl
+requests
