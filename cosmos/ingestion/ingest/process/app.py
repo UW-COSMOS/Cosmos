@@ -48,7 +48,7 @@ class ProcessPage(object):
         super().__init__()
         self.pp_model = pp_model
         if use_db:
-            self.engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+            self.engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
             self.Session = sessionmaker()
             self.Session.configure(bind=self.engine)
 

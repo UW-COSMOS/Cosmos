@@ -90,7 +90,7 @@ def convert(did, session, conn):
 
 
 if __name__ == '__main__':
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     did = os.environ["DATASET_ID"]
     conn = engine.connect()
     Session = sessionmaker()

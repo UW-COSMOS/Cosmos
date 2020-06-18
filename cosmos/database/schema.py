@@ -61,6 +61,11 @@ class PageObject(Base):
     confidence = Column(Numeric(precision=9, scale=6))
     classification_success = Column(Boolean, unique=False, default=None)
     proposal_success = Column(Boolean, unique=False, default=None)
+    summary = Column(Text())
+    keywords = Column(Text())
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 class Table(Base):
     __tablename__ = 'tables'
@@ -91,7 +96,8 @@ class ObjectContext(Base):
     header_id = Column(Integer, ForeignKey('page_objects.id'))
     header_content = Column(Text())
     content = Column(Text(2**32-1))
-
+    summary = Column(Text())
+    keywords = Column(Text())
 
 def ping_healthcheck():
     try:

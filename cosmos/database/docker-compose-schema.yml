@@ -1,11 +1,11 @@
 version: '3'
 networks:
-    cosmos_swarm_network:
-        external: true
+  default:
+    external:
+      name: cosmos_swarm_network 
+
 services:
   create_schema:
-    networks:
-        cosmos_swarm_network:
     env_file:
       - schema.env
     image: schema:latest
@@ -22,10 +22,13 @@ services:
     command: python schema.py --sqlite
 
   migrate:
-    networks:
-        cosmos_swarm_network:
     env_file:
       - schema.env
     image: schema:latest
     command: alembic upgrade head
 
+  downgrade:
+    env_file:
+      - schema.env
+    image: schema:latest
+    command: alembic downgrade -1 

@@ -2,7 +2,7 @@
 Ingest to elasticsearch
 """
 import logging
-logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 from elasticsearch_dsl import Document, Text, connections, Integer, Float
 import pymongo
 from pymongo import MongoClient
@@ -13,7 +13,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, defer
 from sqlalchemy.sql.expression import func
 import json
-engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
 Session = sessionmaker()
 Session.configure(bind=engine)
 
@@ -22,16 +22,17 @@ class Object(Document):
 
     cls = Text()
     dataset_id = Text()
+    context_id = Integer()
     content = Text()
     area = Integer()
 #    init_cls_confidences = Float()
     postprocessing_confidence = Float()
     pp_rule_cls = Text()
     annotated_cls = Text()
-
+    pdf_name = Text()
 
     class Index:
-        name = 'object'
+        name = 'object_updated'
         settings = {
                 'number_of_shards': 1,
                 'number_of_replicas': 0
@@ -44,6 +45,7 @@ class Context(Document):
     dataset_id = Text()
     content = Text()
     header_content = Text()
+    pdf_name = Text()
 
     # Hmm these are really filters at the _object_ level, not the _context_ level...
 #    area = Integer()
@@ -51,7 +53,7 @@ class Context(Document):
 #    postprocessing_confidence = Float()
 
     class Index:
-        name = 'context'
+        name = 'context_updated'
         settings = {
                 'number_of_shards': 1,
                 'number_of_replicas': 0
@@ -65,7 +67,7 @@ def ingest_elasticsearch(objects, code, sections, tableContexts, figureContexts,
     connections.create_connection(hosts=['es01'])
     Context.init()
     session = Session()
-    logging.info("Querying for contexts")
+#    logging.info("Querying for contexts")
 #    contexts = session.execute('SELECT oc.*, p.dataset_id FROM object_contexts oc JOIN (SELECT dataset_id, id FROM pdfs) p ON oc.pdf_id = p.id')
 #    logging.info("Writing to ES")
 #    for c in contexts:
@@ -81,22 +83,27 @@ def ingest_elasticsearch(objects, code, sections, tableContexts, figureContexts,
 #    Context._index.refresh()
     Object.init()
 
-#    objects = session.execute('SELECT po.*, d.dataset_id FROM page_objects po JOIN (SELECT id, pdf_id FROM pages) p ON p.pdf_id = d.id JOIN (SELECT dataset_id, id FROM pdfs) d  ON po.page_id = p.id')
-    objects = session.execute('SELECT po.* FROM page_objects po')
-    for obj in objects:
+    conn = engine.connect()
+    logging.info("Getting objects")
+    objects = conn.execute('SELECT po.id, po.page_id, po.context_id, po.bounding_box, po.cls, po.content, po.init_cls_confidences, po.confidence, po.pp_rule_cls, po.annotated_cls, pdfs.dataset_id, pdfs.pdf_name FROM page_objects po, pdfs, pages WHERE pdfs.id = pages.pdf_id AND pages.id = po.page_id')
+    logging.info("Here we go!")
+    for po in objects:
+        obj = {column:value for column, value in po.items()}
         bb = json.loads(obj['bounding_box'])
         tlx, tly, brx, bry = bb
         area = (brx - tlx) * (bry - tly)
         Object(_id = str(obj['id']),
                 cls = obj['cls'],
-#                dataset_id = obj['dataset_id'],
+                dataset_id = obj['dataset_id'],
+                context_id = obj['context_id'],
                 content = obj['content'],
                 area = area,
                 base_confidence = json.loads(obj['init_cls_confidences'])[0][0],
                 postprocessing_confidence = obj['confidence'],
                 pp_rule_cls = obj['pp_rule_cls'],
-                annotated_cls = obj['annotated_cls']
-    ).save()
+                annotated_cls = obj['annotated_cls'],
+                pdf_name = obj['pdf_name']
+                ).save()
 
 
 

@@ -14,6 +14,7 @@ from io import BytesIO
 from os import path
 import glob
 import base64
+from random import shuffle
 import sys
 from typing import TypeVar, Callable
 
@@ -31,7 +32,7 @@ from .utils import grouper
 # Logging config
 logging.basicConfig(
 #                    filename = 'mylogs.log', filemode = 'w',
-                    format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
+                    format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.INFO)
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 logging.getLogger("camelot").setLevel(logging.ERROR)
 T = TypeVar('T')
@@ -81,7 +82,7 @@ def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_pa
     Improvements:
         Currently this gets called for each page of the PDF. It should be pretty easy to make it cover all pages in the PDF instead..
     """
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     Session = sessionmaker()
     Session.configure(bind=engine)
     tsession = Session()
@@ -142,7 +143,7 @@ def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_pa
     tsession.close()
 
 def process_dataset(client):
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     conn = engine.connect()
     Session = sessionmaker()
     Session.configure(bind=engine)
@@ -150,13 +151,14 @@ def process_dataset(client):
     final_table_futures = []
     try:
         filenames = glob.glob("/input/*.pdf")
+        shuffle(filenames)
         for filename in filenames:
             # Get PDFs + read bytes
             pdf_bytes =  open(filename, 'rb').read()
             # TODO: poach byte reading + looping from ingest.
             pdf_name = os.path.basename(filename)
             logging.info(f"Working on {filename}")
-            q = text("SELECT *, po.id as object_id FROM page_objects po INNER JOIN (SELECT page_number, pdf_id, id FROM pages) AS p ON po.page_id = p.id INNER JOIN (SELECT id, pdf_name FROM pdfs) AS d ON p.pdf_id = d.id WHERE po.cls='Table' AND d.pdf_name=:pdf_name")
+            q = text("SELECT *, po.id as object_id FROM page_objects po INNER JOIN (SELECT page_number, pdf_id, id FROM pages) AS p ON po.page_id = p.id INNER JOIN (SELECT id, pdf_name FROM pdfs) AS d ON p.pdf_id = d.id WHERE po.cls='Table' AND d.pdf_name=:pdf_name AND po.page_id NOT IN (SELECT DISTINCT(page_id) from tables)")
             res = conn.execute(q, pdf_name=pdf_name)
             for obj in res:
                 pdf_name = obj['pdf_name']
@@ -164,8 +166,9 @@ def process_dataset(client):
                 coords = json.loads(obj['bounding_box'])
                 object_id = obj['object_id']
                 page_id = obj['page_id']
-                r1 = client.submit(extract_tables, pdf_bytes, pdf_name, coords, page_num, json.load(open("tableextractions/camelot_stream_params.txt")), object_id, page_id, resources={'extract_tables' : 1})
-                fire_and_forget(r1)
+                r1 = extract_tables(pdf_bytes, pdf_name, coords, page_num, json.load(open("tableextractions/camelot_stream_params.txt")), object_id, page_id)
+#                r1 = client.submit(extract_tables, pdf_bytes, pdf_name, coords, page_num, json.load(open("tableextractions/camelot_stream_params.txt")), object_id, page_id, resources={'extract_tables' : 1})
+#                fire_and_forget(r1)
                 #final_table_futures.append(client.submit(extract_tables, pdf_bytes, pdf_name, coords, page_num, "camelot_lattice_params.txt", "camelot_stream_params.txt", resources={'extract_tables': 1}))
 #                progress(final_table_futures)
 #                client.gather(final_table_futures)

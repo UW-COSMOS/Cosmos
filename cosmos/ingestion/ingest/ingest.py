@@ -130,7 +130,7 @@ def pdf_to_images(obj):
 
 def ingest(obj, conn_str=None):
     if conn_str is None:
-        engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+        engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     else:
         engine = create_engine(conn_str)
     Session = sessionmaker()
