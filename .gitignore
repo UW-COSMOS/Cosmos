@@ -27,3 +27,4 @@ services/tableextractions/build/
 semantic_segmentation/data/
 */*/data/
 cosmos/database/*.ini
+dask-worker-space/

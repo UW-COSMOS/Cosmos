@@ -6,8 +6,7 @@ from scipy.special import softmax
 import copy
 import base64
 import uuid
-import celery
-from .schema import Pdf, Page, PageObject
+from ingest.schema import Pdf, Page, PageObject
 import uuid
 import tempfile
 import json
@@ -34,10 +33,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 def process_page(inputs):
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
-    Session = sessionmaker()
-    Session.configure(bind=engine)
-    session = Session()
     if 'bytes' not in inputs:
         raise Exception('Invalid input, bytes not in input')
     result = inputs['bytes']

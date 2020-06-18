@@ -11,6 +11,16 @@ services:
     image: schema:latest
     command: python schema.py
 
+  create_sqlite:
+    networks:
+        cosmos_swarm_network:
+    env_file:
+      - schema.env
+    volumes:
+        - ./:/db
+    image: schema:latest
+    command: python schema.py --sqlite
+
   migrate:
     env_file:
       - schema.env

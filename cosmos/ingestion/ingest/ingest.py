@@ -74,9 +74,65 @@ def process_page(filepath, pdfid, session, client):
     obj = {'bytes': resize_bytes, 'page_id': page.id}
     return obj
 
-#@app.task(bind=True, name='ingest', queue='ingest_q')
-def ingest(obj):
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
+def pdf_to_images(obj):
+    pdf_file = base64.b64decode(obj['pdf'].encode())
+    if 'dataset_id' not in obj or 'pdf_name' not in obj:
+        raise Exception('Malformed input, no dataset_id or pdf_name in input')
+    dataset_id = obj['dataset_id']
+    pdf_name = obj['pdf_name']
+    with tempfile.NamedTemporaryFile() as tf, tempfile.TemporaryDirectory() as td:
+        tf.write(pdf_file)
+        tf.seek(0)
+        try:
+            meta, dims = parse_pdf(tf.name)
+        except Exception as e:
+            logger.error(str(e), exc_info=True)
+            raise Exception('Parsing error', str(e))
+        if meta is not None:
+            meta = meta.to_dict()
+            meta = json.dumps(meta)
+            meta = json.loads(meta)
+            dims = list(dims)
+        pdf_id = uuid.uuid4()
+        subprocess.run(['gs', '-dBATCH',
+                              '-dNOPAUSE',
+                              '-sDEVICE=png16m',
+                              '-dGraphicsAlphaBits=4',
+                              '-dTextAlphaBits=4',
+                              '-r600',
+                              f'-sOutputFile="{td}/%d"',
+                              tf.name
+                        ])
+        files = glob.glob(f'{td}/*')
+        objs = []
+        for filepath in files:
+            page_num = int(os.path.basename(filepath))
+            try:
+                img = Image.open(filepath)
+            except Image.DecompressionBombError as e:
+                logging.error(str(e), exc_info=True)
+                raise e
+            width, height = img.size
+            with open(filepath, 'rb') as bimage:
+                bstring = bimage.read()
+                bytesio = io.BytesIO(bstring)
+                img = resize_png(bytesio)
+                # Convert it back to bytes
+                resize_bytes_stream = io.BytesIO()
+                img.save(resize_bytes_stream, format='PNG')
+                resize_bytes_stream.seek(0)
+                resize_bytes = resize_bytes_stream.read()
+                resize_bytes = base64.b64encode(resize_bytes).decode('ASCII')
+                resize_bytes_stream.seek(0)
+                obj = {'bytes': resize_bytes, 'page_id': str(uuid.uuid4()), 'pdf_name': pdf_name, 'page_num': page_num}
+                objs.append(obj)
+        return objs
+
+def ingest(obj, conn_str=None):
+    if conn_str is None:
+        engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
+    else:
+        engine = create_engine(conn_str)
     Session = sessionmaker()
     Session.configure(bind=engine)
     pdf_file = base64.b64decode(obj['pdf'].encode())
