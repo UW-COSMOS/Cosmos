@@ -392,14 +392,14 @@ def page_by_id(page_id):
     session = Session()
     if page_id == "next_prediction":
         # Hacky way to get a random, because sorting by rand().limit(1) is real slow
-#        rowCount = int(session.query(Page).count())
-#        rand = random.randrange(0, rowCount)
-#        page = session.query(Page).filter(Page.id==int(rand)).first()
+        rowCount = int(session.query(Page).count())
+        rand = random.randrange(0, rowCount)
+        page = session.query(Page).filter(Page.id==int(rand)).first()
 #        page = session.query(Page, Pdf).filter(Page.pdf_id==).filter(Page.id==int(rand)).first()
 
         # Hardcode dataset to the a set of 391 "good" ones for DARPA screenshots + quality measurements
 #        page = session.execute('SELECT p.* FROM pages p JOIN pdfs d ON d.id=p.pdf_id WHERE dataset_id=:dataset_id AND p.id not in (SELECT DISTINCT(page_id) FROM page_objects WHERE classification_success IS NOT NULL) ORDER BY RAND() LIMIT 1;', {'dataset_id' : 'ff9c0668-8fd5-4e5b-8fa9-b7890615d34b'}).first()
-        page = session.execute('SELECT p.* FROM pages p JOIN pdfs d ON d.id=p.pdf_id WHERE dataset_id=:dataset_id AND p.id not in (SELECT DISTINCT(page_id) FROM page_objects WHERE classification_success IS NOT NULL) ORDER BY RAND() LIMIT 1;', {'dataset_id' : 'baa7f3b2-4381-47a9-98fd-5b5bfd19205e'}).first()
+#        page = session.execute('SELECT p.* FROM pages p JOIN pdfs d ON d.id=p.pdf_id WHERE dataset_id=:dataset_id AND p.id not in (SELECT DISTINCT(page_id) FROM page_objects WHERE classification_success IS NOT NULL) ORDER BY RAND() LIMIT 1;', {'dataset_id' : 'baa7f3b2-4381-47a9-98fd-5b5bfd19205e'}).first()
     else:
         page, pdf = session.query(Page, Pdf).filter(Page.id == page_id).first()
     # temp hack -- bringing back the full model sucks for large docs because of the metadata field, so just bring back the column we care about IAR - 10.Mar.2020
