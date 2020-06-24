@@ -121,3 +121,27 @@ services:
         depends_on:
             - mysql-server-1
 
+    gateway:
+        networks:
+            swarm_network:
+        image: uwcosmos/visualizer:dev
+        ports:
+            - 8081:80
+        depends_on:
+            - search_backend
+  
+    search_backend:
+        networks:
+            swarm_network:
+        image: uwcosmos/sbackend:dev
+        command: "flask run --host=0.0.0.0 --port=5001"
+        ports:
+            - 5001:5001
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+            - PDF_DB=pdfs
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
