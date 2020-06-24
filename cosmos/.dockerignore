@@ -5,4 +5,6 @@ semantic_segmentation/data
 ingestion/ingest/process/detection/weights
 ingestion/ingest/process/detection/data
 ingestion/ingest/process/detection/src/runs
+db/
+*tmp*
 
