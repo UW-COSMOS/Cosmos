@@ -3,3 +3,4 @@ alembic
 pyserini
 requests
 mysqlclient
+click

@@ -1,0 +1,55 @@
+version: "3"
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network
+services:
+    mysql-server-1:
+      env_file:
+        - ./database/innodb-cluster/mysql-server.env
+      image: mysql/mysql-server:8.0.12
+      volumes:
+          - ${DB_PTH}:/var/lib/mysql
+          - ${DB_TMP_PTH}:/tmp
+      ports:
+        - "3301:3306"
+      command: ["mysqld","--server_id=1","--binlog_checksum=NONE","--gtid_mode=ON","--enforce_gtid_consistency=ON","--log_bin","--log_slave_updates=ON","--master_info_repository=TABLE","--relay_log_info_repository=TABLE","--transaction_write_set_extraction=XXHASH64","--user=mysql","--skip-host-cache","--skip-name-resolve", "--default_authentication_plugin=mysql_native_password", "--max-connections=1024", "--innodb_buffer_pool_size=16g", "--group-concat-max-len=4294967295", "--innodb-log-file-size=1G"]
+
+    birdnest_backend:
+        image: uwcosmos/birdnest_backend:dev
+        ipc: host
+        command: "flask run --host=0.0.0.0 --port=5010"
+        volumes:
+            - ${DATASET_INDEX_DIR}:/index_dir/
+        environment:
+            - DATASET_ID
+            - FLASK_APP=app.py
+            - LC_ALL=C.UTF-8
+            - LANG=C.UTF-8
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+        ports:
+            - 5010:5010
+
+    es01:
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+        environment:
+            - node.name=es01
+            - cluster.initial_master_nodes=es01
+            - cluster.name=docker-cluster
+            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+        volumes:
+            - ${ES_INDEX_DIR}:/usr/share/elasticsearch/data:rw
+        ports:
+            - 9200:9200
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9200"]
+            interval: 10s
+            timeout: 10s
+            retries: 5
