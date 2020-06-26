@@ -18,12 +18,13 @@ class PostProcessTrainer:
         self.model_path = model_path
         self.classes = classes
 
-    def train(self):        
+    def train(self, skip_val=False):        
         self.model.fit(self.train_set_x, self.train_set_y)
         accuracy, classification_list = self.validate()
-        print("Val Accuracy: {} \n".format(accuracy*100))
-        print(classification_list)
-        #run_evaluate(classification_list, classes)
+        if not skip_val:
+            print("Val Accuracy: {} \n".format(accuracy*100))
+            print(classification_list)
+            #run_evaluate(classification_list, classes)
         joblib.dump(self.model, self.model_path)
         
     def validate(self):

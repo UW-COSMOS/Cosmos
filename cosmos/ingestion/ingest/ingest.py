@@ -11,6 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import click
 import os
+from pathlib import Path
 import io
 import subprocess
 import glob
@@ -74,7 +75,38 @@ def process_page(filepath, pdfid, session, client):
     obj = {'bytes': resize_bytes, 'page_id': page.id}
     return obj
 
-def pdf_to_images(obj):
+def load_images_from_dir(idir, pdf_name, image_ref):
+    files = glob.glob(f'{idir}/*')
+    objs = []
+    for filepath in files:
+        page_num = int(os.path.basename(filepath))
+        try:
+            img = Image.open(filepath)
+        except Image.DecompressionBombError as e:
+            logging.error(str(e), exc_info=True)
+            raise e
+        width, height = img.size
+        with open(filepath, 'rb') as bimage:
+            bstring = bimage.read()
+            bytesio = io.BytesIO(bstring)
+            img = resize_png(bytesio)
+            # Convert it back to bytes
+            if image_ref:
+                img.save(filepath, format='PNG')
+                obj = {'bytes': filepath, 'page_id': str(uuid.uuid4()), 'pdf_name': pdf_name, 'page_num': page_num, 'pdf_name': pdf_name}
+                objs.append(obj)
+            else:
+                resize_bytes_stream = io.BytesIO()
+                img.save(resize_bytes_stream, format='PNG')
+                resize_bytes_stream.seek(0)
+                resize_bytes = resize_bytes_stream.read()
+                resize_bytes = base64.b64encode(resize_bytes).decode('ASCII')
+                resize_bytes_stream.seek(0)
+                obj = {'bytes': resize_bytes, 'page_id': str(uuid.uuid4()), 'pdf_name': pdf_name, 'page_num': page_num, 'pdf_name': pdf_name}
+                objs.append(obj)
+    return objs
+
+def pdf_to_images(obj, use_image_bytes=True, image_dir=None):
     pdf_file = base64.b64decode(obj['pdf'].encode())
     if 'dataset_id' not in obj or 'pdf_name' not in obj:
         raise Exception('Malformed input, no dataset_id or pdf_name in input')
@@ -94,39 +126,28 @@ def pdf_to_images(obj):
             meta = json.loads(meta)
             dims = list(dims)
         pdf_id = uuid.uuid4()
+        if image_dir is None:
+            idir = td
+        else:
+            idir = os.path.join(image_dir, pdf_name) 
+            Path(idir).mkdir(parents=True, exist_ok=True)
+        
         subprocess.run(['gs', '-dBATCH',
                               '-dNOPAUSE',
                               '-sDEVICE=png16m',
                               '-dGraphicsAlphaBits=4',
                               '-dTextAlphaBits=4',
                               '-r600',
-                              f'-sOutputFile="{td}/%d"',
+                              f'-sOutputFile="{idir}/%d"',
                               tf.name
                         ])
-        files = glob.glob(f'{td}/*')
-        objs = []
-        for filepath in files:
-            page_num = int(os.path.basename(filepath))
-            try:
-                img = Image.open(filepath)
-            except Image.DecompressionBombError as e:
-                logging.error(str(e), exc_info=True)
-                raise e
-            width, height = img.size
-            with open(filepath, 'rb') as bimage:
-                bstring = bimage.read()
-                bytesio = io.BytesIO(bstring)
-                img = resize_png(bytesio)
-                # Convert it back to bytes
-                resize_bytes_stream = io.BytesIO()
-                img.save(resize_bytes_stream, format='PNG')
-                resize_bytes_stream.seek(0)
-                resize_bytes = resize_bytes_stream.read()
-                resize_bytes = base64.b64encode(resize_bytes).decode('ASCII')
-                resize_bytes_stream.seek(0)
-                obj = {'bytes': resize_bytes, 'page_id': str(uuid.uuid4()), 'pdf_name': pdf_name, 'page_num': page_num}
-                objs.append(obj)
-        return objs
+
+        # gs -dBATCH -dNOPAUSE -sDEVICE=png16m -dGraphicsAlphaBits=4 -dTextAlphaBits=4 -r600 -sOutputFile="{td}/%d" -sOutputFile="{td}/%d"
+        if use_image_bytes:
+            return load_images_from_dir(idir, pdf_name, False)
+        else:
+            return load_images_from_dir(idir, pdf_name, True)
+
 
 def ingest(obj, conn_str=None):
     if conn_str is None:

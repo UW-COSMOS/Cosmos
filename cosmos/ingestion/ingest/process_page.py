@@ -2,6 +2,7 @@
 """
 Route to handle decomposition of pages into page objects
 """
+from pathlib import Path
 from scipy.special import softmax
 import copy
 import base64
@@ -36,11 +37,21 @@ def process_page(inputs):
     if 'bytes' not in inputs:
         raise Exception('Invalid input, bytes not in input')
     result = inputs['bytes']
+    if type(result) == str:
+        img = Image.open(result).convert('RGB')
+    else:
+        img = Image.open(io.BytesIO(base64.b64decode(result.encode('ASCII')))).convert('RGB')
+
     page_id = inputs['page_id']
 
-    img = Image.open(io.BytesIO(base64.b64decode(result.encode('ASCII')))).convert('RGB')
     coords = get_proposals(img)
     padded_img = pad_image(img)
+    if type(result) == str:
+        d = f'/tmp/{page_id}.png'
+        padded_img.save(d, "PNG")
+        obj = {'id': '0', 'img_path': result, 'pad_img': d, 'proposals': coords, 'page_id': page_id}
+        return obj
+
     byteImgIO = io.BytesIO()
     padded_img.save(byteImgIO, "PNG")
     byteImgIO.seek(0)

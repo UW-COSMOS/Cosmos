@@ -32,7 +32,10 @@ def detect(obj):
         Session.configure(bind=engine)
         Base.metadata.create_all(engine)
         session = Session()
-        obj['img'] = Image.open(io.BytesIO(base64.b64decode(obj['pad_img'].encode('ASCII')))).convert('RGB')
+        if type(obj['pad_img']) == str:
+            obj['img'] = Image.open(obj['pad_img']).convert('RGB')
+        else:
+            obj['img'] = Image.open(io.BytesIO(base64.b64decode(obj['pad_img'].encode('ASCII')))).convert('RGB')
         if not keep_bytes:
             del obj['pad_img']
         detected_objs, softmax_detected_objs = run_inference(model, [obj], model_config, device_str, session)
