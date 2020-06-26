@@ -53,3 +53,16 @@ services:
             interval: 10s
             timeout: 10s
             retries: 5
+
+    kbviz:
+        image: uwcosmos/visualizer_kb:dev
+        ports:
+            - 8082:80
+        environment:
+          - ENVIRONMENT=production
+          - MODE=${MODE:-visualizer}
+          - PUBLIC_URL=/
+          - API_BASE_URL=/search
+          - API_ERROR_MESSAGE
+          - OBJECT_API_BASE_URL=/search
+          - WORD2VEC_API_BASE_URL=/word2vec
