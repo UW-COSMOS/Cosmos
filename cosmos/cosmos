@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+# A simple wrapper around docker-compose to run the COSMOS visualizer
+# with the appropriate settings
+from os.path import join, dirname
+from os import chdir, environ
+from subprocess import run
+from shlex import split
+from sys import argv, exit
+
+
+# cosmos [option] up
+## where [option] in ['ingest', 'extract', 'recall', 'all']
+## start up the necessary "listeners"
+
+# cosmos [option] run
+## actually do the thing.
+## ingest -- needs pdf dir, dataset_id
+## extract -- needs pdf dir, dataset_id
+## recall -- needs index dir, dataset_id
+
+
+# set stuff via environ['...'] = ...
+
+
+def cmd(*v):
+    val = " ".join(v)
+    print(val)
+    return run(split(val))
+
+args = argv[1:]
+try:
+    args.remove("--production")
+    production = True
+except ValueError:
+    production = False
+
+allowed_modes = ['ingest', 'extract', 'recall', 'all']
+try:
+    mode = args.pop(0)
+    assert mode in allowed_modes
+except (AssertionError, IndexError):
+    print(f"Please supply argument (allowed: [{', '.join(allowed_modes)}])")
+    exit(1)
+
+allowed_actions = ['up', 'run', 'down']
+try:
+    action = args.pop(0)
+    assert action in allowed_actions
+except (AssertionError, IndexError):
+    print(f"Please supply action argument (allowed: [{', '.join(allowed_actions)}])")
+    exit(1)
+
+environ['MYSQL_USER']='myuser'
+environ['MYSQL_DATABASE']='cosmos'
+environ['MYSQL_PASSWORD']='cosmos123'
+environ['MYSQL_HOST']='mysql-server-1'
+environ['MYSQL_PORT']='3306'
+environ['DB_PTH']='./db'
+environ['DB_TMP_PTH']='./dbtmp'
+environ['TMP_PTH']='./tmp'
+environ['DIR']='/home/iaross/test'
+environ['DATASET_ID']='dummy2'
+
+if action=="up" and (mode=="all" or mode=="ingest"):
+    # TODO: check for path existence + permissions
+    cmd('pwd')
+    cmd('docker stack deploy cosmos --compose-file docker-compose.yml')
+    # TODO scale up things ?
+#    cmd('docker service scale cosmos_ingestion=1 cosmos_scheduler=1 cosmos_worker1=1 cosmos_worker2=1')
+
+if action=="run" and (mode=="all" or mode=="ingest"):
+    # TODO: parse dataset_id, pdf_dir
+    print("Ingesting some documents.")
+    cmd('sh', './scripts/process_dir.sh', '/home/iaross/test/', 'dummy2')
+
+if action=="up" and (mode=="all" or mode=="extract"):
+    cmd('docker stack deploy cosmos --compose-file docker-compose-extraction.yml')
+
+
+if action=="down" and mode=='all':
+    cmd("docker", "stack", "rm", "cosmos")
+
+
+
+
+#env = "production" if production else "development"
+#environ["COMPOSE_FILE"] = "docker-compose.{0}.yml".format(env)
+#environ["MODE"] = mode
+#
+#
+def cmd(*v):
+    val = " ".join(v)
+    print(val)
+    return run(split(val))
+#
+#
+#def compose(*v):
+#    return cmd("docker-compose", *v)
+#
+#
+#res = compose("up -d --force-recreate --build")
+#if res.returncode == 0:
+#    compose("logs -f")
+#else:
+#    print("Error starting containers")
