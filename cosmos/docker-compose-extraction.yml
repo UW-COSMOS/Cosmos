@@ -7,6 +7,13 @@ networks:
 
 services:
 
+    adminer:
+        image: adminer
+        ports:
+            - 8080:8080
+        networks:
+            swarm_network:
+
     mysql-server-1:
       env_file:
         - ./database/innodb-cluster/mysql-server.env
