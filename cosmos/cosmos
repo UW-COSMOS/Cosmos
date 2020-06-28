@@ -42,7 +42,7 @@ except (AssertionError, IndexError):
     print(f"Please supply argument (allowed: [{', '.join(allowed_modes)}])")
     exit(1)
 
-allowed_actions = ['up', 'run', 'down']
+allowed_actions = ['up', 'run', 'down', 'dummy']
 try:
     action = args.pop(0)
     assert action in allowed_actions
@@ -60,6 +60,8 @@ environ['DB_TMP_PTH']='./dbtmp'
 environ['TMP_PTH']='./tmp'
 environ['DIR']='/home/iaross/test'
 environ['DATASET_ID']='dummy2'
+environ['DATASET_INDEX_DIR']='/hdd/iaross/covid_26May/'
+environ['ES_INDEX_DIR']='/hdd/iaross/es_index/'
 
 if action=="up" and (mode=="all" or mode=="ingest"):
     # TODO: check for path existence + permissions
@@ -73,8 +75,15 @@ if action=="run" and (mode=="all" or mode=="ingest"):
     print("Ingesting some documents.")
     cmd('sh', './scripts/process_dir.sh', '/home/iaross/test/', 'dummy2')
 
-if action=="up" and (mode=="all" or mode=="extract"):
+if (action=="run" or action=="up") and (mode=="all" or mode=="extract"): # or action="run"?
+    #TODO: up should make the worker, etc. run should kick it off.
     cmd('docker stack deploy cosmos --compose-file docker-compose-extraction.yml')
+
+if action=="up" and (mode=="all" or mode=="recall"): # or action="run;?
+    cmd('docker stack deploy cosmos --compose-file docker-compose-recall.yml')
+
+if action=="run" and (mode=="all" or mode=="recall"): 
+    cmd('docker stack deploy cosmos --compose-file docker-compose-recall-createindexes.yml')
 
 
 if action=="down" and mode=='all':
