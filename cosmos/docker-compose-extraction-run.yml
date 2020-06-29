@@ -1,0 +1,31 @@
+version: "3"
+
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network 
+
+services:
+    aggregate_sections:
+        image: uwcosmos/aggregate_sections:dev
+        command: "python3 -m agg.aggregate"
+        environment:
+            - DATASET_ID
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+
+    extract_tables:
+        image: uwcosmos/extract_tables:dev
+        ipc: host
+        command: "python3 -m tableextractions.pdf_table_extractions"
+#        command: "tail -f :dev/null"
+        volumes:
+            - ${DIR}:/input
+        environment:
+            - DATASET_ID
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT

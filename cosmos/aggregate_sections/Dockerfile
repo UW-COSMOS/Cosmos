@@ -1,4 +1,5 @@
-FROM nvidia/cuda:10.1-devel-ubuntu18.04
+#FROM nvidia/cuda:10.1-devel-ubuntu18.04
+FROM ubuntu:18.04
 
 ENV PATH="/root/miniconda3/bin:${PATH}"
 ARG PATH="/root/miniconda3/bin:${PATH}"

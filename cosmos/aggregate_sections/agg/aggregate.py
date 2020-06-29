@@ -52,13 +52,13 @@ def process_dataset(did, client):
             if len(obj_list) == 0:
                 continue
             [r] = client.scatter([obj_list])
-            r1 = client.submit(aggregate_sections, obj_list)
+            r1 = client.submit(aggregate_sections, obj_list, resources={"agg" : 1})
             fire_and_forget(r1)
-            r2 = client.submit(aggregate_equations, r)
+            r2 = client.submit(aggregate_equations, r, resources={"agg" : 1})
             fire_and_forget(r2)
-            r3 = client.submit(aggregate_figures, r)
+            r3 = client.submit(aggregate_figures, r, resources={"agg" : 1})
             fire_and_forget(r3)
-            r4 = client.submit(aggregate_tables, r)
+            r4 = client.submit(aggregate_tables, r, resources={"agg" : 1})
             fire_and_forget(r4)
     except Exception as e:
         logger.error(str(e), exc_info=True)
@@ -150,7 +150,7 @@ def aggregate_equations(objs):
                                header_id=eq["po_id"],
                                header_content=eq["po_content"],
                                content=aggregated_context)
-            final_objects.append(oc)
+            final_objs.append(oc)
             session.add(oc)
             session.commit()
             session.refresh(oc)
@@ -293,7 +293,6 @@ def aggregate_tables(objs):
             update_ids = [tab['po_id']]
             if tab_caption is not None:
                 update_ids.append(tab_caption['po_id'])
-            update_ids = [fig['po_id'], fig_caption['po_id']]
             aggregated_context = f"{tab['po_content']}\n{tab_caption['po_content']}" if tab_caption is not None else tab['po_content']
             if aggregated_context.strip() == '':
                 continue

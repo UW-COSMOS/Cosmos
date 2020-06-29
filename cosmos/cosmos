@@ -16,7 +16,18 @@ from os.path import join, dirname, exists
 from os import chdir, environ, makedirs, chmod
 from subprocess import run
 from shlex import split
+import argparse
 from sys import argv, exit
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('stage', metavar='stage', type=str,
+        help='')
+parser.add_argument('action', metavar='action', type=str,
+        help='')
+parser.add_argument('pdf_dir', metavar='pdf_dir', type=str,
+        help='')
+parser.add_argument('dataset_id', metavar='dataset_id', type=str,
+        help='')
 
 
 # cosmos [stage] up
@@ -31,14 +42,22 @@ def cmd(*v):
     print(val)
     return run(split(val))
 
-args = argv[1:]
+args = parser.parse_args()
+
+paths = {
+    'dataset_index_dir' : '/hdd/iaross/covid_26May/',
+    'es_index_dir' : '/hdd/iaross/es_index/',
+    'db_pth' : './db',
+    'db_tmp_pth' : './dbtmp',
+    'tmp_pth' : './tmp',
+}
 
 allowed_stages = {'ingest' : 'Ingest PDF, apply segmentation to find regions and apply detection to classify those regions.',
                     'extract' : "Aggregate sections of text, associate tables and figures with their captions",
                     'recall' : "Index and search for relevant objects (and contexts)",
                     'all' : "The entire pipeline"}
 try:
-    stage = args.pop(0)
+    stage = args.stage
     assert stage in allowed_stages.keys()
 except (AssertionError, IndexError):
     print(f"Please provide an argument for which stage of the pipeline. Allowed:")
@@ -50,7 +69,7 @@ allowed_actions = {'up': "Bring up the services and workers relevant to the spec
         'run' : "Trigger processing aand computations of the stage.",
         'down' : "Shut down the services and workers relevant to the specified stage."}
 try:
-    action = args.pop(0)
+    action = args.action
     assert action in allowed_actions.keys()
 except (AssertionError, IndexError):
     print(f"Please supply action argument. Allowed:")
@@ -65,22 +84,14 @@ environ['MYSQL_HOST']='mysql-server-1'
 environ['MYSQL_PORT']='3306'
 
 
-paths = {
-'db_pth' : './db',
-'db_tmp_pth' : './dbtmp',
-'tmp_pth' : './tmp',
-'dataset_index_dir' : '/hdd/iaross/covid_26May/',
-'es_index_dir' : '/hdd/iaross/es_index/'
-}
-
 environ['DB_PTH']=paths['db_pth']
 environ['DB_TMP_PTH']=paths['db_tmp_pth']
 environ['TMP_PTH']=paths['tmp_pth']
 environ['DATASET_INDEX_DIR']=paths['dataset_index_dir']
 environ['ES_INDEX_DIR']=paths['es_index_dir']
 
-environ['DIR']='/home/iaross/test'
-environ['DATASET_ID']='dummy2'
+environ['DIR'] = args.pdf_dir
+environ['DATASET_ID'] = args.dataset_id
 
 for _, pt in paths.items():
     if not exists(pt):
@@ -96,7 +107,7 @@ if action=="up" and (stage=="all" or stage=="ingest"):
 if action=="run" and (stage=="all" or stage=="ingest"):
     # TODO: parse dataset_id, pdf_dir
     print("Ingesting some documents.")
-    cmd('sh', './scripts/process_dir.sh', '/home/iaross/test/', 'dummy2')
+    cmd('sh', './scripts/process_dir.sh', args.pdf_dir, args.dataset_id)
 
 if (action=="up") and (stage=="all" or stage=="extract"): 
     cmd('docker stack deploy cosmos --compose-file docker-compose-extraction.yml')
@@ -108,7 +119,11 @@ if action=="up" and (stage=="all" or stage=="recall"): # or action="run;?
     cmd('docker stack deploy cosmos --compose-file docker-compose-recall.yml')
 
 if action=="run" and (stage=="all" or stage=="recall"): 
-    cmd('docker stack deploy cosmos --compose-file docker-compose-recall-createindexes.yml')
+    # TODO: make sure things are up
+    res = cmd('docker ps | grep worker1')
+    print(res)
+    import pdb; pdb.set_trace()
+    print(cmd('docker stack deploy cosmos --compose-file docker-compose-recall-createindexes.yml'))
 
 if action=="down" and stage=='ingest':
     for service in ['adminer', 'mysql-server-1', 'ingestion', 'scheduler', 'worker1', 'worker2', 'mysql-shell', 'create_schema', 'dbwebapp', 'gateway', 'search_backend']:
