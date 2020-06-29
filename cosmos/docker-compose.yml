@@ -50,8 +50,8 @@ services:
         networks:
             swarm_network:
         command: "dask-scheduler"
-        ports:
-            - 8787:8787
+#        ports:
+#            - 8787:8787
 
     worker1:
         image: uwcosmos/ingestion:dev
@@ -111,10 +111,11 @@ services:
         networks:
             swarm_network:
         environment:
-            - MYSQL_USER
-            - MYSQL_PASSWORD
-            - MYSQL_HOST
-            - MYSQL_PORT
+            - DBUSER=${MYSQL_USER}
+            - DBPASS=${MYSQL_PASSWORD}
+            - DBHOST=${MYSQL_HOST}
+            - DBPORT=${MYSQL_PORT}
+            - DBNAME=${MYSQL_DATABASE}
         image: neumayer/dbwebapp
         ports:
             - "8089:8080"

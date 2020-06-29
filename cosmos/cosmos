@@ -120,10 +120,7 @@ if action=="up" and (stage=="all" or stage=="recall"): # or action="run;?
 
 if action=="run" and (stage=="all" or stage=="recall"): 
     # TODO: make sure things are up
-    res = cmd('docker ps | grep worker1')
-    print(res)
-    import pdb; pdb.set_trace()
-    print(cmd('docker stack deploy cosmos --compose-file docker-compose-recall-createindexes.yml'))
+    cmd('docker-compose -f docker-compose-recall-createindexes.yml up')
 
 if action=="down" and stage=='ingest':
     for service in ['adminer', 'mysql-server-1', 'ingestion', 'scheduler', 'worker1', 'worker2', 'mysql-shell', 'create_schema', 'dbwebapp', 'gateway', 'search_backend']:

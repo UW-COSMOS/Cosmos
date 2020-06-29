@@ -1,7 +1,8 @@
-FROM python:3.7
+FROM python:3.7-alpine
 
 # Install bash and vim
-#RUN apk add bash vim
+#RUN apk add bash vim py-mysqldb
+RUN apk --no-cache add build-base mariadb-dev
 
 # Pillow requirements
 #run apt install build-base jpeg-dev zlib-dev
