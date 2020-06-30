@@ -3,44 +3,74 @@ Interface for applying Cosmos to document segmentation
 
 Current milestone (with demo links): https://github.com/UW-COSMOS/project-docs/tree/master/presentations_reports/milestone_3
 
-# Running the standalone images
-We provide a separate repo (https://github.com/UW-COSMOS/cosmos-demo) describing how to use our canonical docker images, which include everything necessary to run the model.
+## Services - overview
+1. ingestion
+    - Ingest the PDF documents
+    - Separate into page-level image objects
+    - Apply segmentation (separate regions of the page)
+    - Apply detection (visually classify regions)
+    - Postprocessing (combine regions and re-classify regions using a secondary model that uses text content)
+    - Populates `pdfs`, `pages`, `page objects`
+2. extraction
+    - Aggregate text sections, 
+    - Associate figures and tables with their respective captions
+    - For table objects, extract dataframe objects
+    - Populates `tables`, `object_contexts`
+3. recall
+    - Create an Anserini and ElasticSearch indexes on the contexts and objects
+4. Visualizers, tagging, and annotation approver
+    - Visual interfaces exist to 
+        - Visualize and annotate the detection output (classified regions of the pages),
+    - APIs exist to:
+        - Access + search the Anserini/Elasticsearch indexes (`birdnest_backend`)
+        - Access and annotate the page-level objects (`page_api`)
+        - Get table objects in dataframe, csv, and text-preview forms
+
+## Running the standalone images
+The COSMOS architecture is service-based. Running each stage of the pipeline requires: 
+    - Bringing up the worker services via `cosmos [stage] up [pdf_dir] [dataset_id]`
+    - Triggering the stage via `cosmos [stage] run [pdf_dir] [dataset_id]`
+
+A full pipeline run:
+  ```
+  export PDFS=./pdfs
+  export DATASET_ID=first_dataset
+  ./cosmos all up $PDFS $DATASET_ID # prepares services of all stages
+  ./cosmos ingest run $PDFS $DATASET_ID # start the ingestion process to ingest pdfs, separate pages, detect + classify regions 
+  ./cosmos extract run $PDFS $DATASET_ID # start the extraction process to aggregate sections and extract table objects
+  ./cosmos recall run $PDFS $DATASET_ID # create the searchable Anserini and ElasticSearch indexes
+  ```
+
+The stages must be run in order. `recall` requires the `object_contexts`, which
+are created in `extract`. `extract` requires the `page_objects`, which are
+created in `ingest`.
+
+**Important** Note that the `run` commands submit PDFs, pages, etc into a work
+queue. If submitting a late-stage run does not produce expected output, it is
+possible that the earlier stage(s) have not finished running.
+
+Page-level (ingestion) output can be viewed by browsing 'Page-level Extractions' on localhost:8081
+Classified, identified, and extracted objects (with their contexts) can be viewed by browsing on localhost:8082
 
 
-# Building + running the model from scratch
-It is also possible to build the model image yourself. To do so:
+## Known issues
 
-1. Switch to the cosmos directory
-2. Run, specifying the PDF input and desired output directories with the `INPUT_DIR` and `OUTPUT_DIR` environment variables, respectively
+## Scaling
+COSMOS workers are run as dask [TODO: link] workers as docker services. This
+allows services to be scaled arbitrarily, by adding a new node to the docker
+swarm and then scaling the service:
 
 ```
-OUTPUT_DIR=./output/ INPUT_DIR=/path/to/input/docs DEVICE=cpu docker-compose up
+# on master node
+docker swarm join-token worker
+
+# on worker node, copy/ paste the join command output from the master:
+docker swarm join --token SWMTKN-1-xxyyzz 128.xxx.yyy.zzz:port
+
+# back on master node, scale up the desired service:
+docker service scale cosmos-worker-2=2
+
 ```
-
-# Layout of the model
-
-Documentation can be viewed at https://uw-cosmos.github.io/Cosmos/
-
-The entry points for the program is cosmos/run.py
-
-The procedure of the program is laid out generally as follows (docs correspond to paths)
-
-1. Preprocessing -- cosmos/preprocessing
-    - Turn PDFs into PNGs so that they can be fed to a computer vision pipeline.
-2. Create proposals -- cosmos/connected_components
-    - Generate region proposals within document pages, this segments each page.
-3. Ingesting data -- cosmos/ingestion
-   - Prepare region proposals to be classified by a Neural Network as Body Text, Equation, Figure, etc.
-4. Model inference -- Inference runner: cosmos/infer ||  Model definition: cosmos/model
-   - Run the Neural Network on each region proposal.
-5. Convert to HTML/XML --  cosmos/converters
-   -  Results are converted to HTML/XML and class specific information extraction modules are run.
-6. Postprocessing -- cosmos/postprocessing
-   - Update class labels in light of extracted information.
-7. Equation specific OCR -- cosmos/latex_ocr
-   - Custom extraction pipeline for equations.
-8. Create knowledge base of figures and tables -- cosmos/construct_caption_tables
-9. Create knowledge base of equations -- cosmos/UnicodeParser
 
 # License and Acknowledgements
 All development work supported by DAPRA ASKE HR00111990013 and UW-Madison.
