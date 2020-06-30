@@ -26,12 +26,33 @@ from ingest.process.ocr.group_cls import check_overlap_bb
 from ingest.process.postprocess.xgboost_model.inference import run_inference as postprocess
 from ingest.process.postprocess.pp_rules import apply_rules as postprocess_rules
 from dask.distributed import get_worker
+import pickle
 
 import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 logging.getLogger("pdfminer").setLevel(logging.WARNING)
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
+
+
+def propose_and_pad(obj):
+    tmp_dir, pdf_name, page_num = obj
+    pkl_path = f'{os.path.join(tmp_dir, pdf_name)}'
+    image_path = f'{pkl_path}_{page_num}'
+    img = Image.open(image_path).convert('RGB')
+    with open(pkl_path, 'rb') as rf:
+        obj = pickle.load(rf)
+    coords = get_proposals(img)
+    padded_img = pad_image(img)
+    obj['id'] = '0'
+    obj['proposals'] = coords
+    obj['page_id'] = f'{pdf_name}_{page_num}'
+    obj['page_path'] = f'{tmp_dir}/{obj["page_id"]}'
+    d = f'{tmp_dir}/{pdf_name}_{page_num}_pad'
+    padded_img.save(d, "PNG")
+    obj['pad_img'] = d
+    return obj
+
 
 def process_page(inputs):
     if 'bytes' not in inputs:
@@ -78,6 +99,33 @@ def commit_objs(objs, page_id, session):
         session.refresh(obj)
         ids.append(obj.id)
     return ids
+
+
+def xgboost_postprocess(obj):
+    try:
+        worker = get_worker()
+        dp = None
+        for plg in worker.plugins:
+            if 'ProcessPlugin' in plg:
+                dp = worker.plugins[plg]
+                break
+        if dp is None:
+            raise ValueException('No process plugin registered')
+    except Exception as e:
+        logger.error(str(e), exc_info=True)
+        raise e
+
+    objects = obj['content']
+    objects = postprocess(dp.postprocess_model, dp.classes, objects)
+    obj['xgboost_content'] = objects
+    return obj
+
+
+def rules_postprocess(obj):
+    objects = obj['xgboost_content']
+    objects = postprocess_rules(objects)
+    obj['rules_content'] = objects
+    return obj
 
 
 def postprocess_page(obj):

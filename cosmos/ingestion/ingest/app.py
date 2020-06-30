@@ -1,24 +1,9 @@
-import uuid
 import falcon
 from .schema import Pdf, Page, PageObject
 import json
-import uuid
-import tempfile
-from .pdf_extractor import parse_pdf
-from .preprocess import resize_png
-import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import click
 import os
-import io
-import subprocess
-import glob
-from PIL import Image
-import requests
-from concurrent.futures import ThreadPoolExecutor
-import base64
-import time
 from ingest.ingest import ingest
 from dask.distributed import Client, fire_and_forget
 client = Client('scheduler:8786')

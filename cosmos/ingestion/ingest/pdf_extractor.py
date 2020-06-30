@@ -6,6 +6,7 @@ from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.layout import LAParams
 from pdfminer.converter import PDFPageAggregator
+import logging
 
 import pandas as pd
 
@@ -44,19 +45,31 @@ def parse_pdf(fp):
             interpreter.process_page(page)
             layout = device.get_result()
             for child in layout:
+                logging.info(type(child))
+                logging.info(f'{child.width} {child.height}')
+                logging.info('------')
                 if isinstance(child, LTTextBox):
                     for line in child:
-                        for char in line:
-                            if isinstance(char, LTChar):
-                                text += char.get_text()
-                                pos = update_pos(char.bbox,pos)
-                                page = idx
-                            else:
-                                texts.append(text)
-                                positions.append(pos)
-                                pages.append(page)
-                                text = ''
-                                pos = (10000,10000,-1,-1)
+                        positions.append(line.bbox)
+                        if line.get_text().strip() == 'SPECIMEN':
+                            import ipdb
+                            ipdb.set_trace()
+                        texts.append(line.get_text().strip())
+                        pages.append(idx)
+                        #for char in line:
+                        #    if isinstance(char, LTChar):
+                        #        text += char.get_text()
+                        #        if 'Fig' in text:
+                        #            print(line)
+                        #            #print(char.bbox)
+                        #        pos = update_pos(char.bbox,pos)
+                        #        page = idx
+                        #    else:
+                        #        texts.append(text)
+                        #        positions.append(pos)
+                        #        pages.append(page)
+                        #        text = ''
+                        #        pos = (10000,10000,-1,-1)
     if len(positions) == 0:
         return None, None                      
     x1, y1, x2, y2 = list(zip(*positions))

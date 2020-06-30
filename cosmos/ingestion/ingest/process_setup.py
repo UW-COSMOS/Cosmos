@@ -8,11 +8,13 @@ import joblib
 import yaml
 
 class ProcessPlugin(WorkerPlugin):
-    def __init__(self):
-        self.cfg_path = '/ingestion/ingest/process/configs/model_config.yaml'
-        postprocess_weights_pth = '/ingestion/ingest/process/weights/pp_model_weights.pth'
+    def __init__(self, cfg_path='/ingestion/ingest/process/configs/model_config.yaml',
+                       weights_path='/ingestion/ingest/process/weights/pp_model_weights.pth',
+                       classes_path='/ingestion/ingest/process/configs/classes.yaml'):
+        self.cfg_path = cfg_path
+        postprocess_weights_pth = weights_path
         self.postprocess_model = joblib.load(postprocess_weights_pth)
-        self.classes_pth = '/ingestion/ingest/process/configs/classes.yaml'
+        self.classes_pth = classes_path
         with open(self.classes_pth) as stream:
             self.classes = yaml.load(stream)["classes"]
 
