@@ -72,6 +72,42 @@ docker service scale cosmos-worker-2=2
 
 ```
 
+## GPUs
+**GPU usage is highly recommended for the detection process**
+Currently, GPUs are not required, but performance without them is not recommended. To enable GPUs,
+ensure that the worker2 service definition in `docker-compose.yml` includes cuda:0 as the device:
+```
+- DEVICE=cuda:0
+- CUDA_VISIBLE_DEVICES=0
+```
+
+For CPU-based detection, make sure the 'cpu' device is uncommented in `docker-compose.yml`:
+
+```
+- DEVICE=cpu
+- CUDA_VISIBLE_DEVICES=''
+```
+
+
+## Services
+A list of the current services, their roles, and interactions
+
+- `cosmos_adminer` - web interface to mysql database, running on localhost:8080. Username/passwords are set in `./cosmos` script
+- `cosmos_agg_worker1` - DASK worker for section aggregation
+- `cosmos_birdnest_backend` - Search API for recall. Simple interface to Anserini + Elasticsearch databases
+- `cosmos_create_schema` - Initial schema creation
+- `cosmos_dbwebapp` - Simple helper service to echo database availability
+- `cosmos_es01` - Elasticsearch node for recall
+- `cosmos_gateway` - Visualization frontend for page-level detection visualization 
+- `cosmos_ingestion` - PDF ingestion service
+- `cosmos_kbviz` - Visualization frontend for Anserini + Elasticsearch search interface
+- `cosmos_mysql-server-1` - central database
+- `cosmos_scheduler` - DASK scheduler. Jobs are submitted to here and then passed along to various worker nodes
+- `cosmos_search_backend` - Page-level API
+- `cosmos_table_worker1` - Worker to extract dataframe objects from tables
+- `cosmos_worker1` - Worker for non-GPU tasks within ingestion stage
+- `cosmos_worker2` - Worker for GPU tasks within ingestion stage
+
 # License and Acknowledgements
 All development work supported by DAPRA ASKE HR00111990013 and UW-Madison.
 
