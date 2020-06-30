@@ -78,23 +78,14 @@ services:
             - MYSQL_PASSWORD
             - MYSQL_HOST
             - MYSQL_PORT
+#            - DEVICE=cuda:0
+#            - CUDA_VISIBLE_DEVICES=0
             - DEVICE=cpu
             - CUDA_VISIBLE_DEVICES=''
         command: "dask-worker tcp://scheduler:8786 --nprocs 1 --resources 'GPU=1' --preload ingest.detect_setup"
         depends_on:
             - scheduler
               #
-
-    mysql-shell:
-        networks:
-            swarm_network:
-        env_file:
-            - ./database/innodb-cluster/mysql-shell.env
-        image: neumayer/mysql-shell-batch
-        volumes:
-            - ./database/innodb-cluster/scripts/:/scripts/
-        depends_on:
-          - mysql-server-1
 
     create_schema:
         networks:

@@ -123,7 +123,7 @@ if action=="run" and (stage=="all" or stage=="recall"):
     cmd('docker-compose -f docker-compose-recall-createindexes.yml up')
 
 if action=="down" and stage=='ingest':
-    for service in ['adminer', 'mysql-server-1', 'ingestion', 'scheduler', 'worker1', 'worker2', 'mysql-shell', 'create_schema', 'dbwebapp', 'gateway', 'search_backend']:
+    for service in ['adminer', 'mysql-server-1', 'ingestion', 'scheduler', 'worker1', 'worker2', 'create_schema', 'dbwebapp', 'gateway', 'search_backend']:
         cmd("docker", "service", "rm", f"cosmos_{service}")
 
 if action=="down" and stage=='extract':
