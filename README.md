@@ -74,8 +74,10 @@ docker service scale cosmos-worker-2=2
 
 ## GPUs
 **GPU usage is highly recommended for the detection process**
-Currently, GPUs are not required, but performance without them is not recommended. To enable GPUs,
-ensure that the worker2 service definition in `docker-compose.yml` includes cuda:0 as the device:
+Currently, GPUs are not required, but performance without them is not
+guaranteed. It requires at least 12GB to be allocated to the docker daemon. To
+enable GPUs, ensure that the worker2 service definition in `docker-compose.yml`
+includes cuda:0 as the device:
 ```
 - DEVICE=cuda:0
 - CUDA_VISIBLE_DEVICES=0
