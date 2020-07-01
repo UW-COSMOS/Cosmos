@@ -54,7 +54,7 @@ def run(directory, dataset_id=""):
         logger.info('Finished submitting jobs')
         successful_resps = [r for r in resps if r.status_code == 200]
         logger.info(f'There were {len(resps) - len(successful_resps)} failed job submissions')
-        time.sleep(2400)
+#        time.sleep(2400)
     print(processed_subdirs)
     #pages_dict = {}
     #with tqdm(total=len(successful_resps)) as pbar:
