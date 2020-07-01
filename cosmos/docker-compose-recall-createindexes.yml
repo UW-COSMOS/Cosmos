@@ -6,7 +6,7 @@ networks:
 
 services:
     preprocess:
-        image: uwcosmos/retrieval:dev
+        image: uwcosmos/retrieval:latest
         environment:
             - DATASET_ID
             - MYSQL_USER
@@ -18,7 +18,7 @@ services:
         command: "python write_dataset.py"
 #
     ingest_elastic:
-        image: uwcosmos/es_ingest:dev
+        image: uwcosmos/es_ingest:latest
         command: "python ingest_elastic.py"
         environment:
             - DATASET_ID

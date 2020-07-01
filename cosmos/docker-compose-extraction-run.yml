@@ -7,7 +7,7 @@ networks:
 
 services:
     aggregate_sections:
-        image: uwcosmos/aggregate_sections:dev
+        image: uwcosmos/aggregate_sections:latest
         command: "python3 -m agg.aggregate"
         environment:
             - DATASET_ID
@@ -17,10 +17,9 @@ services:
             - MYSQL_PORT
 
     extract_tables:
-        image: uwcosmos/extract_tables:dev
+        image: uwcosmos/extract_tables:latest
         ipc: host
         command: "python3 -m tableextractions.pdf_table_extractions"
-#        command: "tail -f :dev/null"
         volumes:
             - ${DIR}:/input
         environment:

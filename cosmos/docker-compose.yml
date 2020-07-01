@@ -40,7 +40,7 @@ services:
           - mysql-server-1
 
     ingestion:
-        image: uwcosmos/ingestion:dev
+        image: uwcosmos/ingestion:latest
         networks:
             swarm_network:
         environment:
@@ -59,7 +59,7 @@ services:
             - 8000:8000
 
     scheduler:
-        image: uwcosmos/ingestion:dev
+        image: uwcosmos/ingestion:latest
         networks:
             swarm_network:
         command: "dask-scheduler"
@@ -67,7 +67,7 @@ services:
 #            - 8787:8787
 
     worker1:
-        image: uwcosmos/ingestion:dev
+        image: uwcosmos/ingestion:latest
         networks:
             swarm_network:
         environment:
@@ -83,7 +83,7 @@ services:
             - scheduler
 
     worker2:
-        image: uwcosmos/ingestion:dev
+        image: uwcosmos/ingestion:latest
         networks:
             swarm_network:
         environment:
@@ -110,7 +110,7 @@ services:
             - MYSQL_PORT
             - MYSQL_DATABASE
             - ALEMBIC_CFG=alembic.ini
-        image: uwcosmos/schema:dev
+        image: uwcosmos/schema:latest
         command: python schema.py
 
     dbwebapp:
@@ -131,7 +131,7 @@ services:
     gateway:
         networks:
             swarm_network:
-        image: uwcosmos/visualizer:dev
+        image: uwcosmos/visualizer:latest
         ports:
             - 8081:80
         depends_on:
@@ -140,7 +140,7 @@ services:
     search_backend:
         networks:
             swarm_network:
-        image: uwcosmos/sbackend:dev
+        image: uwcosmos/sbackend:latest
         command: "flask run --host=0.0.0.0 --port=5001"
         ports:
             - 5001:5001

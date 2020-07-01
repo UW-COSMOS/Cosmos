@@ -16,7 +16,7 @@ services:
       command: ["mysqld","--server_id=1","--binlog_checksum=NONE","--gtid_mode=ON","--enforce_gtid_consistency=ON","--log_bin","--log_slave_updates=ON","--master_info_repository=TABLE","--relay_log_info_repository=TABLE","--transaction_write_set_extraction=XXHASH64","--user=mysql","--skip-host-cache","--skip-name-resolve", "--default_authentication_plugin=mysql_native_password", "--max-connections=1024", "--innodb_buffer_pool_size=16g", "--group-concat-max-len=4294967295", "--innodb-log-file-size=1G"]
 
     birdnest_backend:
-        image: uwcosmos/birdnest_backend:dev
+        image: uwcosmos/birdnest_backend:latest
         ipc: host
         command: "flask run --host=0.0.0.0 --port=5010"
         volumes:
@@ -55,7 +55,7 @@ services:
             retries: 5
 
     kbviz:
-        image: uwcosmos/visualizer_kb:dev
+        image: uwcosmos/visualizer_kb:latest
         ports:
             - 8082:80
         environment:
