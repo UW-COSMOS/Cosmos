@@ -25,7 +25,7 @@ MIN_SECTION_LEN = 30
 
 
 def process_dataset(did, client):
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     conn = engine.connect()
     Session = sessionmaker()
     Session.configure(bind=engine)
@@ -48,17 +48,17 @@ def process_dataset(did, client):
             for pid, page_number, poid, po_content, po_cls, po_bb in res2:
                 obj = {'pdf_id' : pid, 'page_number': page_number, 'po_id': poid, 'po_content': po_content, 'po_cls': po_cls, 'po_bb': po_bb}
                 obj_list.append(obj)
-                
+
             if len(obj_list) == 0:
                 continue
             [r] = client.scatter([obj_list])
-            r1 = client.submit(aggregate_sections, obj_list)
+            r1 = client.submit(aggregate_sections, obj_list, resources={"agg" : 1})
             fire_and_forget(r1)
-            r2 = client.submit(aggregate_equations, r)
+            r2 = client.submit(aggregate_equations, r, resources={"agg" : 1})
             fire_and_forget(r2)
-            r3 = client.submit(aggregate_figures, r)
+            r3 = client.submit(aggregate_figures, r, resources={"agg" : 1})
             fire_and_forget(r3)
-            r4 = client.submit(aggregate_tables, r)
+            r4 = client.submit(aggregate_tables, r, resources={"agg" : 1})
             fire_and_forget(r4)
     except Exception as e:
         logger.error(str(e), exc_info=True)
@@ -95,7 +95,7 @@ def groups(pobjs):
     return groups
 
 def aggregate_equations(objs):
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()
@@ -150,12 +150,12 @@ def aggregate_equations(objs):
                                header_id=eq["po_id"],
                                header_content=eq["po_content"],
                                content=aggregated_context)
-            final_objects.append(oc)
+            final_objs.append(oc)
             session.add(oc)
             session.commit()
             session.refresh(oc)
             for update_id in update_ids:
-                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False) 
+                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False)
             session.commit()
     except Exception as e:
         logger.error(str(e), exc_info=True)
@@ -166,7 +166,7 @@ def aggregate_equations(objs):
     return 'Ok'
 
 def aggregate_figures(objs):
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()
@@ -224,7 +224,7 @@ def aggregate_figures(objs):
             session.commit()
             session.refresh(oc)
             for update_id in update_ids:
-                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False) 
+                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False)
             session.commit()
     except Exception as e:
         logger.error(str(e), exc_info=True)
@@ -237,7 +237,7 @@ def aggregate_figures(objs):
 
 
 def aggregate_tables(objs):
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()
@@ -293,7 +293,6 @@ def aggregate_tables(objs):
             update_ids = [tab['po_id']]
             if tab_caption is not None:
                 update_ids.append(tab_caption['po_id'])
-            update_ids = [fig['po_id'], fig_caption['po_id']]
             aggregated_context = f"{tab['po_content']}\n{tab_caption['po_content']}" if tab_caption is not None else tab['po_content']
             if aggregated_context.strip() == '':
                 continue
@@ -306,7 +305,7 @@ def aggregate_tables(objs):
             session.commit()
             session.refresh(oc)
             for update_id in update_ids:
-                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False) 
+                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False)
             session.commit()
     except Exception as e:
         logger.error(str(e), exc_info=True)
@@ -318,7 +317,7 @@ def aggregate_tables(objs):
 
 
 def aggregate_sections(objs):
-    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()
@@ -388,7 +387,7 @@ def aggregate_sections(objs):
             session.commit()
             session.refresh(oc)
             for update_id in update_ids:
-                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False) 
+                res = session.query(PageObject).filter(PageObject.id == update_id).update({PageObject.context_id: oc.id}, synchronize_session = False)
             session.commit()
     except Exception as e:
         logger.error(str(e), exc_info=True)

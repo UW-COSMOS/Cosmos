@@ -1,118 +1,154 @@
-version: '2.3'
-services:
-  es01:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
-    container_name: es01
-    environment:
-      - node.name=es01
-      - discovery.seed_hosts=es02
-      - cluster.initial_master_nodes=es01,es02
-      - cluster.name=docker-cluster
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - esdata01:/ssd/ankur/elasticsearch/data
-    ports:
-      - 9200:9200
-    networks:
-      - esnet
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-
-
-  es02:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
-    container_name: es02
-    environment:
-      - node.name=es02
-      - discovery.seed_hosts=es01
-      - cluster.initial_master_nodes=es01,es02
-      - cluster.name=docker-cluster
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - esdata02:/ssd/ankur/elasticsearch/data
-    networks:
-      - esnet
-
-  ingest_elastic:
-      image: ankurgos/ingest_elastic:latest
-      ipc: host
-      command: "/scripts/wait_for_elastic.sh python ingest_elastic.py --no-objects --sections --no-code --tables --figures --equations" 
-      networks:
-        - esnet
-      volumes:
-        - ./scripts:/scripts/
-      environment:
-          - DBCONNECT
-  qa:
-      image: ankurgos/qa:latest
-      ipc: host
-      runtime: nvidia
-      networks:
-        - esnet
-      command: 
-          - /bin/bash
-          - -c
-          - |
-            /scripts/wait_for_elastic.sh
-            export LC_ALL=C.UTF-8
-            export LANG=C.UTF-8
-            flask run --host=0.0.0.0 --port=4000
-      environment:
-          - SQUAD_DIR=../squad
-          - FLASK_APP=app.py
-          - FLASK_ENV=development
-      ports:
-          - 4000:4000
-
-  search_backend:
-      image: ankurgos/search_backend:latest
-      ipc: host
-      command: "/scripts/wait_for_elastic.sh flask run --host=0.0.0.0 --port=5001"
-      networks:
-        - esnet
-      volumes:
-        - ./scripts:/scripts
-      environment:
-          - DBCONNECT
-          - FLASK_APP=app.py
-          - FLASK_ENV=development
-      ports:
-          - 5001:5001
-
-  word2vec_endpoint:
-      image: ankurgos/word2vec_endpoints:latest
-      ipc: host
-      container_name: word2vec_endpoint
-      command: "flask run --host=0.0.0.0 --port=5003"
-      networks:
-        - esnet
-      environment:
-          - DBCONNECT
-          - FLASK_APP=app.py
-          - FLASK_ENV=development
-      ports:
-          - 5003:5003
-      volumes:
-          - ./word_embeddings/data:/app/data
-
-volumes:
-  esdata01:
-    driver: local
-  esdata02:
-    driver: local
+version: '3.4'
 
 networks:
-  esnet:
+    swarm_network:
+        driver: overlay
+        attachable: true
+
+services:
+    adminer:
+        image: adminer
+        ports:
+            - 8080:8080
+        networks:
+            swarm_network:
+
+    mysql-server-1:
+      env_file:
+        - ./database/innodb-cluster/mysql-server.env
+      image: mysql/mysql-server:8.0.12
+      networks:
+          swarm_network:
+      volumes:
+          - ${DB_PTH}:/var/lib/mysql
+          - ${DB_TMP_PTH}:/tmp
+      ports:
+        - "3301:3306"
+      healthcheck:
+          disable: true
+      command: ["mysqld","--server_id=1","--binlog_checksum=NONE","--gtid_mode=ON","--enforce_gtid_consistency=ON","--log_bin","--log_slave_updates=ON","--master_info_repository=TABLE","--relay_log_info_repository=TABLE","--transaction_write_set_extraction=XXHASH64","--user=mysql","--skip-host-cache","--skip-name-resolve", "--default_authentication_plugin=mysql_native_password", "--max-connections=1024", "--innodb_buffer_pool_size=16g", "--group-concat-max-len=4294967295", "--innodb-log-file-size=1G"]
+
+    mysql-shell:
+        networks:
+            swarm_network:
+        env_file:
+            - ./database/innodb-cluster/mysql-shell.env
+        image: neumayer/mysql-shell-batch
+        volumes:
+            - ./database/innodb-cluster/scripts/:/scripts/
+        depends_on:
+          - mysql-server-1
+
+    ingestion:
+        image: uwcosmos/ingestion:latest
+        networks:
+            swarm_network:
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+            - DEVICE=cpu
+            - PYTHONUNBUFFERED=TRUE
+        command: "gunicorn -w 4 -b 0.0.0.0:8000 ingest.app"
+        depends_on:
+            - scheduler
+            - worker1
+            - worker2
+        ports:
+            - 8000:8000
+
+    scheduler:
+        image: uwcosmos/ingestion:latest
+        networks:
+            swarm_network:
+        command: "dask-scheduler"
+#        ports:
+#            - 8787:8787
+
+    worker1:
+        image: uwcosmos/ingestion:latest
+        networks:
+            swarm_network:
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+            - CUDA_VISIBLE_DEVICES=''
+        command: "dask-worker tcp://scheduler:8786 --nprocs 15 --resources 'process=1' --preload ingest.process_setup"
+        volumes:
+            - ${TMP_PTH}:/tmp
+        depends_on:
+            - scheduler
+
+    worker2:
+        image: uwcosmos/ingestion:latest
+        networks:
+            swarm_network:
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+#            - DEVICE=cuda:0
+#            - CUDA_VISIBLE_DEVICES=0
+            - DEVICE=cpu
+            - CUDA_VISIBLE_DEVICES=''
+        command: "dask-worker tcp://scheduler:8786 --nprocs 1 --resources 'GPU=1' --preload ingest.detect_setup"
+        depends_on:
+            - scheduler
+              #
+
+    create_schema:
+        networks:
+            swarm_network:
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+            - MYSQL_DATABASE
+            - ALEMBIC_CFG=alembic.ini
+        image: uwcosmos/schema:latest
+        command: python schema.py
+
+    dbwebapp:
+        networks:
+            swarm_network:
+        environment:
+            - DBUSER=${MYSQL_USER}
+            - DBPASS=${MYSQL_PASSWORD}
+            - DBHOST=${MYSQL_HOST}
+            - DBPORT=${MYSQL_PORT}
+            - DBNAME=${MYSQL_DATABASE}
+        image: neumayer/dbwebapp
+        ports:
+            - "8089:8080"
+        depends_on:
+            - mysql-server-1
+
+    gateway:
+        networks:
+            swarm_network:
+        image: uwcosmos/visualizer:latest
+        ports:
+            - 8081:80
+        depends_on:
+            - search_backend
+  
+    search_backend:
+        networks:
+            swarm_network:
+        image: uwcosmos/sbackend:latest
+        command: "flask run --host=0.0.0.0 --port=5001"
+        ports:
+            - 5001:5001
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+            - PDF_DB=pdfs
+            - FLASK_APP=app.py
+            - FLASK_ENV=development
