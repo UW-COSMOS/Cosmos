@@ -24,7 +24,20 @@ services:
           - ${DB_TMP_PTH}:/tmp
       ports:
         - "3301:3306"
+      healthcheck:
+          disable: true
       command: ["mysqld","--server_id=1","--binlog_checksum=NONE","--gtid_mode=ON","--enforce_gtid_consistency=ON","--log_bin","--log_slave_updates=ON","--master_info_repository=TABLE","--relay_log_info_repository=TABLE","--transaction_write_set_extraction=XXHASH64","--user=mysql","--skip-host-cache","--skip-name-resolve", "--default_authentication_plugin=mysql_native_password", "--max-connections=1024", "--innodb_buffer_pool_size=16g", "--group-concat-max-len=4294967295", "--innodb-log-file-size=1G"]
+
+    mysql-shell:
+        networks:
+            swarm_network:
+        env_file:
+            - ./database/innodb-cluster/mysql-shell.env
+        image: neumayer/mysql-shell-batch
+        volumes:
+            - ./database/innodb-cluster/scripts/:/scripts/
+        depends_on:
+          - mysql-server-1
 
     ingestion:
         image: uwcosmos/ingestion:dev
@@ -95,6 +108,8 @@ services:
             - MYSQL_PASSWORD
             - MYSQL_HOST
             - MYSQL_PORT
+            - MYSQL_DATABASE
+            - ALEMBIC_CFG=alembic.ini
         image: uwcosmos/schema:dev
         command: python schema.py
 

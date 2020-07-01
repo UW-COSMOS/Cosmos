@@ -119,8 +119,6 @@ def main(sqlite):
         time.sleep(1)
 
     logger.info('DB Up, creating schema')
-    username = os.environ['DBUSER']
-    password = os.environ['DBPASS']
     engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     Base.metadata.create_all(engine)
     alembic_cfg = Config(os.environ['ALEMBIC_CFG'])
