@@ -49,11 +49,12 @@ objtype_index_map = {
 def get_bibjson(pdf_name):
     xdd_docid = pdf_name.replace(".pdf", "")
 #    logging.info(f"Getting bibjson for {xdd_docid}")
-    resp = requests.get(f"https://geodeepdive.org/api/articles?docid={xdd_docid}")
-    if resp.status_code == 200:
-        data = resp.json()
-        bibjson = data["success"]["data"][0]
-    else:
+    try:
+        resp = requests.get(f"https://geodeepdive.org/api/articles?docid={xdd_docid}")
+        if resp.status_code == 200:
+            data = resp.json()
+            bibjson = data["success"]["data"][0]
+    except:
         bibjson = {"Error" : "Could not retrieve article data"}
     return bibjson
 
