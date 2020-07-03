@@ -1,13 +1,13 @@
 """
 Information Retrieval using anserinin given a query
 """
-from pyserini.search import pysearch
+from pyserini.search import SimpleSearcher
 import pickle
 
 class Retrieval:
     def __init__(self, doc_idx_path, context_idx_pth, doc2odoc_pth, ctx2octx_pth, octx2odoc_pth, k1=5, k2=100):
-        self.doc_searcher = pysearch.SimpleSearcher(doc_idx_path)
-        self.context_searcher = pysearch.SimpleSearcher(context_idx_pth)
+        self.doc_searcher = SimpleSearcher(doc_idx_path)
+        self.context_searcher = SimpleSearcher(context_idx_pth)
         with open(doc2odoc_pth, 'rb') as handle:
             self.doc2odoc_map = pickle.load(handle)
         with open(ctx2octx_pth, 'rb') as handle:
