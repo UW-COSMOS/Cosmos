@@ -62,7 +62,8 @@ services:
           - ENVIRONMENT=production
           - MODE=${MODE:-visualizer}
           - PUBLIC_URL=/
-          - API_BASE_URL=/search
+            #          I don't think these API URLs matter at startup time.. only compile time IAR - 03.Jul.2020
+#          - OBJECT_API_BASE_URL=/v1/api
+#          - API_BASE_URL=/v1/api
           - API_ERROR_MESSAGE
-          - OBJECT_API_BASE_URL=/search
           - WORD2VEC_API_BASE_URL=/word2vec
