@@ -4,8 +4,9 @@ from ingest.process.detection.src.torch_model.train.data_layer.xml_loader import
 from pascal_voc_writer import Writer
 from os.path import join, isdir
 from os import mkdir
-from tqdm import tqdm
 from collections import defaultdict
+import logging
+logger = logging.getLogger(__name__)
 
 class InferenceHelper:
     def __init__(self, model, dataset, device):
@@ -29,7 +30,7 @@ class InferenceHelper:
         loader = DataLoader(self.dataset, batch_size=1, collate_fn=self.dataset.collate)
         pred_dict = defaultdict(list)
         s_pred_dict = defaultdict(list)
-        for ex in tqdm(loader):
+        for ex in loader:
             batch, db_ex = ex
             windows = batch.neighbor_windows.to(self.device)
             ex = batch.center_windows.to(self.device)
@@ -39,7 +40,6 @@ class InferenceHelper:
             windows_sub = windows[0]
             ex_sub = ex[0].unsqueeze(0)
             rois, cls_scores = self.model(ex_sub, windows_sub,radii, angles, ex_color, batch.center_bbs, self.device)
-            #probabilities = torch.nn.functional.softmax(cls_scores).squeeze()
             bb = batch.center_bbs[0] 
             probs, pred_idxs = torch.sort(cls_scores, dim=1, descending=True)
             sprobs = torch.softmax(probs, dim=1)

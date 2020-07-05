@@ -45,9 +45,9 @@ def parse_pdf(fp):
             interpreter.process_page(page)
             layout = device.get_result()
             for child in layout:
-                logging.info(type(child))
-                logging.info(f'{child.width} {child.height}')
-                logging.info('------')
+                #logging.info(type(child))
+                #logging.info(f'{child.width} {child.height}')
+                #logging.info('------')
                 if isinstance(child, LTTextBox):
                     for line in child:
                         positions.append(line.bbox)

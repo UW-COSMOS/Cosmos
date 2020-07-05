@@ -19,7 +19,7 @@ class ConfigManager:
             :param fp:
             """
             with open(fp) as fh:
-                config = yaml.load(fh)
+                config = yaml.load(fh, yaml.Loader)
                 for key, value in config.items():
                     value2 = (Struct(**value) if isinstance(value, dict) else value)
                     self.__dict__[key] = value2

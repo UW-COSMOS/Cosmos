@@ -29,19 +29,29 @@ from dask.distributed import get_worker
 import pickle
 
 import logging
-logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
-logging.getLogger("pdfminer").setLevel(logging.WARNING)
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.INFO)
+logging.getLogger("pdfminer").setLevel(logging.DEBUG)
+logging.getLogger("PIL").setLevel(logging.DEBUG)
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 def propose_and_pad(obj):
     tmp_dir, pdf_name, page_num = obj
-    pkl_path = f'{os.path.join(tmp_dir, pdf_name)}'
-    image_path = f'{pkl_path}_{page_num}'
+    pkl_path = f'{os.path.join(tmp_dir, pdf_name)}_{page_num}.pkl'
+    image_path = f'{os.path.join(tmp_dir, pdf_name)}_{page_num}'
     img = Image.open(image_path).convert('RGB')
     with open(pkl_path, 'rb') as rf:
-        obj = pickle.load(rf)
+        try:
+            obj = pickle.load(rf)
+        except EOFError as e:
+            logging.error(e)
+            logging.error(f'Pickle path: {pkl_path}')
+            raise e
+        except pickle.UnpicklingError as e:
+            logging.error(e)
+            logging.error(f'Pickle path: {pkl_path}')
+            raise e
     coords = get_proposals(img)
     padded_img = pad_image(img)
     obj['id'] = '0'
@@ -51,7 +61,9 @@ def propose_and_pad(obj):
     d = f'{tmp_dir}/{pdf_name}_{page_num}_pad'
     padded_img.save(d, "PNG")
     obj['pad_img'] = d
-    return obj
+    with open(pkl_path, 'wb') as wf:
+        pickle.dump(obj, wf)
+    return pkl_path
 
 
 def process_page(inputs):

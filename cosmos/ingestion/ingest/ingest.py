@@ -3,7 +3,9 @@ import pickle
 import uuid
 import tempfile
 import shutil
+from dask_cuda import LocalCUDACluster
 from ingest.preprocess import resize_png
+import functools
 import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -17,40 +19,39 @@ from ingest.process_page import process_page as pp, postprocess_page, propose_an
 from ingest.process_setup import ProcessPlugin
 from ingest.detect import detect
 from ingest.detect_setup import DetectPlugin
-from dask.distributed import get_client, fire_and_forget, Client, LocalCluster
+from dask.distributed import get_client, fire_and_forget, Client, LocalCluster, progress
 from ingest.utils.pdf_helpers import get_pdf_names
 from ingest.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
 import pikepdf
 
 import logging
-logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
-logging.getLogger("pdfminer").setLevel(logging.WARNING)
-logger = logging.getLogger()
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.ERROR)
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
+logging.getLogger("PIL").setLevel(logging.ERROR)
+logging.getLogger("ingest.detect").setLevel(logging.ERROR)
+logging.getLogger("ingest.process.detection.src.torch_model.model.model").setLevel(logging.ERROR)
+logging.getLogger("ingest.process.detection.src.utils.ingest_images").setLevel(logging.ERROR)
+logging.getLogger("ingest.process.detection.src.torch_model.train.data_layer.xml_loader").setLevel(logging.ERROR)
+
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
 class Ingest:
-    def __init__(self, use_semantic_detection=False, client=None, model_config=None, weights_pth=None, device_str=None,
+    def __init__(self, scheduler_address, use_semantic_detection=False, client=None,
                        tmp_dir=None, use_xgboost_postprocess=False, use_rules_postprocess=False, xgboost_config=None):
         logging.info("Initializing Ingest object")
         self.client = client
         if self.client is None:
             logging.info("Setting up client")
-            cl = LocalCluster(n_workers=1, threads_per_worker=1)
-            self.client = Client(cl, serializers=['msgpack', 'dask'], deserializers=['msgpack', 'dask'])
+            self.client = Client(scheduler_address, serializers=['msgpack', 'dask'], deserializers=['msgpack', 'dask'])
+            logging.info(self.client)
         self.use_xgboost_postprocess = use_xgboost_postprocess
         self.use_rules_postprocess = use_rules_postprocess
-        self.model_config = model_config
-        self.weights_pth = weights_pth
-        self.device_str = device_str
         self.use_semantic_detection = use_semantic_detection
         if use_semantic_detection:
-            if model_config is None or weights_pth is None or device_str is None:
-                raise ValueError("model_config, weights_pth, and device_str must all be valid strings")
-            logging.info("Semantic detection enabled, loading detection model to CPUs.")
-            plugin = DetectPlugin(model_config, weights_pth, device_str, keep_bytes=False)
-            self.client.register_worker_plugin(plugin)
             if self.use_xgboost_postprocess:
                 if xgboost_config is None:
                     raise ValueError("If using xgboost postprocess, you need to specify xgboost_config")
@@ -66,32 +67,43 @@ class Ingest:
         if self.client is not None:
             self.client.close()
 
-    def ingest(self, pdf_directory, dataset_id, result_path):
+    def ingest(self, pdf_directory, dataset_id, result_path, remove_watermark=False):
         if self.tmp_dir is not None:
-            self._ingest_local(pdf_directory, dataset_id, result_path)
+            self._ingest_local(pdf_directory, dataset_id, result_path, remove_watermark=remove_watermark)
         else:
             self._ingest_distributed(pdf_directory, dataset_id)
 
-    def _ingest_local(self, pdf_directory, dataset_id, result_path):
-        pdfs = get_pdf_names(pdf_directory)
-        for pdf in pdfs:
-            Ingest.remove_watermark(pdf)
-        images = [self.client.submit(Ingest.pdf_to_images, pdf, dataset_id, self.images_tmp) for pdf in pdfs]
+    def _ingest_local(self, pdf_directory, dataset_id, result_path, remove_watermark=False):
+        pdfnames = get_pdf_names(pdf_directory)
+        pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
+        if remove_watermark:
+            logging.info('Removing watermarks')
+            pdfs = []
+            for pdf in pdfnames:
+                pdfs.append(Ingest.remove_watermark(pdf))
+            #pdfs = [self.client.submit(Ingest.remove_watermark, pdf, resources={'process': 1}) for pdf in pdfnames]
+            images = self.client.map(pdf_to_images, pdfs)
+        else:
+            logging.info('Starting ingestion.')
+            images = [self.client.submit(pdf_to_images, pdf, resources={'process': 1}) for pdf in pdfnames]
+        progress(images)
         images = [i.result() for i in images]
+        images = [i for i in images if i is not None]
         images = [i for il in images for i in il]
-        images = self.client.map(propose_and_pad, images, priority=8)
+        images = self.client.map(propose_and_pad, images, resources={'process': 1}, priority=8)
         if self.use_semantic_detection:
-            images = self.client.map(detect, images, priority=8)
-            images = self.client.map(regroup, images)
-            images = self.client.map(pool_text, images)
+            images = self.client.map(detect, images, resources={'GPU': 1}, priority=8)
+            images = self.client.map(regroup, images, resources={'process': 1})
+            images = self.client.map(pool_text, images, resources={'process': 1})
             if self.use_xgboost_postprocess:
-                images = self.client.map(xgboost_postprocess, images)
+                images = self.client.map(xgboost_postprocess, images, resources={'process': 1})
                 if self.use_rules_postprocess:
-                    images = self.client.map(rules_postprocess, images)
+                    images = self.client.map(rules_postprocess, images, resources={'process': 1})
+        progress(images)
         images = [i.result() for i in images]
         with open(result_path, 'wb') as wf:
             pickle.dump(images, wf)
-        #shutil.rmtree(self.tmp_dir)
+        shutil.rmtree(self.tmp_dir)
 
     def _ingest_distributed(self, pdf_directory, dataset_id):
         raise NotImplementedError("Distributed setup currently not implemented via Ingest class. Set a tmp directory.")
@@ -100,28 +112,42 @@ class Ingest:
     def remove_watermark(cls, filename):
         target = pikepdf.Pdf.open(filename)
         new = pikepdf.Pdf.new()
-        for ind, page in enumerate(target.pages):
-            commands = []
-            BDC = False
-            for operands, operator in pikepdf.parse_content_stream(page):
-                if str(operator) == 'BDC':
-                    BDC = True
-                    continue
-                if BDC:
-                    if str(operator) == 'EMC':
-                        BDC = False
-                        continue
-                    continue
-                commands.append((operands, operator))
-            new_content_stream = pikepdf.unparse_content_stream(commands)
-            new.add_blank_page()
-            new.pages[ind].Contents = new.make_stream(new_content_stream)
-            new.pages[ind].Resources = new.copy_foreign(target.make_indirect(target.pages[ind].Resources))
-        new.remove_unreferenced_resources()
-        new.save(filename)
+        try:
+            for ind, page in enumerate(target.pages):
+                commands = []
+                BDC = False
+                for operands, operator in pikepdf.parse_content_stream(page):
+                    #for o in operands:
+                    #    if type(o) == pikepdf.Dictionary:
+                    #        print(o)
+                    #        if '/Subtype' in o:
+                    #            print(o['/Subtype'])
+                    #if str(operator) == 'BDC':
+                    #    BDC = True
+                    #    continue
+                    #if BDC:
+                    #    if str(operator) == 'EMC':
+                    #        BDC = False
+                    #        continue
+                    #    continue
+                    commands.append((operands, operator))
+                new_content_stream = pikepdf.unparse_content_stream(commands)
+                new.add_blank_page()
+                new.pages[ind].Contents = new.make_stream(new_content_stream)
+                new.pages[ind].Resources = new.copy_foreign(target.make_indirect(target.pages[ind].Resources))
+            new.remove_unreferenced_resources()
+            new.save(filename)
+            return filename
+        except RuntimeError as e:
+            os.remove(filename)
+            logger.error(f'Error in file: {filename}')
+            logger.error(e)
+            return None
 
     @classmethod
-    def pdf_to_images(cls, filename, dataset_id, tmp_dir):
+    def pdf_to_images(cls, dataset_id, tmp_dir, filename):
+        if filename is None:
+            return None
         pdf_name = os.path.basename(filename)
         try:
             meta, dims = parse_pdf(filename)
@@ -136,7 +162,7 @@ class Ingest:
                         '-r600',
                         f'-sOutputFile="{tmp_dir}/{pdf_name}_%d"',
                         filename
-                        ])
+                        ], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
         objs = []
         names = glob.glob(f'{tmp_dir}/{pdf_name}_?')
         for image in names:
@@ -167,9 +193,9 @@ class Ingest:
             img.save(image, format='PNG')
             obj = {'dataset_id': dataset_id, 'pdf_name': pdf_name, 'meta': meta2, 'dims': dims, 'page_num': page_num}
             if tmp_dir is not None:
-                with open(os.path.join(tmp_dir, pdf_name), 'wb') as wf:
+                with open(os.path.join(tmp_dir, pdf_name) + f'_{page_num}.pkl', 'wb') as wf:
                     pickle.dump(obj, wf)
-                    objs.append((tmp_dir, pdf_name, page_num))
+                objs.append((tmp_dir, pdf_name, page_num))
             else:
                 objs.append(obj)
         return objs
@@ -225,7 +251,7 @@ def load_images_from_dir(idir, pdf_name, image_ref):
         try:
             img = Image.open(filepath)
         except Image.DecompressionBombError as e:
-            logging.error(str(e), exc_info=True)
+            logger.error(str(e), exc_info=True)
             raise e
         width, height = img.size
         with open(filepath, 'rb') as bimage:
@@ -269,7 +295,7 @@ def ingest(obj, conn_str=None):
     session = Session()
     n = session.query(Pdf).filter(Pdf.pdf_name == pdf_name, Pdf.dataset_id == dataset_id).count()
     if n > 0:
-        logging.info("Already ingested this PDF to this dataset_id!")
+        logger.info("Already ingested this PDF to this dataset_id!")
         return None
 
     with tempfile.NamedTemporaryFile() as tf, tempfile.TemporaryDirectory() as td:

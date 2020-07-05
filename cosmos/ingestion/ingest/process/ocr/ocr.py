@@ -10,15 +10,22 @@ import pytesseract
 from .group_cls import group_cls
 import pandas as pd
 from PIL import Image
+import pickle
 
 
-def regroup(obj):
+def regroup(pkl_path):
+    with open(pkl_path, 'rb') as rf:
+        obj = pickle.load(rf)
     l = group_cls(obj['detected_objs'], 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
     obj['detected_objs'] = group_cls(l, 'Figure')
-    return obj
+    with open(pkl_path, 'wb') as wf:
+        pickle.dump(obj, wf)
+    return pkl_path
 
 
-def pool_text(obj):
+def pool_text(pkl_path):
+    with open(pkl_path, 'rb') as rf:
+        obj = pickle.load(rf)
     meta_df = obj['meta']
     detect_objs = obj['detected_objs']
     if meta_df is not None:
@@ -26,7 +33,9 @@ def pool_text(obj):
     else:
         text_map = _pool_text_ocr(obj['page_path'], detect_objs)
     obj['content'] = text_map
-    return obj
+    with open(pkl_path, 'wb') as wf:
+        pickle.dump(obj, wf)
+    return pkl_path
 
 
 def _pool_text_meta(meta_df, height, detect_objs):

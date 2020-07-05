@@ -4,6 +4,8 @@ import torch
 from ingest.process.detection.src.torch_model.inference.inference import InferenceHelper
 from ingest.process.detection.src.torch_model.inference.data_layer.inference_loader import InferenceLoader
 from ingest.process.detection.src.utils.ingest_images import ImageDB
+import logging
+logger = logging.getLogger(__name__)
 
 
 def get_model(model_config, weights, device_str):
@@ -38,9 +40,7 @@ def run_inference(model, page_objs, model_config, device_str, session):
     loader = InferenceLoader(ingest_objs, cfg.CLASSES, session)
     device = torch.device(device_str)
     infer_session = InferenceHelper(model, loader, device)
-    print("Running infer in session")
     results, softmax_results = infer_session.run()
     ImageDB.cleanup(ingest_objs, session)
-    print("Returning results")
     return results, softmax_results
 

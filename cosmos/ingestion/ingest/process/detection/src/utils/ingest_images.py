@@ -11,7 +11,6 @@ from numpy import genfromtxt
 from torchvision.transforms import ToTensor
 from ingest.process.detection.src.torch_model.train.data_layer.transforms import NormalizeWrapper
 from uuid import uuid4
-from tqdm import tqdm
 import pickle
 from ingest.process.detection.src.torch_model.utils.matcher import match
 from ingest.process.detection.src.torch_model.utils.bbox import BBoxes
@@ -19,18 +18,15 @@ from ingest.process.detection.src.torch_model.train.data_layer.sql_types import 
 from ingest.process.detection.src.torch_model.train.data_layer.sql_types import Neighbor, Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import yaml
 import io
 import logging
 
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
+logger = logging.getLogger(__name__)
 Example = namedtuple('Example', ["ex_window", "ex_proposal", "gt_cls", "gt_box"])
 
 normalizer = NormalizeWrapper()
 tens = ToTensor()
-#with open("config/classes.yaml") as stream:
-#    classes = yaml.load(stream)["classes"]
-#    print(f"classes are {classes}")
 
 def mapper(obj, preprocessor=None):
     """
@@ -191,7 +187,7 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
     nproposals = 0
     ngt_boxes = 0
     examples = []
-    for img_name in tqdm(os.listdir(img_dir)):
+    for img_name in os.listdir(img_dir):
         name, ext = os.path.splitext(img_name)
         image = load_image(img_dir, name, ext)
         gt = None
@@ -201,7 +197,7 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
         if proposal_dir is not None:
             proposals = load_proposal(proposal_dir, name)
             if proposals.shape[0] == 0:
-                print("no proposals for ", name)
+                logger.debug("no proposals for ", name)
                 continue
         ret = [image, gt, proposals, name]
         pts, proposals_len, gt_box_len = unpack_page(ret, warped_size)
@@ -211,7 +207,7 @@ def db_ingest(img_dir, proposal_dir, xml_dir, warped_size, partition, session):
             uuid = str(uuid4())
             label = pt.gt_cls
             if label == 0 or label == "0":
-                print("found 0")
+                logger.debug("found 0")
                 continue
             if label is not None and xml_dir is not None:
                 uuids.append(uuid)
@@ -261,7 +257,7 @@ def db_ingest_objs(objs, warped_size, partition, session):
             uuid = str(uuid4())
             label = pt.gt_cls
             if label == 0 or label == "0":
-                print("found 0")
+                logger.debug("found 0")
                 continue
             uuids.append(uuid)
             if label in class_stats:
@@ -295,11 +291,11 @@ def compute_neighborhoods(partition, expansion_delta, session, orig_size=1920):
     :param expansion_delta: Neighborhood expansion parameter
     :param orig_size: original size of the image
     """
-    print('Computing neighborhoods')
+    logger.debug('Computing neighborhoods')
     avg_nbhd_size = 0.0
     nbhds = 0.0
     partition_filter = session.query(Ex).filter(Ex.partition == partition)
-    for ex in tqdm(partition_filter):
+    for ex in partition_filter:
         orig_bbox = ex.bbox
         nbhd_bbox = [max(0, orig_bbox[0]-expansion_delta), max(0, orig_bbox[1]-expansion_delta), min(orig_size, orig_bbox[2]+expansion_delta), min(orig_size, orig_bbox[3]+expansion_delta)]
         # Get all the examples on the same page
@@ -314,9 +310,9 @@ def compute_neighborhoods(partition, expansion_delta, session, orig_size=1920):
         avg_nbhd_size += len(nbhd)
         session.add_all(nbhd)
     session.commit()
-    print("=== Done Computing Neighborhoods ===")
+    logger.debug("=== Done Computing Neighborhoods ===")
     if nbhds != 0.0:
-        print(f"Average of {avg_nbhd_size/nbhds} neighbors")
+        logger.debug(f"Average of {avg_nbhd_size/nbhds} neighbors")
 
 def get_neighbors_for_uuid(uuid, session):
     """
