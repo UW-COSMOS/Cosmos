@@ -24,6 +24,7 @@ from ingest.utils.pdf_helpers import get_pdf_names
 from ingest.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
 import pikepdf
+import pandas as pd
 
 import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
@@ -42,12 +43,12 @@ logger.setLevel(logging.DEBUG)
 class Ingest:
     def __init__(self, scheduler_address, use_semantic_detection=False, client=None,
                        tmp_dir=None, use_xgboost_postprocess=False, use_rules_postprocess=False, xgboost_config=None):
-        logging.info("Initializing Ingest object")
+        logger.info("Initializing Ingest object")
         self.client = client
         if self.client is None:
-            logging.info("Setting up client")
+            logger.info("Setting up client")
             self.client = Client(scheduler_address, serializers=['msgpack', 'dask'], deserializers=['msgpack', 'dask'])
-            logging.info(self.client)
+            logger.info(self.client)
         self.use_xgboost_postprocess = use_xgboost_postprocess
         self.use_rules_postprocess = use_rules_postprocess
         self.use_semantic_detection = use_semantic_detection
@@ -77,16 +78,17 @@ class Ingest:
         pdfnames = get_pdf_names(pdf_directory)
         pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
         if remove_watermark:
-            logging.info('Removing watermarks')
+            logger.info('Removing watermarks')
             pdfs = []
             for pdf in pdfnames:
                 pdfs.append(Ingest.remove_watermark(pdf))
             #pdfs = [self.client.submit(Ingest.remove_watermark, pdf, resources={'process': 1}) for pdf in pdfnames]
             images = self.client.map(pdf_to_images, pdfs)
         else:
-            logging.info('Starting ingestion.')
+            logger.info('Starting ingestion. Converting PDFs to images.')
             images = [self.client.submit(pdf_to_images, pdf, resources={'process': 1}) for pdf in pdfnames]
         progress(images)
+        logger.info('Done converting to images. Starting detection and text extraction')
         images = [i.result() for i in images]
         images = [i for i in images if i is not None]
         images = [i for il in images for i in il]
@@ -101,8 +103,27 @@ class Ingest:
                     images = self.client.map(rules_postprocess, images, resources={'process': 1})
         progress(images)
         images = [i.result() for i in images]
-        with open(result_path, 'wb') as wf:
-            pickle.dump(images, wf)
+        results = []
+        for i in images:
+            with open(i, 'rb') as rf:
+                obj = pickle.load(rf)
+                for c in obj['content']:
+                    bb, cls, text = c
+                    scores, classes = zip(*cls)
+                    scores = list(scores)
+                    classes = list(classes)
+                    #cls = [list(c) for c in cls]
+                    final_obj = {'pdf_name': obj['pdf_name'], 
+                                 'dataset_id': obj['dataset_id'],
+                                 'page_num': obj['page_num'], 
+                                 'bounding_box': list(bb),
+                                 'classes': classes,
+                                 'scores': scores,
+                                 'content': text
+                                }
+                    results.append(final_obj)
+        result_df = pd.DataFrame(results)
+        result_df.to_parquet(result_path, engine='pyarrow', compression='gzip')
         shutil.rmtree(self.tmp_dir)
 
     def _ingest_distributed(self, pdf_directory, dataset_id):
@@ -207,7 +228,7 @@ def process_page(filepath, pdfid, session, client):
     try:
         img = Image.open(filepath)
     except Image.DecompressionBombError as e:
-        logging.error(str(e), exc_info=True)
+        logger.error(str(e), exc_info=True)
         session.rollback()
         raise e
 
