@@ -31,6 +31,20 @@ def visualize_region(img_path, bb):
     plt.show()
 
 
+def write_regions(img_path, bbs):
+    image = cv2.imread(img_path, flags=cv2.IMREAD_COLOR)
+    for bb in bbs:
+        startX, startY, endX, endY = [int(x) for x in bb]
+        cv2.rectangle(image, (startX, startY), (endX, endY), COLORS[0], thickness=2)
+        cv2.putText(image, f'{startX}, {startY}, {endX}, {endY}', (startX, startY-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255,0,0), 2)
+    plt.figure(figsize=(20, 20))
+    plt.axis('off')
+    res = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    plt.imshow(res)
+    plt.savefig(f'{img_path}.png')
+
+
+
 
 
 

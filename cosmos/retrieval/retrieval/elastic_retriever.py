@@ -56,6 +56,7 @@ class ElasticRetriever(Retriever):
         return contexts
 
     def build_index(self, input_path):
+        logger.info('Building elastic index')
         connections.create_connection(hosts=self.hosts)
         Object.init()
         FullDocument.init()
@@ -69,6 +70,7 @@ class ElasticRetriever(Retriever):
                     pdf_text += '\n'
                     pdf_text += row['content']
                 FullDocument(name=name[0], dataset_id=name[1], content=pdf_text).save()
+            logger.info('Done building document index')
             for ind, row in df.iterrows():
                 tlx, tly, brx, bry = row['bounding_box']
                 area = (brx - tlx) * (bry - tly)
@@ -80,12 +82,11 @@ class ElasticRetriever(Retriever):
                         page_num=row['page_num'],
                         pdf_name=row['pdf_name'],
                         ).save()
+            logger.info('Done building object index')
         else:
             raise NotImplementedError('Only parquet files are currently supported')
 
-    def delete(self, dataset_id=None):
-        if dataset_id is None:
-            raise ValueError('Delete requires a dataset id or an object id')
+    def delete(self, dataset_id):
         connections.create_connection(hosts=self.hosts)
         s = Search(index='fulldocument')
         q = Q()
@@ -97,5 +98,8 @@ class ElasticRetriever(Retriever):
         q = q & Q('match', dataset_id=dataset_id)
         result = s.query(q).delete()
         logger.info(result)
+
+    def rerank(self, query, contexts):
+        raise NotImplementedError('ElasticRetriever does not rerank results')
 
 

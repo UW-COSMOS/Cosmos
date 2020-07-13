@@ -2,7 +2,6 @@ import click
 from distributed.diagnostics.plugin import WorkerPlugin
 import os
 from ingest.process.detection.src.infer import get_model
-import asyncio
 
 class DetectPlugin(WorkerPlugin):
     def __init__(self):

@@ -47,7 +47,7 @@ class Ingest:
         self.client = client
         if self.client is None:
             logger.info("Setting up client")
-            self.client = Client(scheduler_address, serializers=['msgpack', 'dask'], deserializers=['msgpack', 'dask'])
+            self.client = Client(scheduler_address, serializers=['msgpack', 'dask'], deserializers=['msgpack', 'dask', 'pickle'])
             logger.info(self.client)
         self.use_xgboost_postprocess = use_xgboost_postprocess
         self.use_rules_postprocess = use_rules_postprocess
@@ -68,13 +68,13 @@ class Ingest:
         if self.client is not None:
             self.client.close()
 
-    def ingest(self, pdf_directory, dataset_id, result_path, remove_watermark=False):
+    def ingest(self, pdf_directory, dataset_id, result_path, remove_watermark=False, visualize_proposals=False):
         if self.tmp_dir is not None:
-            self._ingest_local(pdf_directory, dataset_id, result_path, remove_watermark=remove_watermark)
+            self._ingest_local(pdf_directory, dataset_id, result_path, remove_watermark=remove_watermark, visualize_proposals=visualize_proposals)
         else:
             self._ingest_distributed(pdf_directory, dataset_id)
 
-    def _ingest_local(self, pdf_directory, dataset_id, result_path, remove_watermark=False):
+    def _ingest_local(self, pdf_directory, dataset_id, result_path, remove_watermark=False, visualize_proposals=False):
         pdfnames = get_pdf_names(pdf_directory)
         pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
         if remove_watermark:
@@ -92,7 +92,8 @@ class Ingest:
         images = [i.result() for i in images]
         images = [i for i in images if i is not None]
         images = [i for il in images for i in il]
-        images = self.client.map(propose_and_pad, images, resources={'process': 1}, priority=8)
+        partial_propose = functools.partial(propose_and_pad, visualize=visualize_proposals)
+        images = self.client.map(partial_propose, images, resources={'process': 1}, priority=8)
         if self.use_semantic_detection:
             images = self.client.map(detect, images, resources={'GPU': 1}, priority=8)
             images = self.client.map(regroup, images, resources={'process': 1})
@@ -124,7 +125,7 @@ class Ingest:
                     results.append(final_obj)
         result_df = pd.DataFrame(results)
         result_df.to_parquet(result_path, engine='pyarrow', compression='gzip')
-        shutil.rmtree(self.tmp_dir)
+        #shutil.rmtree(self.tmp_dir)
 
     def _ingest_distributed(self, pdf_directory, dataset_id):
         raise NotImplementedError("Distributed setup currently not implemented via Ingest class. Set a tmp directory.")
@@ -205,14 +206,14 @@ class Ingest:
                 meta.loc[meta.page == (page_num-1), 'x2'] = meta.x2 * scale_w
                 meta.loc[meta.page == (page_num-1), 'y1'] = meta.y1 * scale_h
                 meta.loc[meta.page == (page_num-1), 'y2'] = meta.y2 * scale_h
-                dims = [0, 0, w, h]
+                dims2 = [0, 0, w, h]
                 meta2 = meta.to_dict()
                 meta2 = json.dumps(meta2)
                 meta2 = json.loads(meta2)
 
             # Convert it back to bytes
             img.save(image, format='PNG')
-            obj = {'dataset_id': dataset_id, 'pdf_name': pdf_name, 'meta': meta2, 'dims': dims, 'page_num': page_num}
+            obj = {'orig_w': orig_w, 'orig_h': orig_h, 'dataset_id': dataset_id, 'pdf_name': pdf_name, 'meta': meta2, 'dims': dims2, 'page_num': page_num}
             if tmp_dir is not None:
                 with open(os.path.join(tmp_dir, pdf_name) + f'_{page_num}.pkl', 'wb') as wf:
                     pickle.dump(obj, wf)
