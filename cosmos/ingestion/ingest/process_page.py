@@ -19,6 +19,7 @@ import io
 import subprocess
 import glob
 from PIL import Image, UnidentifiedImageError
+from ingest.utils.visualize import write_regions
 from ingest.process.proposals.connected_components import get_proposals
 from ingest.process.detection.src.preprocess import pad_image
 from ingest.process.ocr.ocr import run as ocr
@@ -36,7 +37,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def propose_and_pad(obj):
+def propose_and_pad(obj, visualize=False):
     tmp_dir, pdf_name, page_num = obj
     pkl_path = f'{os.path.join(tmp_dir, pdf_name)}_{page_num}.pkl'
     image_path = f'{os.path.join(tmp_dir, pdf_name)}_{page_num}'
@@ -56,6 +57,8 @@ def propose_and_pad(obj):
     padded_img = pad_image(img)
     obj['id'] = '0'
     obj['proposals'] = coords
+    if visualize:
+        write_regions(image_path, coords)
     obj['page_id'] = f'{pdf_name}_{page_num}'
     obj['page_path'] = f'{tmp_dir}/{obj["page_id"]}'
     d = f'{tmp_dir}/{pdf_name}_{page_num}_pad'
