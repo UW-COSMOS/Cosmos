@@ -29,14 +29,6 @@ parser.add_argument('pdf_dir', metavar='pdf_dir', type=str, default="./pdfs",
 parser.add_argument('dataset_id', metavar='dataset_id', type=str, default="cosmos",
         help='')
 
-
-# cosmos [stage] up
-## where [stage] in ['ingest', 'extract', 'recall', 'all']
-## start up the necessary "listeners"
-
-# cosmos [stage] run
-## actually do the thing.
-
 def cmd(*v):
     val = " ".join(v)
     print(val)
@@ -105,7 +97,6 @@ if action=="up" and (stage=="all" or stage=="ingest"):
     cmd('docker stack deploy cosmos --compose-file docker-compose.yml')
 
 if action=="run" and (stage=="all" or stage=="ingest"):
-    # TODO: parse dataset_id, pdf_dir
     print("Ingesting some documents.")
     cmd('sh', './scripts/process_dir.sh', args.pdf_dir, args.dataset_id)
 
@@ -119,7 +110,6 @@ if action=="up" and (stage=="all" or stage=="recall"): # or action="run;?
     cmd('docker stack deploy cosmos --compose-file docker-compose-recall.yml')
 
 if action=="run" and (stage=="all" or stage=="recall"): 
-    # TODO: make sure things are up
     cmd('docker-compose -f docker-compose-recall-createindexes.yml up')
 
 if action=="down" and stage=='ingest':
