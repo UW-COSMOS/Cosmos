@@ -81,6 +81,12 @@ possible that the earlier stage(s) have not finished running.
 Page-level (ingestion) output can be viewed by browsing 'Page-level Extractions' on localhost:8081
 Classified, identified, and extracted objects (with their contexts) can be searched by browsing on localhost:8082
 
+## Examples
+Example datasets with a small number of documents with quickstart guides are provided:
+
+- [COVID-19](examples/covid)
+
+
 ## Scaling
 COSMOS workers are run as [Dask](https://dask.org/) worknodes as docker services. This
 allows services to be scaled arbitrarily, by adding a new node to the docker

@@ -1,0 +1,454 @@
+[
+{
+    "publisher": "Taylor and Francis", 
+    "title": "Is the domestic tourism cycle synchronized with the economic cycle? Evidence from Mainland China and Taiwan", 
+    "journal": {
+        "name": "Asia Pacific Journal of Tourism Research"
+    }, 
+    "author": [
+        {
+            "name": "Li, Wei-Wei"
+        }, 
+        {
+            "name": "Ma, Xiao-Long"
+        }, 
+        {
+            "name": "Yu, Hu"
+        }
+    ], 
+    "year": "2019", 
+    "number": "9", 
+    "volume": "24", 
+    "link": [
+        {
+            "url": "https://www.tandfonline.com/doi/full/10.1080/10941665.2019.1653332", 
+            "type": "publisher"
+        }
+    ], 
+    "_gddid": "5d5c12890b45c76cafa54fef", 
+    "identifier": [
+        {
+            "type": "doi", 
+            "id": "10.1080/10941665.2019.1653332"
+        }
+    ], 
+    "type": "article", 
+    "pages": "944--964"
+},
+{
+    "publisher": "Taylor and Francis", 
+    "title": "An Analysis of International Tourism Development in Thailand: 1994–2007", 
+    "journal": {
+        "name": "Asia Pacific Journal of Tourism Research"
+    }, 
+    "author": [
+        {
+            "name": "McDowall, Siriporn"
+        }, 
+        {
+            "name": "Wang, Youcheng"
+        }
+    ], 
+    "year": "2009", 
+    "number": "4", 
+    "volume": "14", 
+    "link": [
+        {
+            "url": "http://www.tandfonline.com/doi/abs/10.1080/10941660903023952", 
+            "type": "publisher"
+        }
+    ], 
+    "_gddid": "590ee93ccf58f15102a6190b", 
+    "identifier": [
+        {
+            "type": "doi", 
+            "id": "10.1080/10941660903023952"
+        }
+    ], 
+    "type": "article", 
+    "pages": "351--370"
+},
+{
+    "publisher": "bioRxiv", 
+    "title": "Identification of Candidate COVID-19 Therapeutics using hPSC-derived Lung Organoids", 
+    "journal": {
+        "name": "Cold Spring Harbor Laboratory"
+    }, 
+    "author": [
+        {
+            "name": "Yuling Han"
+        }, 
+        {
+            "name": "Liuliu Yang"
+        }, 
+        {
+            "name": "Xiaohua Duan"
+        }, 
+        {
+            "name": "Fuyu Duan"
+        }, 
+        {
+            "name": "Benjamin E. Nilsson-Payant"
+        }, 
+        {
+            "name": "Tomer M Yaron"
+        }, 
+        {
+            "name": "Pengfei Wang"
+        }, 
+        {
+            "name": "Xuming Tang"
+        }, 
+        {
+            "name": "Tuo Zhang"
+        }, 
+        {
+            "name": "Zeping Zhao"
+        }, 
+        {
+            "name": "Yaron Bram"
+        }, 
+        {
+            "name": "David Redmond"
+        }, 
+        {
+            "name": "Sean Houghton"
+        }, 
+        {
+            "name": "Duc Nguyen"
+        }, 
+        {
+            "name": "Dong Xu"
+        }, 
+        {
+            "name": "Xing Wang"
+        }, 
+        {
+            "name": "Skyler Uhl"
+        }, 
+        {
+            "name": "Yaoxing Huang"
+        }, 
+        {
+            "name": "Jared L. Johnson"
+        }, 
+        {
+            "name": "Jenny Xiang"
+        }, 
+        {
+            "name": "Hui Wang"
+        }, 
+        {
+            "name": "Fong Cheng Pan"
+        }, 
+        {
+            "name": "Lewis C. Cantley"
+        }, 
+        {
+            "name": "Benjamin R. tenOever"
+        }, 
+        {
+            "name": "David D. Ho"
+        }, 
+        {
+            "name": "Todd Evans"
+        }, 
+        {
+            "name": "Robert E. Schwartz"
+        }, 
+        {
+            "name": "Huanhuan Joyce Chen"
+        }, 
+        {
+            "name": "Shuibing Chen"
+        }
+    ], 
+    "year": "2020", 
+    "link": [
+        {
+            "url": "https://www.biorxiv.org/content/10.1101/2020.05.05.079095v1", 
+            "type": "publisher"
+        }
+    ], 
+    "_gddid": "5eb2ef84998e17af826d549b", 
+    "identifier": [
+        {
+            "type": "doi", 
+            "id": "10.1101/2020.05.05.079095"
+        }
+    ], 
+    "type": "article"
+},
+{
+    "publisher": "Taylor and Francis", 
+    "title": "Coronavirus disease 2019 (COVID-19) and pregnancy: a systematic review", 
+    "journal": {
+        "name": "The Journal of Maternal-Fetal & Neonatal Medicine"
+    }, 
+    "author": [
+        {
+            "name": "Yang, Ziyi"
+        }, 
+        {
+            "name": "Wang, Min"
+        }, 
+        {
+            "name": "Zhu, Ziyu"
+        }, 
+        {
+            "name": "Liu, Yi"
+        }
+    ], 
+    "link": [
+        {
+            "url": "https://www.tandfonline.com/doi/full/10.1080/14767058.2020.1759541", 
+            "type": "publisher"
+        }
+    ], 
+    "_gddid": "5ebaf2b9998e17af826e2195", 
+    "identifier": [
+        {
+            "type": "doi", 
+            "id": "10.1080/14767058.2020.1759541"
+        }
+    ], 
+    "type": "article", 
+    "pages": "1--4"
+},
+{
+    "publisher": "Taylor and Francis", 
+    "title": "Price discovery of property markets in Shenzhen and Hong Kong", 
+    "journal": {
+        "name": "Construction Management and Economics"
+    }, 
+    "author": [
+        {
+            "name": "Hui, Eddie Chi‐man"
+        }, 
+        {
+            "name": "Ng, Ivan"
+        }
+    ], 
+    "year": "2009", 
+    "number": "12", 
+    "volume": "27", 
+    "link": [
+        {
+            "url": "http://www.tandfonline.com/doi/abs/10.1080/01446190903365640", 
+            "type": "publisher"
+        }
+    ], 
+    "_gddid": "590cd2cacf58f147271fdec2", 
+    "identifier": [
+        {
+            "type": "doi", 
+            "id": "10.1080/01446190903365640"
+        }
+    ], 
+    "type": "article", 
+    "pages": "1175--1196"
+},
+{
+    "publisher": "Wiley", 
+    "title": "Different pathogenicities of Rice stripe virus from the insect vector and from viruliferous plants", 
+    "journal": {
+        "name": "New Phytologist"
+    }, 
+    "author": [
+        {
+            "name": "Zhao, Wan"
+        }, 
+        {
+            "name": "Yang, Pengcheng"
+        }, 
+        {
+            "name": "Kang, Le"
+        }, 
+        {
+            "name": "Cui, Feng"
+        }
+    ], 
+    "year": "2016", 
+    "number": "1", 
+    "volume": "210", 
+    "link": [
+        {
+            "url": "http://doi.wiley.com/10.1111/nph.13747", 
+            "type": "publisher"
+        }
+    ], 
+    "_gddid": "57dd5dfacf58f17b49f9d307", 
+    "identifier": [
+        {
+            "type": "doi", 
+            "id": "10.1111/nph.13747"
+        }
+    ], 
+    "type": "article", 
+    "pages": "196--207"
+},
+{
+    "publisher": "Elsevier", 
+    "title": "Unpacking the black box: How to promote citizen engagement through government social media during the COVID-19 crisis", 
+    "journal": {
+        "name": "Computers in Human Behavior"
+    }, 
+    "author": [
+        {
+            "name": "Min, Chen"
+        }, 
+        {
+            "name": "Zhang, Wei"
+        }, 
+        {
+            "name": "Wang, Ge"
+        }, 
+        {
+            "name": "Ma, Xiaoyue"
+        }, 
+        {
+            "name": "Evans, Richard"
+        }
+    ], 
+    "year": "2020", 
+    "volume": "110", 
+    "link": [
+        {
+            "url": "https://www.sciencedirect.com/science/article/pii/S0747563220301333", 
+            "type": "publisher"
+        }
+    ], 
+    "_gddid": "5eac5cdb998e17af826cac2b", 
+    "identifier": [
+        {
+            "type": "doi", 
+            "id": "10.1016/j.chb.2020.106380"
+        }
+    ], 
+    "type": "article", 
+    "pages": "106380"
+},
+{
+    "publisher": "Elsevier", 
+    "title": "Reduced plasma angiotensin II levels are reversed by hydroxyurea treatment in mice with sickle cell disease", 
+    "journal": {
+        "name": "Life Sciences"
+    }, 
+    "author": [
+        {
+            "name": "dos Santos, Alisson F."
+        }, 
+        {
+            "name": "Almeida, Camila B."
+        }, 
+        {
+            "name": "Brugnerotto, Ana F."
+        }, 
+        {
+            "name": "Roversi, Fernanda M."
+        }, 
+        {
+            "name": "Pallis, Flávia R."
+        }, 
+        {
+            "name": "Franco-Penteado, Carla F."
+        }, 
+        {
+            "name": "Lanaro, Carolina"
+        }, 
+        {
+            "name": "Albuquerque, Dulcinéia M."
+        }, 
+        {
+            "name": "Leonardo, Flávia C."
+        }, 
+        {
+            "name": "Costa, Fernando F."
+        }, 
+        {
+            "name": "Conran, Nicola"
+        }
+    ], 
+    "year": "2014", 
+    "number": "1", 
+    "volume": "117", 
+    "link": [
+        {
+            "url": "http://www.sciencedirect.com/science/article/pii/S0024320514007346", 
+            "type": "publisher"
+        }
+    ], 
+    "_gddid": "56aa4a00cf58f187a425a4af", 
+    "identifier": [
+        {
+            "type": "doi", 
+            "id": "10.1016/j.lfs.2014.08.021"
+        }
+    ], 
+    "type": "article", 
+    "pages": "7--12"
+},
+{
+    "publisher": "Wiley", 
+    "title": "Halothane Hepatitis in a Laboratory Technician", 
+    "journal": {
+        "name": "Australian and New Zealand Journal of Medicine"
+    }, 
+    "author": [
+        {
+            "name": "Johnston, C. I."
+        }, 
+        {
+            "name": "Mendelsohn, F."
+        }
+    ], 
+    "year": "1971", 
+    "number": "2", 
+    "volume": "1", 
+    "link": [
+        {
+            "url": "http://doi.wiley.com/10.1111/j.1445-5994.1971.tb02285.x", 
+            "type": "publisher"
+        }
+    ], 
+    "_gddid": "5c85b3501faed65548991d5a", 
+    "identifier": [
+        {
+            "type": "doi", 
+            "id": "10.1111/j.1445-5994.1971.tb02285.x"
+        }
+    ], 
+    "type": "article", 
+    "pages": "171--173"
+},
+{
+    "publisher": "Wiley", 
+    "title": "A Multiphase Disaster Training Exercise for Emergency Medicine Residents: Opportunity Knocks", 
+    "journal": {
+        "name": "Academic Emergency Medicine"
+    }, 
+    "author": [
+        {
+            "name": "Alexander, A. J."
+        }
+    ], 
+    "year": "2005", 
+    "number": "5", 
+    "volume": "12", 
+    "link": [
+        {
+            "url": "http://doi.wiley.com/10.1197/j.aem.2004.11.025", 
+            "type": "publisher"
+        }
+    ], 
+    "_gddid": "5b961d97cf58f155ea7e6910", 
+    "identifier": [
+        {
+            "type": "doi", 
+            "id": "10.1197/j.aem.2004.11.025"
+        }
+    ], 
+    "type": "article", 
+    "pages": "404--409"
+}
+]

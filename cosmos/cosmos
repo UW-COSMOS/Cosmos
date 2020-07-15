@@ -13,7 +13,7 @@
 # TODO: 'run all' doesn't exist because the extract and recall steps don't watch for new documents. They must be kicked off directly.
 
 from os.path import join, dirname, exists
-from os import chdir, environ, makedirs, chmod
+from os import chdir, environ, makedirs, chmod, getcwd
 from subprocess import run
 from shlex import split
 import argparse
@@ -37,11 +37,11 @@ def cmd(*v):
 args = parser.parse_args()
 
 paths = {
-    'dataset_index_dir' : './anserini_index/',
-    'es_index_dir' : './es_index/',
-    'db_pth' : './db',
-    'db_tmp_pth' : './dbtmp',
-    'tmp_pth' : './tmp',
+    'dataset_index_dir' : join(getcwd(), './anserini_index/'),
+    'es_index_dir' : join(getcwd(), './es_index/'),
+    'db_pth' : join(getcwd(), './db'),
+    'db_tmp_pth' : join(getcwd(), './dbtmp'),
+    'tmp_pth' : join(getcwd(), './tmp'),
 }
 
 allowed_stages = {'ingest' : 'Ingest PDF, apply segmentation to find regions and apply detection to classify those regions.',
@@ -84,6 +84,10 @@ environ['ES_INDEX_DIR']=paths['es_index_dir']
 
 environ['DIR'] = args.pdf_dir
 environ['DATASET_ID'] = args.dataset_id
+
+if 'COSMOS_HOME' in environ:
+    chdir(environ['COSMOS_HOME'])
+print(getcwd())
 
 for _, pt in paths.items():
     if not exists(pt):
