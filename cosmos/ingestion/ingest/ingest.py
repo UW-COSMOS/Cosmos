@@ -82,7 +82,7 @@ class Ingest:
             pdfs = []
             for pdf in pdfnames:
                 pdfs.append(Ingest.remove_watermark(pdf))
-            #pdfs = [self.client.submit(Ingest.remove_watermark, pdf, resources={'process': 1}) for pdf in pdfnames]
+            pdfs = [self.client.submit(Ingest.remove_watermark, pdf, resources={'process': 1}) for pdf in pdfnames]
             images = self.client.map(pdf_to_images, pdfs)
         else:
             logger.info('Starting ingestion. Converting PDFs to images.')
@@ -113,7 +113,6 @@ class Ingest:
                     scores, classes = zip(*cls)
                     scores = list(scores)
                     classes = list(classes)
-                    #cls = [list(c) for c in cls]
                     final_obj = {'pdf_name': obj['pdf_name'], 
                                  'dataset_id': obj['dataset_id'],
                                  'page_num': obj['page_num'], 
@@ -125,7 +124,7 @@ class Ingest:
                     results.append(final_obj)
         result_df = pd.DataFrame(results)
         result_df.to_parquet(result_path, engine='pyarrow', compression='gzip')
-        #shutil.rmtree(self.tmp_dir)
+        shutil.rmtree(self.tmp_dir)
 
     def _ingest_distributed(self, pdf_directory, dataset_id):
         raise NotImplementedError("Distributed setup currently not implemented via Ingest class. Set a tmp directory.")
@@ -221,149 +220,4 @@ class Ingest:
             else:
                 objs.append(obj)
         return objs
-
-
-def process_page(filepath, pdfid, session, client):
-    raise PendingDeprecationWarning("process_page will be deprecated in a future release. Transition to Ingest API")
-    page_num = int(os.path.basename(filepath))
-    try:
-        img = Image.open(filepath)
-    except Image.DecompressionBombError as e:
-        logger.error(str(e), exc_info=True)
-        session.rollback()
-        raise e
-
-    width, height = img.size
-    with open(filepath, 'rb') as bimage:
-        bstring = bimage.read()
-        bytesio = io.BytesIO(bstring)
-        img = resize_png(bytesio)
-        # Convert it back to bytes
-        resize_bytes_stream = io.BytesIO()
-        img.save(resize_bytes_stream, format='PNG')
-        resize_bytes_stream.seek(0)
-        resize_bytes = resize_bytes_stream.read()
-        resize_bytes = base64.b64encode(resize_bytes).decode('ASCII')
-        resize_bytes_stream.seek(0)
-        bstring = resize_bytes_stream.getvalue()
-#        page = Page(pdf_id=pdfid, page_width=width, page_height=height, page_number=page_num, bytes=bstring)
-        page = Page(pdf_id=pdfid, page_width=width, page_height=height, page_number=page_num)
-        session.add(page)
-    # Because PDFs can be very large (100+ pages), this transaction can become very large if we batch all pages together
-    # As a result I'm committing on a per page basis.
-    # In the future, this should be batched, and rollback should be fixed to properly remove already committed pages
-    try:
-        session.commit()
-        session.refresh(page)
-    except Exception as e:
-        logger.error(str(e), exc_info=True)
-        session.rollback()
-        raise e
-    finally:
-        session.close()
-    obj = {'bytes': resize_bytes, 'page_id': page.id}
-    return obj
-
-def load_images_from_dir(idir, pdf_name, image_ref):
-    raise PendingDeprecationWarning("load_images_from_dir will be deprecated in a future release. Transition to Ingest API")
-    files = glob.glob(f'{idir}/*')
-    objs = []
-    for filepath in files:
-        page_num = int(os.path.basename(filepath))
-        try:
-            img = Image.open(filepath)
-        except Image.DecompressionBombError as e:
-            logger.error(str(e), exc_info=True)
-            raise e
-        width, height = img.size
-        with open(filepath, 'rb') as bimage:
-            bstring = bimage.read()
-            bytesio = io.BytesIO(bstring)
-            img = resize_png(bytesio)
-            # Convert it back to bytes
-            if image_ref:
-                img.save(filepath, format='PNG')
-                obj = {'bytes': filepath, 'page_id': str(uuid.uuid4()), 'pdf_name': pdf_name, 'page_num': page_num, 'pdf_name': pdf_name}
-                objs.append(obj)
-            else:
-                resize_bytes_stream = io.BytesIO()
-                img.save(resize_bytes_stream, format='PNG')
-                resize_bytes_stream.seek(0)
-                resize_bytes = resize_bytes_stream.read()
-                resize_bytes = base64.b64encode(resize_bytes).decode('ASCII')
-                resize_bytes_stream.seek(0)
-                obj = {'bytes': resize_bytes, 'page_id': str(uuid.uuid4()), 'pdf_name': pdf_name, 'page_num': page_num, 'pdf_name': pdf_name}
-                objs.append(obj)
-    return objs
-
-
-
-def ingest(obj, conn_str=None):
-    raise PendingDeprecationWarning("ingest will be deprecated in a future release. Transition to Ingest API")
-    if conn_str is None:
-        engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
-    else:
-        engine = create_engine(conn_str)
-    Session = sessionmaker()
-    Session.configure(bind=engine)
-    pdf_file = base64.b64decode(obj['pdf'].encode())
-    if 'dataset_id' not in obj or 'pdf_name' not in obj:
-        raise Exception('Malformed input, no dataset_id or pdf_name in input')
-
-    dataset_id = obj['dataset_id']
-    pdf_name = obj['pdf_name']
-
-    # Don't ingest if we have this pdf_name in this dataset_id
-    session = Session()
-    n = session.query(Pdf).filter(Pdf.pdf_name == pdf_name, Pdf.dataset_id == dataset_id).count()
-    if n > 0:
-        logger.info("Already ingested this PDF to this dataset_id!")
-        return None
-
-    with tempfile.NamedTemporaryFile() as tf, tempfile.TemporaryDirectory() as td:
-        tf.write(pdf_file)
-        tf.seek(0)
-        try:
-            meta, dims = parse_pdf(tf.name)
-        except Exception as e:
-            logger.error(str(e), exc_info=True)
-            raise Exception('Parsing error', str(e))
-        if meta is not None:
-            meta = meta.to_dict()
-            meta = json.dumps(meta)
-            meta = json.loads(meta)
-            dims = list(dims)
-        pdf_id = uuid.uuid4()
-        subprocess.run(['gs', '-dBATCH',
-                              '-dNOPAUSE',
-                              '-sDEVICE=png16m',
-                              '-dGraphicsAlphaBits=4',
-                              '-dTextAlphaBits=4',
-                              '-r600',
-                              f'-sOutputFile="{td}/%d"',
-                              tf.name
-                        ])
-        pdf = Pdf(pdf_name=pdf_name, meta=meta, meta_dimension=dims, name=pdf_id, dataset_id=dataset_id)
-        session.add(pdf)
-        session.commit()
-        session.refresh(pdf)
-        session.close()
-        fnames = glob.glob(f'{td}/*')
-        pdfns = [pdf.id] * len(fnames)
-        payload = list(zip(fnames, pdfns))
-        logger.info('Starting page requests')
-        objs = []
-        client = get_client()
-        for fname, pdfn in payload:
-            obj = process_page(fname, pdfn, Session(), client)
-            objs.append(obj)
-        processed = [client.submit(pp, obj, resources={'process': 1}, priority=8) for obj in objs]
-        detected_processed = client.map(detect, processed, resources={'GPU': 1}, priority=9)
-        postprocessed_pages = client.map(postprocess_page, detected_processed, resources={'process': 1}, priority=10)
-        job_keys = [p.key for p in postprocessed_pages]
-        for p in postprocessed_pages:
-            fire_and_forget(p)
-        logger.info(f'Processed {len(fnames)} pages')
-        return job_keys
-
 

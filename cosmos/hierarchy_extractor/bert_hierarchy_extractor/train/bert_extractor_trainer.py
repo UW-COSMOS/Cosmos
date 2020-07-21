@@ -1,6 +1,7 @@
 from bert_hierarchy_extractor.datasets.train_dataset import TrainHierarchyExtractionDataset
-from bert_hierarchy_extractor.utils import cudafy
+from bert_hierarchy_extractor.datasets.utils import cudafy
 from bert_hierarchy_extractor.logging.utils import log_metrics
+import numpy as np
 from torch.utils.data import DataLoader
 from transformers import AdamW, get_linear_schedule_with_warmup
 import torch
@@ -9,7 +10,28 @@ from tqdm import tqdm
 from comet_ml import Experiment
 
 
-class RerankingTrainer:
+def placeholder_num_correct(x, y, print_result=False):
+    result = torch.argmax(x, dim=1)
+    result = result.view(-1)
+    y2 = y.view(-1)
+    mask = (y2 != -1)
+    y2 = y2[mask]
+    result = result[mask]
+    if print_result:
+
+        print('*************')
+        y1mask = (y[0] != -1)
+        print(y[0][y1mask])
+        print('-------------')
+        rez = torch.argmax(x[0], dim=0)
+        print(rez[y1mask])
+        print('**************')
+    total_correct = (result == y2).sum().detach().cpu().numpy()
+    total = result.shape[0]
+    return total_correct, total
+
+
+class BertExtractorTrainer:
     def __init__(
         self,
         experiment: Experiment,
@@ -28,7 +50,7 @@ class RerankingTrainer:
         save_min: bool,
         device: str,
         seed=1,
-        num_correct=lambda x, y: return 0,
+        num_correct=placeholder_num_correct,
     ):
         """
         :param model: Initialized model
@@ -50,28 +72,41 @@ class RerankingTrainer:
         torch.manual_seed(seed)
         self.experiment = experiment
         self.device = device
+        print(device)
         self.model = model.to(device)
         self.max_accumulation = accumulation_steps
         print("Loading training dataset")
         self.train_dataset = TrainHierarchyExtractionDataset(data_path)
+        num_classes = len(self.train_dataset.label_map)-1
+        class_counts = np.zeros(num_classes)
+        for i in range(len(self.train_dataset)):
+            _, l = self.train_dataset[i]
+            for cl in l:
+                class_counts[cl] += 1
+
+        effective_num = 1.0 - np.power(0.9999, class_counts)
+        weights = (1.0 - 0.999) / np.array(effective_num)
+        weights = weights / np.sum(weights * num_classes)
+        self.weights = torch.FloatTensor(weights).to(device)
+        print(self.weights)
         #print("Loading validation dataset")
-        #self.val_dataset = MSMarcoDataset(data_path, base_model, "val")
+        #self.val_dataset = TrainHierarchyExtractionDataset(data_path, base_model, "val")
         self.train_dataloader = DataLoader(
             self.train_dataset,
             batch_size=bsz,
             num_workers=num_workers,
             pin_memory=True,
             shuffle=True,
-            collate_fn=MSMarcoDataset.collate,
+            collate_fn=TrainHierarchyExtractionDataset.collate,
         )
-        #self.val_dataloader = DataLoader(
-        #    self.train_dataset,
-        #    batch_size=bsz,
-        #    num_workers=num_workers,
-        #    pin_memory=True,
-        #    shuffle=True,
-        #    collate_fn=MSMarcoDataset.collate,
-        #)
+        self.val_dataloader = DataLoader(
+            self.train_dataset,
+            batch_size=bsz,
+            num_workers=num_workers,
+            pin_memory=True,
+            shuffle=True,
+            collate_fn=TrainHierarchyExtractionDataset.collate,
+        )
         self.bsz = bsz
         self.optimizer = AdamW(model.parameters(), lr=lr, weight_decay=0.01)
         self.scheduler = get_linear_schedule_with_warmup(
@@ -81,6 +116,9 @@ class RerankingTrainer:
         )
         self.max_updates = max_updates
         self.validate_interval = validate_interval
+        self.num_correct = num_correct
+        self.save_metric = save_metric
+        self.current_best_metric = float('inf')
 
     def validate(self, validate_cap=None, best_save_metric=None):
         self.model.eval()
@@ -88,24 +126,26 @@ class RerankingTrainer:
         with tqdm(total=val_cap) as pbar:
             total_loss = 0
             total_correct = 0
+            total_instances = 0
             for ind, batch in enumerate(self.val_dataloader):
                 if ind > val_cap:
                     break
                 xs, labels = cudafy(batch)
-                loss, logits = self.model(**xs, labels=labels)
-                nc = num_correct(logits, labels)
+                loss, logits = self.model(xs, labels=labels, weights=self.weights)
+                nc, t = self.num_correct(logits, labels, print_result=True if ind < 5 else False)
                 total_correct += nc
+                total_instances += t
                 total_loss += loss.detach().cpu().numpy()
                 pbar.update(1)
             loss_per_sample = total_loss / val_cap / self.bsz
-            accuracy = total_correct / val_cap / self.bsz
+            accuracy = total_correct / total_instances
         metrics = {}
         metrics["val_loss"] = loss_per_sample
         metrics["val_accuracy"] = accuracy
         metrics["val_per_sample_loss"] = total_loss
         if best_save_metric is not None:
             if metrics[best_save_metric] <= self.current_best_metric:
-                model.save_pretrained('best')
+                self.model.save_pretrained('best')
                 self.current_best_metric = metrics[best_save_metric]
         return metrics
 
@@ -125,7 +165,7 @@ class RerankingTrainer:
                 accumulation_loss = None
                 for batch in self.train_dataloader:
                     xs, labels = cudafy(batch)
-                    loss, _ = self.model(**xs, labels=labels)
+                    loss, _ = self.model(xs, labels=labels, weights=self.weights)
                     if accumulation_loss is None:
                         accumulation_steps += 1
                         accumulation_loss = loss
@@ -146,7 +186,7 @@ class RerankingTrainer:
                         # TODO: Accuracy, f1, etc metrics
                         log_metrics(self.experiment, metrics, total_updates)
                         if total_updates % self.validate_interval == 0:
-                            metrics = self.validate(validate_cap=1000, best_save_metric=self.save_metric)
+                            metrics = self.validate(validate_cap=100, best_save_metric=self.save_metric)
                             val_updates += 1
                             log_metrics(self.experiment, metrics, val_updates)
 
