@@ -2,6 +2,7 @@ from comet_ml import Experiment
 import click
 from transformers import BertForTokenClassification
 from bert_hierarchy_extractor.train.bert_extractor_trainer import BertExtractorTrainer
+from bert_hierarchy_extractor.model import BertHierarchyExtractor
 
 @click.command()
 @click.option("--data-path", type=str, help="Path to data")
@@ -46,7 +47,7 @@ def train_hierarchy_extractor(
                     save_metric,
                     save_min,
                 ):
-    experiment = Experiment(project_name="information-retrieval")
+    experiment = Experiment(project_name="information-retrieval", auto_output_logging=False)
     experiment.add_tags([tag])
     parameters = {
         "bsz": bsz,
@@ -57,19 +58,19 @@ def train_hierarchy_extractor(
         "max_updates": max_updates,
         "validation_interval": validation_interval,
         "seed": seed,
-        "base_model": base_model,
+        "model_path": model_path,
         "device": device,
         "accumulation_steps": accumulation_steps,
         "save_metric": save_metric,
         "save_min": save_min
     }
     experiment.log_parameters(parameters)
-    model = BertForTokenClassification.from_pretrained(model_path)
+    model = BertHierarchyExtractor(model_path, 12, device)
     trainer = BertExtractorTrainer(
         experiment,
         model,
         data_path,
-        base_model,
+        model_path,
         bsz,
         num_workers,
         lr,
@@ -80,6 +81,7 @@ def train_hierarchy_extractor(
         validation_interval,
         save_metric,
         save_min,
+        device,
         seed,
     )
     try:
