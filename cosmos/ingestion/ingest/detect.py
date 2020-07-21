@@ -3,12 +3,9 @@ from PIL import Image
 from ingest.process.detection.src.infer import run_inference
 from ingest.process.detection.src.torch_model.train.data_layer.sql_types import Base
 import logging
-import torch
-import json
 import base64
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import os
 from dask.distributed import get_worker
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 logger = logging.getLogger(__name__)

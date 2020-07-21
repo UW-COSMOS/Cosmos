@@ -1,27 +1,17 @@
-from ingest.schema import Pdf, Page, PageObject
 import pickle
-import uuid
-import tempfile
 import shutil
-from dask_cuda import LocalCUDACluster
-from ingest.preprocess import resize_png
 import functools
 import json
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 import os
 import io
 import subprocess
 import glob
-from PIL import Image
-import base64
-from ingest.process_page import process_page as pp, postprocess_page, propose_and_pad, xgboost_postprocess, rules_postprocess
-from ingest.process_setup import ProcessPlugin
+from ingest.process_page import propose_and_pad, xgboost_postprocess, rules_postprocess
 from ingest.detect import detect
-from ingest.detect_setup import DetectPlugin
-from dask.distributed import get_client, fire_and_forget, Client, LocalCluster, progress
+from dask.distributed import Client, progress
+from ingest.utils.preprocess import resize_png
 from ingest.utils.pdf_helpers import get_pdf_names
-from ingest.pdf_extractor import parse_pdf
+from ingest.utils.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
 import pikepdf
 import pandas as pd
@@ -52,12 +42,6 @@ class Ingest:
         self.use_xgboost_postprocess = use_xgboost_postprocess
         self.use_rules_postprocess = use_rules_postprocess
         self.use_semantic_detection = use_semantic_detection
-        if use_semantic_detection:
-            if self.use_xgboost_postprocess:
-                if xgboost_config is None:
-                    raise ValueError("If using xgboost postprocess, you need to specify xgboost_config")
-                plugin = ProcessPlugin(**xgboost_config)
-                self.client.register_worker_plugin(plugin)
         self.tmp_dir = tmp_dir
         if self.tmp_dir is not None:
             # Create a subdirectory for tmp files
