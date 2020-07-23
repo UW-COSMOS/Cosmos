@@ -4,6 +4,7 @@ available here. To process these 10 documents:
 
 
 ```
+docker swarm init # if your machine is not yet a docker swarm master
 export COSMOS_HOME=../../cosmos
 export PDFS=$(pwd)/pdfs # Path to directory of PDFs
 export DATASET_ID=covid_sample # Name of dataset, for book-keeping
