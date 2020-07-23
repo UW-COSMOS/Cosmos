@@ -60,6 +60,12 @@ The COSMOS architecture is service-based, and canonical images are provided. Run
 
 The stage names are `ingest`, `extract`, and `recall`.
 
+First, ensure that your machine has been initialized as a docker swarm manager:
+
+```
+docker swarm init
+```
+
 A full pipeline run (from the `./cosmos/cosmos` directory):
   ```
   export PDFS=./pdfs # Path to directory of PDFs
