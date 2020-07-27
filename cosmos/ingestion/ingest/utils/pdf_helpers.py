@@ -23,7 +23,7 @@ def get_pdf_names(directory: str):
     """
     files = glob.glob(os.path.join(directory, '*.pdf'))
     if len(files) == 0:
-        raise ValueException('Empty input directory')
+        raise ValueError('Empty input directory')
     return files
 
 

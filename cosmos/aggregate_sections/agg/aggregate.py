@@ -24,6 +24,10 @@ logger.setLevel(logging.DEBUG)
 MIN_SECTION_LEN = 30
 
 
+def aggregate(pdf):
+
+
+
 def process_dataset(did, client):
     engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@mysql-router:6446/cosmos', pool_pre_ping=True)
     conn = engine.connect()

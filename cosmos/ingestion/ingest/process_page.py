@@ -2,28 +2,11 @@
 """
 Route to handle decomposition of pages into page objects
 """
-from pathlib import Path
-from scipy.special import softmax
-import copy
-import base64
-import uuid
-from ingest.schema import Pdf, Page, PageObject
-import uuid
-import tempfile
-import json
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-import click
 import os
-import io
-import subprocess
-import glob
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from ingest.utils.visualize import write_regions
 from ingest.process.proposals.connected_components import get_proposals
 from ingest.process.detection.src.preprocess import pad_image
-from ingest.process.ocr.ocr import run as ocr
-from ingest.process.ocr.group_cls import check_overlap_bb
 from ingest.process.postprocess.xgboost_model.inference import run_inference as postprocess
 from ingest.process.postprocess.pp_rules import apply_rules as postprocess_rules
 from dask.distributed import get_worker

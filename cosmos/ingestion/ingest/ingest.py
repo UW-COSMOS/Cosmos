@@ -9,10 +9,12 @@ import glob
 from ingest.process_page import propose_and_pad, xgboost_postprocess, rules_postprocess
 from ingest.detect import detect
 from dask.distributed import Client, progress
+from dask.dataframe as dd
 from ingest.utils.preprocess import resize_png
 from ingest.utils.pdf_helpers import get_pdf_names
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
+from tqdm import tqdm
 import pikepdf
 import pandas as pd
 
@@ -52,30 +54,26 @@ class Ingest:
         if self.client is not None:
             self.client.close()
 
-    def ingest(self, pdf_directory, dataset_id, result_path, remove_watermark=False, visualize_proposals=False):
+    def ingest(self, pdf_directory, dataset_id, result_path, visualize_proposals=False):
         if self.tmp_dir is not None:
-            self._ingest_local(pdf_directory, dataset_id, result_path, remove_watermark=remove_watermark, visualize_proposals=visualize_proposals)
+            self._ingest_local(pdf_directory,
+                               dataset_id,
+                               result_path,
+                               visualize_proposals=visualize_proposals)
         else:
             self._ingest_distributed(pdf_directory, dataset_id)
 
-    def _ingest_local(self, pdf_directory, dataset_id, result_path, remove_watermark=False, visualize_proposals=False):
+    def _ingest_local(self, pdf_directory, dataset_id, result_path, visualize_proposals=False, aggregate=False):
         pdfnames = get_pdf_names(pdf_directory)
         pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
-        if remove_watermark:
-            logger.info('Removing watermarks')
-            pdfs = []
-            for pdf in pdfnames:
-                pdfs.append(Ingest.remove_watermark(pdf))
-            pdfs = [self.client.submit(Ingest.remove_watermark, pdf, resources={'process': 1}) for pdf in pdfnames]
-            images = self.client.map(pdf_to_images, pdfs)
-        else:
-            logger.info('Starting ingestion. Converting PDFs to images.')
-            images = [self.client.submit(pdf_to_images, pdf, resources={'process': 1}) for pdf in pdfnames]
+        logger.info('Starting ingestion. Converting PDFs to images.')
+        images = [self.client.submit(pdf_to_images, pdf, resources={'process': 1}) for pdf in pdfnames]
         progress(images)
         logger.info('Done converting to images. Starting detection and text extraction')
         images = [i.result() for i in images]
         images = [i for i in images if i is not None]
         images = [i for il in images for i in il]
+
         partial_propose = functools.partial(propose_and_pad, visualize=visualize_proposals)
         images = self.client.map(partial_propose, images, resources={'process': 1}, priority=8)
         if self.use_semantic_detection:
@@ -107,47 +105,79 @@ class Ingest:
                                 }
                     results.append(final_obj)
         result_df = pd.DataFrame(results)
+        if aggregate:
+            result_df = self._aggregate(result_df)
         result_df.to_parquet(result_path, engine='pyarrow', compression='gzip')
         shutil.rmtree(self.tmp_dir)
+
+    def _aggregate(self, df):
+        ddf = dd.from_pandas(df)
+        ddf.
+
 
     def _ingest_distributed(self, pdf_directory, dataset_id):
         raise NotImplementedError("Distributed setup currently not implemented via Ingest class. Set a tmp directory.")
 
+    def write_images_for_annotation(self, pdf_dir, img_dir):
+        logger.info(f"Converting PDFs to images and writing to target directory: {img_dir}")
+        pdfnames = get_pdf_names(pdf_dir)
+        pdf_to_images = functools.partial(Ingest.pdf_to_images, 'na', self.images_tmp)
+        images = [self.client.submit(pdf_to_images, pdf, resources={'process': 1}) for pdf in pdfnames]
+        progress(images)
+        images = [i.result() for i in images]
+        images = [i for i in images if i is not None]
+        images = [i for il in images for i in il]
+        paths = [f'{tmp_dir}/{pdf_name}_{pn}' for tmp_dir, pdf_name, pn in images]
+        for path in paths:
+            bname = os.path.basename(path)
+            new_bname = bname + '.png'
+            shutil.copy(path, os.path.join(img_dir, new_bname))
+        logger.info('Done.')
+        shutil.rmtree(self.tmp_dir)
+
     @classmethod
-    def remove_watermark(cls, filename):
-        target = pikepdf.Pdf.open(filename)
-        new = pikepdf.Pdf.new()
+    def remove_watermarks(cls, pdf_directory, target_directory):
+        logger.info(f'Removing watermarks. Moving to {target_directory}')
+        remove_w_target = functools.partial(Ingest._remove_watermark, target_directory=target_directory)
+        pdfs = glob.glob(os.path.join(pdf_directory, "*"))
+        for p in tqdm(pdfs):
+            remove_w_target(p)
+            # TODO: client.submit wasn't writing to target correctly, fix later
+        logger.info('Done')
+
+    @classmethod
+    def _remove_watermark(cls, filename, target_directory):
         try:
+            target = pikepdf.Pdf.open(filename)
+            new = pikepdf.Pdf.new()
             for ind, page in enumerate(target.pages):
                 commands = []
                 BDC = False
                 for operands, operator in pikepdf.parse_content_stream(page):
-                    #for o in operands:
-                    #    if type(o) == pikepdf.Dictionary:
-                    #        print(o)
-                    #        if '/Subtype' in o:
-                    #            print(o['/Subtype'])
-                    #if str(operator) == 'BDC':
-                    #    BDC = True
-                    #    continue
-                    #if BDC:
-                    #    if str(operator) == 'EMC':
-                    #        BDC = False
-                    #        continue
-                    #    continue
+                    if str(operator) == 'BDC':
+                        BDC = True
+                        continue
+                    if BDC:
+                        if str(operator) == 'EMC':
+                            BDC = False
+                            continue
+                        continue
                     commands.append((operands, operator))
                 new_content_stream = pikepdf.unparse_content_stream(commands)
                 new.add_blank_page()
                 new.pages[ind].Contents = new.make_stream(new_content_stream)
                 new.pages[ind].Resources = new.copy_foreign(target.make_indirect(target.pages[ind].Resources))
             new.remove_unreferenced_resources()
-            new.save(filename)
+            new.save(os.path.join(target_directory, os.path.basename(filename)))
             return filename
-        except RuntimeError as e:
-            os.remove(filename)
+        except pikepdf._qpdf.PdfError as e:
             logger.error(f'Error in file: {filename}')
             logger.error(e)
-            return None
+            return
+        except RuntimeError as e:
+            logger.error(f'Error in file: {filename}')
+            logger.error(e)
+            return
 
     @classmethod
     def pdf_to_images(cls, dataset_id, tmp_dir, filename):
