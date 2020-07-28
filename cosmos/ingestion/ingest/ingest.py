@@ -9,7 +9,7 @@ import glob
 from ingest.process_page import propose_and_pad, xgboost_postprocess, rules_postprocess
 from ingest.detect import detect
 from dask.distributed import Client, progress
-from dask.dataframe as dd
+import dask.dataframe as dd
 from ingest.utils.preprocess import resize_png
 from ingest.utils.pdf_helpers import get_pdf_names
 from ingest.utils.pdf_extractor import parse_pdf
@@ -112,7 +112,7 @@ class Ingest:
 
     def _aggregate(self, df):
         ddf = dd.from_pandas(df)
-        ddf.
+        # ddf.
 
 
     def _ingest_distributed(self, pdf_directory, dataset_id):
