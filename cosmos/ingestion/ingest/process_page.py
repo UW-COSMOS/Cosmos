@@ -11,7 +11,6 @@ from ingest.process.postprocess.xgboost_model.inference import run_inference as 
 from ingest.process.postprocess.pp_rules import apply_rules as postprocess_rules
 from dask.distributed import get_worker
 import pickle
-
 import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.INFO)
 logging.getLogger("pdfminer").setLevel(logging.DEBUG)
@@ -52,12 +51,14 @@ def propose_and_pad(obj, visualize=False):
     return pkl_path
 
 
-def xgboost_postprocess(obj):
+def xgboost_postprocess(pkl_path):
+    with open(pkl_path, 'rb') as rf:
+        obj = pickle.load(rf)
     try:
         worker = get_worker()
         dp = None
         for plg in worker.plugins:
-            if 'ProcessPlugin' in plg:
+            if 'process' in plg:
                 dp = worker.plugins[plg]
                 break
         if dp is None:
@@ -69,11 +70,17 @@ def xgboost_postprocess(obj):
     objects = obj['content']
     objects = postprocess(dp.postprocess_model, dp.classes, objects)
     obj['xgboost_content'] = objects
-    return obj
+    with open(pkl_path, 'wb') as wf:
+        pickle.dump(obj, wf)
+    return pkl_path
 
 
-def rules_postprocess(obj):
+def rules_postprocess(pkl_path):
+    with open(pkl_path, 'rb') as rf:
+        obj = pickle.load(rf)
     objects = obj['xgboost_content']
     objects = postprocess_rules(objects)
     obj['rules_content'] = objects
-    return obj
+    with open(pkl_path, 'wb') as wf:
+        pickle.dump(obj, wf)
+    return pkl_path
