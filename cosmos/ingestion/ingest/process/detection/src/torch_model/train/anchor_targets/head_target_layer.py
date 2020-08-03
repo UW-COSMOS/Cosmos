@@ -3,12 +3,8 @@ Module which takes the RPN output
 and Generates Region Of Interest Proposals
 Author: Josh McGrath
 """
-import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss
-from torch_model.utils.generate_anchors import generate_anchors
-from torch_model.utils.matcher import match
-
 
 class HeadTargetLayer(nn.Module):
     def __init__(self, ncls=1):
@@ -17,7 +13,7 @@ class HeadTargetLayer(nn.Module):
         print(f"there are {ncls} classes")
         self.cls_loss = CrossEntropyLoss(reduction="mean")
 
-    def forward(self, cls_scores, gt_clses, device):
+    def forward(self, cls_scores, gt_clses):
         """
         process proposals from the RPN
         :param rois : [N x L x 4]

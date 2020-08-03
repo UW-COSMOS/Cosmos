@@ -1,13 +1,10 @@
 """
 Dataset class for training an
 Image embedding
-Author: Josh McGrath
 """
-from torch.utils.data import Dataset
-from collections import namedtuple
 import torch
-from torch_model.train.data_layer.xml_loader import XMLLoader, Example, get_radii, get_angles, get_colorfulness
-from utils.ingest_images import get_example_for_uuid, ImageDB
+from ingest.process.detection.src.torch_model.train.data_layer.xml_loader import XMLLoader, Example, get_radii, get_angles, get_colorfulness
+from ingest.process.detection.src.utils.ingest_images import get_example_for_uuid, ImageDB
 import random
 
 

@@ -6,10 +6,10 @@ Author: Josh McGrath
 import torch
 from torch import nn
 from torch.nn import BCEWithLogitsLoss
-from utils.matcher import match, NEGATIVE
-from utils.generate_anchors import generate_anchors
+from ingest.process.detection.src.utils.matcher import match, NEGATIVE
+from ingest.process.detection.src.utils.generate_anchors import generate_anchors
 from train.losses.smooth_l1_loss import SmoothL1Loss
-from utils.boundary_utils import cross_boundary
+from ingest.process.detection.src.utils.boundary_utils import cross_boundary
 
 
 

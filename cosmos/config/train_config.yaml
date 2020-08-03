@@ -4,5 +4,5 @@ WEIGHT_DECAY: 0.0005
 BATCH_SIZE: 1
 EPOCHS: 100
 CHECKPOINT_PERIOD: 5
-SAVE_DIR: "/data/weights"
+SAVE_DIR: "/ssd/ankur/Cosmos/cosmos/weights/amfam"
 DEBUG: False

@@ -2,8 +2,8 @@
 Train postprocessing
 """
 
-from argparse import ArgumentParser
 import numpy as np
+import pickle
 from ingest.process.detection.src.infer import get_model
 from ingest.process.postprocess.xgboost_model.model import PostProcessTrainer
 from ingest.process.postprocess.xgboost_model.featurizer import get_feat_vec
@@ -20,7 +20,10 @@ from ingest.process.detection.src.torch_model.train.data_layer.sql_types import 
 import os
 from PIL import Image, ImageFile
 from tqdm import tqdm
+import click
+import logging
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+logger = logging.getLogger(__name__)
 
 
 def calculate_iou(box1, box2, contains=False):
@@ -70,8 +73,13 @@ def load_data_gt(predict_list, classes, gt_map):
                 continue
             targets.append(classes.index(gt_map[bb]))
             features.append(get_feat_vec(predict, predict_list, classes))
-    print(f'Features: {features}')
-    print(f'Targets: {targets}')
+    try:
+        pickle.dumps(features)
+        pickle.dumps(targets)
+    except:
+        logger.error('Unable to pickle output')
+        logger.error(f'Features: {features}')
+        logger.error(f'Targets: {targets}')
 
     return features, targets
 
@@ -137,40 +145,43 @@ def featurize_images(image_dir, proposals_dir, xml_dir, model, model_config, dev
         final_features.extend(features)
         final_targets.extend(targets)
     return np.array(final_features), np.array(final_targets)
-    
 
-if __name__ == '__main__':
-    parser = ArgumentParser(description="Preprocess data for postprocessing")
-    parser.add_argument("--logdir")
-    parser.add_argument("--modelcfg")
-    parser.add_argument("--weights")
-    parser.add_argument("--device")
-    parser.add_argument("--train_imgdir")
-    parser.add_argument("--train_proposalsdir")
-    parser.add_argument("--train_xmldir")
-    parser.add_argument("--val_imgdir")
-    parser.add_argument("--val_proposalsdir")
-    parser.add_argument("--val_xmldir")
-    parser.add_argument("--num_processes")
-    parser.add_argument("--classcfg")
-    args = parser.parse_args()
-    with open(args.classcfg) as stream:
-        classes  = yaml.load(stream)["classes"]
-    model = get_model(args.modelcfg, args.weights, args.device)
-    nump = int(args.num_processes)
-    print("Featuring Training Dataset")
-    train_x, train_y = featurize_images(args.train_imgdir, args.train_proposalsdir, args.train_xmldir, model, args.modelcfg, args.device, classes, nump)
-    print("Featuring Validation Dataset")
-    val_x, val_y = featurize_images(args.val_imgdir, args.val_proposalsdir, args.val_xmldir, model, args.modelcfg, args.device, classes, nump)
+
+@click.command()
+@click.option("--logdir", type=str, help="Path to logs")
+@click.option("--modelcfg", type=str, help="Model config path")
+@click.option("--detect-weights", type=str, help="Path to detection weights")
+@click.option("--device", type=str, help='Device string, IE "cpu" for cpu training or "cuda" to enable gpu training')
+@click.option("--train-img-dir", type=str, help='Path to train images directory')
+@click.option("--train-proposals-dir", type=str, help='Path to train proposals directory')
+@click.option("--train-xml-dir", type=str, help='Path to train annotations dir')
+@click.option("--val-img-dir", type=str, help='Path to validation image directory')
+@click.option("--val-proposals-dir", type=str, help='Path to validation proposal directory')
+@click.option("--val-xml-dir", type=str, help='Path to validation annotations directory')
+@click.option("--num-processes", type=int, help='Number of processes to use')
+@click.option("--classcfg", type=str, help='Path to class config or model config with classes')
+@click.option("--output-path", type=str, help='Output model path')
+def train(logdir, modelcfg, detect_weights, device, train_img_dir, train_proposals_dir, train_xml_dir, val_img_dir, val_proposals_dir, val_xml_dir, num_processes, classcfg, output_path):
+    with open(classcfg) as stream:
+        classes  = yaml.load(stream)["CLASSES"]
+    model = get_model(modelcfg, detect_weights, device)
+    print("Featurizing Training Dataset")
+    train_x, train_y = featurize_images(train_img_dir, train_proposals_dir, train_xml_dir, model, modelcfg, device, classes, num_processes)
+    print("Featurizing Validation Dataset")
+    val_x, val_y = featurize_images(val_img_dir, val_proposals_dir, val_xml_dir, model, modelcfg, device, classes, num_processes)
     print(val_x)
     print("Dataset featurized")
     model = XGBClassifier()
     print("Training model")
-    trainer = PostProcessTrainer(model, train_x, train_y, val_x, val_y, classes, log_dir=args.logdir, model_path='/data/weights/pp_model_weights1.pth')
+    trainer = PostProcessTrainer(model, train_x, train_y, val_x, val_y, classes, log_dir=logdir, model_path=output_path)
 
     trainer.train()
 
     print("Training completed")
+
+
+if __name__ == '__main__':
+    train()
 
 
 

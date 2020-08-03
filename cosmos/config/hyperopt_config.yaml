@@ -1,0 +1,13 @@
+LEARNING_RATE: 
+   TYPE: "float"
+   MIN: 0.00001
+   MAX: 0.00005
+WEIGHT_DECAY:
+  TYPE: "FLOAT"
+  MIN: 0.001
+  MAX: 0.002
+EPOCHS:
+  TYPE: "int"
+  MIN: 10
+  MAX: 11
+

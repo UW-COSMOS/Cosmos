@@ -7,12 +7,10 @@ import torch
 from torch import nn
 from os.path import join, isdir
 from os import mkdir
-import os
 from torch import optim
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader
 from tqdm import tqdm
-from torch_model.train.anchor_targets.head_target_layer import HeadTargetLayer
-from functools import partial
+from ingest.process.detection.src.torch_model.train.anchor_targets.head_target_layer import HeadTargetLayer
 from tensorboardX import SummaryWriter
 
 
@@ -38,24 +36,12 @@ class TrainerHelper:
         self.train_set, self.val_set = train_set, val_set
         self.params = params
         self.cls = dict([(val, idx) for (idx, val) in enumerate(model.cls_names)])
-        #self.weight_vec = train_set.get_weight_vec(model.cls_names)
         self.device = device
-        weights = self.detect_weights(params["SAVE_DIR"])
-        #if weights is not None:
-          #  self.model.load_state_dict(torch.load(weights))
 
         if params["USE_TENSORBOARD"]:
             self.writer = SummaryWriter()
         self.head_target_layer = HeadTargetLayer(
                                      ncls=len(model.cls_names)).to(device)
-
-                                     
-
-    def detect_weights(self,weights_dir):
-        ls = os.listdir(weights_dir)
-        if len(ls) == 0:
-            return
-        path = join(weights_dir, ls[len(ls) - 1])
 
     def train(self):
         optimizer = optim.Adam(self.model.parameters(), 
@@ -90,7 +76,7 @@ class TrainerHelper:
                   rois, cls_scores= self.model(ex_sub, windows_sub,radii_sub,angles_sub,colors_sub, batch.center_bbs, self.device)
                   batch_cls_scores.append(cls_scores)
                 batch_cls_scores = torch.cat(batch_cls_scores)
-                loss = self.head_target_layer(batch_cls_scores, gt_cls.reshape(-1).long(), self.device)
+                loss = self.head_target_layer(batch_cls_scores, gt_cls.reshape(-1).long())
                 tot_cls_loss += float(loss)
                 loss.backward()
                 nn.utils.clip_grad_value_(self.model.parameters(), 5)
@@ -133,7 +119,7 @@ class TrainerHelper:
             angles_sub = angles[i].reshape(-1,1)
             colors_sub = colors[i].reshape(-1,1)
             rois, cls_scores= self.model(ex_sub, windows_sub, radii_sub, angles_sub,colors_sub,batch.center_bbs, self.device)
-            cls_loss = self.head_target_layer(cls_scores, gt_cls.reshape(-1).long(), self.device)
+            cls_loss = self.head_target_layer(cls_scores, gt_cls.reshape(-1).long())
             tot_cls_loss += float(cls_loss)
         if to_tensorboard:
                 self.output_batch_losses(

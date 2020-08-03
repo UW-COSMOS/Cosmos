@@ -2,9 +2,11 @@ import os
 from ingest.process.detection.src.preprocess import pad_image
 from PIL import Image
 import glob
+import click
 from ingest.process.proposals.connected_components import get_proposals
 import shutil
 from joblib import Parallel, delayed
+import shutil
 
 
 def process_f(f, pth):
@@ -29,7 +31,7 @@ def write_proposals(pth):
     if os.path.exists(os.path.join(pth, 'images_before_preprocess')):
         print('Original images found. Overwriting images dir')
         shutil.rmtree(os.path.join(pth, 'images'))
-        os.path.rename(os.path.join(pth, 'images_before_preprocess'), os.path.join(pth, 'images'))
+        shutil.move(os.path.join(pth, 'images_before_preprocess'), os.path.join(pth, 'images'))
 
     os.makedirs(os.path.join(pth, 'proposals'))
     os.makedirs(os.path.join(pth, 'images_before_preprocess'))
@@ -37,9 +39,13 @@ def write_proposals(pth):
     Parallel(n_jobs=num_processes)(delayed(process_f)(f, pth) for f in glob.glob(os.path.join(pth, 'images', '*.png')))
 
 
-if __name__ == '__main__':
-    train_dir = '/data/train'
-    val_dir = '/data/val'
-    write_proposals(train_dir)
-    write_proposals(val_dir)
+@click.command()
+@click.option('--train-path', type=str, help='Path to training data')
+@click.option('--val-path', type=str, help='Path to training data')
+def run(train_path, val_path):
+    write_proposals(train_path)
+    write_proposals(val_path)
 
+
+if __name__ == '__main__':
+    run()
