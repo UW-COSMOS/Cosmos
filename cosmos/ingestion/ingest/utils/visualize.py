@@ -42,6 +42,7 @@ def write_regions(img_path, bbs):
     res = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     plt.imshow(res)
     plt.savefig(f'{img_path}.png')
+    plt.close()
 
 
 

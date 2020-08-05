@@ -16,7 +16,10 @@ def mapper(obj):
     score = float(diff.text) if diff is not None else 0
     bnd = obj.find("bndbox")
     coords = ["xmin", "ymin", "xmax", "ymax"]
-    return obj.find("name").text, [int(float(bnd.find(coord).text)) for coord in coords], score
+    cls = obj.find("name").text
+    if cls == 'unlabelled':
+        return None
+    return cls, [int(float(bnd.find(coord).text)) for coord in coords], score
 
 
 def test_merge_below():
@@ -76,6 +79,7 @@ def xml2list(fp, tres=0, feather=False):
     root = tree.getroot()
     objects = root.findall("object")
     lst = [mapper(obj) for obj in objects]
+    lst = [i for i in lst if i is not None]
     print(lst)
     new_lst = [l for l in lst]
     feathered_new_lst = None

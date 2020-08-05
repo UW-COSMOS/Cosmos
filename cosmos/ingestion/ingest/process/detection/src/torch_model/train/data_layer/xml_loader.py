@@ -117,6 +117,8 @@ class XMLLoader(Dataset):
            neighbor_windows = [n.window for n in neighbors]
            neighbor_radii = get_radii(ex.bbox, torch.stack(neighbor_boxes))
            neighbor_angles = get_angles(ex.bbox, torch.stack(neighbor_boxes))
+        if ex.label == 'unlabelled':
+            ex.label = self.classes[-1]
         label = torch.Tensor([self.classes.index(ex.label)]) if ex.label is not None else None
         return Example(ex.bbox, label, ex.window, neighbor_boxes, neighbor_windows, neighbor_radii, neighbor_angles,colorfulness)
 

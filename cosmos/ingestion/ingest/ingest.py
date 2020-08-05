@@ -3,6 +3,7 @@ import shutil
 import functools
 import json
 import os
+from PIL import Image
 import io
 import subprocess
 import glob
@@ -19,7 +20,7 @@ import pikepdf
 import pandas as pd
 
 import logging
-logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
+logging.basicConfig(format='%(levelname)s :: %(filename) :: %(funcName)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.ERROR)
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 logging.getLogger("PIL").setLevel(logging.ERROR)
@@ -29,7 +30,7 @@ logging.getLogger("ingest.process.detection.src.utils.ingest_images").setLevel(l
 logging.getLogger("ingest.process.detection.src.torch_model.train.data_layer.xml_loader").setLevel(logging.ERROR)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 
 class Ingest:
@@ -54,16 +55,17 @@ class Ingest:
         if self.client is not None:
             self.client.close()
 
-    def ingest(self, pdf_directory, dataset_id, result_path, visualize_proposals=False):
+    def ingest(self, pdf_directory, dataset_id, result_path, skip_ocr=True, visualize_proposals=False):
         if self.tmp_dir is not None:
             self._ingest_local(pdf_directory,
                                dataset_id,
                                result_path,
-                               visualize_proposals=visualize_proposals)
+                               visualize_proposals=visualize_proposals,
+                               skip_ocr=skip_ocr)
         else:
             self._ingest_distributed(pdf_directory, dataset_id)
 
-    def _ingest_local(self, pdf_directory, dataset_id, result_path, visualize_proposals=False, aggregate=False):
+    def _ingest_local(self, pdf_directory, dataset_id, result_path, visualize_proposals=False, aggregate=False, skip_ocr=True):
         pdfnames = get_pdf_names(pdf_directory)
         pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
         logger.info('Starting ingestion. Converting PDFs to images.')
@@ -79,7 +81,8 @@ class Ingest:
         if self.use_semantic_detection:
             images = self.client.map(detect, images, resources={'GPU': 1}, priority=8)
             images = self.client.map(regroup, images, resources={'process': 1})
-            images = self.client.map(pool_text, images, resources={'process': 1})
+            pool_text_ocr_opt = functools.partial(pool_text, skip_ocr=skip_ocr)
+            images = self.client.map(pool_text_ocr_opt, images, resources={'process': 1})
             if self.use_xgboost_postprocess:
                 images = self.client.map(xgboost_postprocess, images, resources={'process': 1})
                 if self.use_rules_postprocess:
@@ -90,30 +93,35 @@ class Ingest:
         for i in images:
             with open(i, 'rb') as rf:
                 obj = pickle.load(rf)
-                for c in obj['content']:
+                for ind, c in enumerate(obj['content']):
                     bb, cls, text = c
                     scores, classes = zip(*cls)
                     scores = list(scores)
                     classes = list(classes)
+                    postprocess_cls = postprocess_score = None
+                    if 'xgboost_content' in obj:
+                        _, postprocess_cls, _, postprocess_score = obj['xgboost_content'][ind]
                     final_obj = {'pdf_name': obj['pdf_name'], 
                                  'dataset_id': obj['dataset_id'],
                                  'page_num': obj['page_num'], 
                                  'bounding_box': list(bb),
                                  'classes': classes,
                                  'scores': scores,
-                                 'content': text
+                                 'content': text,
+                                 'postprocess_cls': postprocess_cls,
+                                 'postprocess_score': postprocess_score
                                 }
                     results.append(final_obj)
         result_df = pd.DataFrame(results)
+        result_df['detect_cls'] = result_df['classes'].apply(lambda x: x[0])
+        result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
         if aggregate:
             result_df = self._aggregate(result_df)
         result_df.to_parquet(result_path, engine='pyarrow', compression='gzip')
-        shutil.rmtree(self.tmp_dir)
+        #shutil.rmtree(self.tmp_dir)
 
     def _aggregate(self, df):
         ddf = dd.from_pandas(df)
-        # ddf.
-
 
     def _ingest_distributed(self, pdf_directory, dataset_id):
         raise NotImplementedError("Distributed setup currently not implemented via Ingest class. Set a tmp directory.")
@@ -184,8 +192,10 @@ class Ingest:
         if filename is None:
             return None
         pdf_name = os.path.basename(filename)
+        limit = None
         try:
-            meta, dims = parse_pdf(filename)
+            meta, limit = parse_pdf(filename)
+            logger.debug(f'Limit: {limit}')
         except Exception as e:
             logger.error(str(e), exc_info=True)
             raise Exception('Parsing error', str(e))
@@ -208,25 +218,33 @@ class Ingest:
             with open(image, 'rb') as bimage:
                 bstring = bimage.read()
             bytesio = io.BytesIO(bstring)
-            img, img_size = resize_png(bytesio, return_size=True)
+            img = Image.open(bytesio).convert('RGB')
+            orig_w, orig_h = img.size
+            meta2 = None
+            img, img_size = resize_png(img, return_size=True)
             w, h = img_size
+            dims = [0, 0, w, h]
             if meta is not None:
-                dims = list(dims)
-                orig_w, orig_h = dims[2], dims[3]
+                orig_w = limit[2]
+                orig_h = limit[3]
                 scale_w = w / orig_w
                 scale_h = h / orig_h
-                meta.loc[meta.page == (page_num-1), 'x1'] = meta.x1 * scale_w
-                meta.loc[meta.page == (page_num-1), 'x2'] = meta.x2 * scale_w
-                meta.loc[meta.page == (page_num-1), 'y1'] = meta.y1 * scale_h
-                meta.loc[meta.page == (page_num-1), 'y2'] = meta.y2 * scale_h
-                dims2 = [0, 0, w, h]
-                meta2 = meta.to_dict()
+                logger.debug(f'Original w: {orig_w}')
+                logger.debug(f'Original h: {orig_h}')
+                logger.debug(f'New w: {w}')
+                logger.debug(f'New h: {h}')
+                meta2 = meta.copy()
+                meta2.loc[meta2.page == (page_num-1), 'x1'] = meta2.x1 * scale_w
+                meta2.loc[meta2.page == (page_num-1), 'x2'] = meta2.x2 * scale_w
+                meta2.loc[meta2.page == (page_num-1), 'y1'] = meta2.y1 * scale_h
+                meta2.loc[meta2.page == (page_num-1), 'y2'] = meta2.y2 * scale_h
+                meta2 = meta2.to_dict()
                 meta2 = json.dumps(meta2)
                 meta2 = json.loads(meta2)
 
             # Convert it back to bytes
             img.save(image, format='PNG')
-            obj = {'orig_w': orig_w, 'orig_h': orig_h, 'dataset_id': dataset_id, 'pdf_name': pdf_name, 'meta': meta2, 'dims': dims2, 'page_num': page_num}
+            obj = {'orig_w': orig_w, 'orig_h': orig_h, 'dataset_id': dataset_id, 'pdf_name': pdf_name, 'meta': meta2, 'dims': dims, 'pdf_limit': limit, 'page_num': page_num}
             if tmp_dir is not None:
                 with open(os.path.join(tmp_dir, pdf_name) + f'_{page_num}.pkl', 'wb') as wf:
                     pickle.dump(obj, wf)

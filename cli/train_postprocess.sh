@@ -1,0 +1,12 @@
+python -m ingest.scripts.train_postprocess \
+    --logdir logs/ --modelcfg cosmos/config/model_config.yaml \
+    --detect-weights cosmos/weights/amfam_weights.pth \
+    --device cuda  \
+    --train-img-dir       contracts/train/images \
+    --train-proposals-dir contracts/train/proposals \
+    --train-xml-dir       contracts/train/annotations \
+    --val-img-dir       contracts/val/images \
+    --val-proposals-dir contracts/val/proposals \
+    --val-xml-dir       contracts/val/annotations \
+    --num-processes 40 --classcfg cosmos/config/model_config.yaml \
+    --output-path cosmos/weights/pp_amfam_weights.pth
