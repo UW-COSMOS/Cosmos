@@ -13,7 +13,7 @@ class ProcessPlugin(WorkerPlugin):
         self.postprocess_model = joblib.load(postprocess_weights_pth)
         self.classes_pth = classes_path
         with open(self.classes_pth) as stream:
-            self.classes = yaml.load(stream)["classes"]
+            self.classes = yaml.load(stream)["CLASSES"]
 
 @click.command()
 def dask_setup(worker):

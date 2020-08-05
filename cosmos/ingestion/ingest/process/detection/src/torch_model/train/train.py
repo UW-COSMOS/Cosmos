@@ -3,6 +3,7 @@ Training helper class
 Takes a model, dataset, and training paramters
 as arguments
 """
+import numpy as np
 import torch
 from torch import nn
 from os.path import join, isdir
@@ -34,9 +35,24 @@ class TrainerHelper:
         """
         self.model = model.to(device)
         self.train_set, self.val_set = train_set, val_set
+
         self.params = params
         self.cls = dict([(val, idx) for (idx, val) in enumerate(model.cls_names)])
         self.device = device
+        num_classes = len(self.train_set.classes)
+        print('Calculating class weights')
+        print(f'Number of classes: {num_classes}')
+        print(f'Class stats: {self.train_set.class_stats}')
+        class_np = np.zeros(num_classes)
+        for ind, cls in enumerate(self.train_set.classes):
+            class_np[ind] = float(self.train_set.class_stats[cls])
+
+        effective_num = 1.0 - np.power(0.9999, class_np)
+        weights = (1.0 - 0.9999) / np.array(effective_num)
+        weights = weights / np.sum(weights * num_classes)
+        self.weights = torch.FloatTensor(weights).to(device)
+        print(f'Classes: {self.train_set.classes}')
+        print(f'Class Weights: {self.weights}')
 
         if params["USE_TENSORBOARD"]:
             self.writer = SummaryWriter()
@@ -56,7 +72,7 @@ class TrainerHelper:
                             batch_size=int(self.params["BATCH_SIZE"]),
                             collate_fn=self.train_set.collate,
                             num_workers=int(self.params["BATCH_SIZE"]*2))
-         
+
             for batch in tqdm(train_loader, desc="training"):
                 # print(batch)  
                 optimizer.zero_grad()
@@ -76,7 +92,7 @@ class TrainerHelper:
                   rois, cls_scores= self.model(ex_sub, windows_sub,radii_sub,angles_sub,colors_sub, batch.center_bbs, self.device)
                   batch_cls_scores.append(cls_scores)
                 batch_cls_scores = torch.cat(batch_cls_scores)
-                loss = self.head_target_layer(batch_cls_scores, gt_cls.reshape(-1).long())
+                loss = self.head_target_layer(batch_cls_scores, gt_cls.reshape(-1).long(), weights=self.weights)
                 tot_cls_loss += float(loss)
                 loss.backward()
                 nn.utils.clip_grad_value_(self.model.parameters(), 5)

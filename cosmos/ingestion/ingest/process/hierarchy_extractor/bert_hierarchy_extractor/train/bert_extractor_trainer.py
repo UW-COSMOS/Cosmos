@@ -85,7 +85,7 @@ class BertExtractorTrainer:
                 class_counts[cl] += 1
 
         effective_num = 1.0 - np.power(0.9999, class_counts)
-        weights = (1.0 - 0.999) / np.array(effective_num)
+        weights = (1.0 - 0.9999) / np.array(effective_num)
         weights = weights / np.sum(weights * num_classes)
         self.weights = torch.FloatTensor(weights).to(device)
         print(self.weights)

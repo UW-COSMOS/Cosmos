@@ -4,9 +4,7 @@ Run OCR over docs, also merge
 
 import functools
 import json
-import os
 import logging
-logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 import pytesseract
 from .group_cls import group_cls
 import pandas as pd
@@ -14,6 +12,9 @@ from PIL import Image
 import pickle
 from ingest.process.detection.src.evaluate.evaluate import calculate_iou
 
+logging.basicConfig(format='%(levelname)s :: %(filename) :: %(funcName)s :: %(asctime)s :: %(message)s', level=logging.ERROR)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
 
 def regroup(pkl_path):
     with open(pkl_path, 'rb') as rf:
@@ -25,19 +26,22 @@ def regroup(pkl_path):
     return pkl_path
 
 
-def pool_text(pkl_path):
+def pool_text(pkl_path, skip_ocr=True):
     with open(pkl_path, 'rb') as rf:
         obj = pickle.load(rf)
     meta_df = obj['meta']
     detect_objs = obj['detected_objs']
     if meta_df is not None:
         text_map = _pool_text_meta(meta_df, obj['dims'][3], detect_objs, obj['page_num'])
-    else:
+    elif not skip_ocr:
         text_map = _pool_text_ocr(obj['page_path'], detect_objs)
+    else:
+        text_map = _placeholder_map(detect_objs)
     obj['content'] = text_map
     with open(pkl_path, 'wb') as wf:
         pickle.dump(obj, wf)
     return pkl_path
+
 
 def check_overlap(b2, row):
     b1 = (row['x1'], row['y1'], row['x2'], row['y2'])
@@ -47,6 +51,7 @@ def check_overlap(b2, row):
 
 def _pool_text_meta(meta_df, height, detect_objs, page_num):
     text_df = pd.DataFrame(meta_df)
+    logger.debug(f'Page number: {page_num}')
     # Switch coordinate systems to bottom left is the origin
     text_df['y1'] = height - text_df['y1']
     text_df['y2'] = height - text_df['y2']
@@ -65,12 +70,22 @@ def _pool_text_meta(meta_df, height, detect_objs, page_num):
         br_y += 10
         go = functools.partial(check_overlap, (tl_x, tl_y, br_x, br_y))
         text_df['overlap'] = text_df.apply(go, axis=1)
+        logger.debug(f'Bounding box: {bb}')
+        df = text_df[text_df['overlap'] == True]
+        logger.debug(f'Overlap: {df[["overlap", "x1", "y1", "x2", "y2", "text"]]}')
+        logger.debug(f'Number of overlaps: {text_df.overlap[text_df.overlap == True].count()}')
         text_pool = text_df.loc[(text_df['page'] == page_num-1) & (text_df['overlap'] == True)]
         #text_pool = text_df.loc[(text_df['page'] == page_num-1) & (text_df['x2'] <= br_x) & (text_df['y1'] >= tl_y) &
         #                        (text_df['x1'] >= tl_x) & (text_df['y2'] <= br_y)]
         text_pool = text_pool.sort_values(by=['y2', 'x1'])
         text_pool = ' '.join(text_pool['text'].tolist())
+        logger.debug(f'Text pool: {text_pool}')
+        logger.debug('-------')
         pooled.append((bb, scrs, text_pool))
+    return pooled
+
+def _placeholder_map(detect_objs):
+    pooled = [(bb, scrs, '') for bb, scrs in detect_objs]
     return pooled
 
 
