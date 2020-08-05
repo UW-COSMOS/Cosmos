@@ -1,3 +1,4 @@
+import pandas as pd
 
 
 def check_y_overlap(bb1, bb2):
@@ -54,12 +55,14 @@ def group_section(obj_list):
     section = {'pdf_name': obj_list[0]['pdf_name']}
     if obj_list[0]['postprocess_cls'] == 'Section Header':
         section['section_header'] = obj_list[0]['content']
-        section['section_header_key'] = (obj_list[0]['page_num'], obj_list[0]['bounding_box'])
+        section['section_header_page'] = obj_list[0]['page_num']
+        section['section_header_bb'] = obj_list[0]['bounding_box']
         obj_list.pop(0)
     content = [obj['content'] for obj in obj_list]
     content = ' '.join(content)
     section['content'] = content
-    section['obj_keys'] = [(obj['page_num'], obj['bounding_box']) for obj in obj_list]
+    section['obj_pages'] = [obj['page_num'] for obj in obj_list]
+    section['obj_bbs'] = [obj['bounding_box'] for obj in obj_list]
     return section
 
 
@@ -80,27 +83,52 @@ def aggregate_sections(pdf):
 
 
 def aggregate_pdf(pdf):
-    pdf = {}
+    pdf_obj = {}
     content = ''
-    obj_keys = []
+    obj_pages = []
+    obj_bbs = []
     for ind, row in pdf.iterrows():
-        if 'pdf_name' not in pdf:
-            pdf['pdf_name'] = row['pdf_name']
+        if 'pdf_name' not in pdf_obj:
+            pdf_obj['pdf_name'] = row['pdf_name']
         content += f' {row["content"]}'
-        obj_keys.append((row['page_num'], row['bounding_box']))
-    pdf['content'] = content
-    pdf['obj_keys'] = obj_keys
-    return pdf
+        obj_pages.append(row['page_num'])
+        obj_bbs.append(row['bounding_box'])
+    pdf_obj['content'] = content
+    pdf_obj['obj_pages'] = obj_pages
+    pdf_obj['obj_bbs'] = obj_bbs
+    return pdf_obj
 
 
-supported_types = ['sections', 'pdfs']
+stream_types = ['sections', 'pdfs']
+association_types = []
 
 
-def stream_aggregate(ddf, aggregate_type='sections'):
-    if aggregate_type not in supported_types:
-        raise ValueError(f'Passed type not supported for stream aggregation. Acceptable types are: {supported_types}')
+def aggregate_router(ddf, aggregate_type):
+    if aggregate_type in stream_types:
+        return stream_aggregate(ddf, aggregate_type)
+    elif aggregate_type in association_types:
+        association_aggregate(ddf, aggregate_type)
+    else:
+        raise ValueError(f'Passed type not support for aggregation. Supported types are {stream_types + association_types}')
+
+
+def stream_aggregate(ddf, aggregate_type):
     if aggregate_type == 'sections':
-        return ddf.groupby('pdf_name').apply(aggregate_sections, meta=object).compute()
+        result = ddf.groupby('pdf_name').apply(aggregate_sections)
+        results = []
+        for pdf_name, sections in result.iteritems():
+            for section in sections:
+                results.append(section)
+        results_df = pd.DataFrame(results)
+        return results_df
     if aggregate_type == 'pdfs':
-        return ddf.groupby('pdf_name').apply(aggregate_pdf, meta=object).compute()
+        result = ddf.groupby('pdf_name').apply(aggregate_pdf)
+        results = []
+        for pdf_name, item in result.iteritems():
+            results.append(item)
+        result_df = pd.DataFrame(results)
+        return result_df
 
+
+def association_aggregate(ddf, aggregate_type):
+    raise NotImplementedError('Implement association aggregate')

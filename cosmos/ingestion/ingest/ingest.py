@@ -15,6 +15,7 @@ from ingest.utils.preprocess import resize_png
 from ingest.utils.pdf_helpers import get_pdf_names
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
+from ingest.process.aggregation.aggregate import aggregate_router
 from tqdm import tqdm
 import pikepdf
 import pandas as pd
@@ -35,7 +36,7 @@ logger.setLevel(logging.ERROR)
 
 class Ingest:
     def __init__(self, scheduler_address, use_semantic_detection=False, client=None,
-                       tmp_dir=None, use_xgboost_postprocess=False, use_rules_postprocess=False, xgboost_config=None):
+                       tmp_dir=None, use_xgboost_postprocess=False, use_rules_postprocess=False):
         logger.info("Initializing Ingest object")
         self.client = client
         if self.client is None:
@@ -55,17 +56,18 @@ class Ingest:
         if self.client is not None:
             self.client.close()
 
-    def ingest(self, pdf_directory, dataset_id, result_path, skip_ocr=True, visualize_proposals=False):
+    def ingest(self, pdf_directory, dataset_id, result_path, skip_ocr=True, visualize_proposals=False, aggregations=[]):
         if self.tmp_dir is not None:
             self._ingest_local(pdf_directory,
                                dataset_id,
                                result_path,
                                visualize_proposals=visualize_proposals,
-                               skip_ocr=skip_ocr)
+                               skip_ocr=skip_ocr,
+                               aggregations=aggregations)
         else:
             self._ingest_distributed(pdf_directory, dataset_id)
 
-    def _ingest_local(self, pdf_directory, dataset_id, result_path, visualize_proposals=False, aggregate=False, skip_ocr=True):
+    def _ingest_local(self, pdf_directory, dataset_id, result_path, visualize_proposals=False, aggregate=False, skip_ocr=True, aggregations=[]):
         pdfnames = get_pdf_names(pdf_directory)
         pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
         logger.info('Starting ingestion. Converting PDFs to images.')
@@ -115,13 +117,12 @@ class Ingest:
         result_df = pd.DataFrame(results)
         result_df['detect_cls'] = result_df['classes'].apply(lambda x: x[0])
         result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
-        if aggregate:
-            result_df = self._aggregate(result_df)
-        result_df.to_parquet(result_path, engine='pyarrow', compression='gzip')
-        #shutil.rmtree(self.tmp_dir)
-
-    def _aggregate(self, df):
-        ddf = dd.from_pandas(df)
+        for aggregation in aggregations:
+            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation)
+            name = f'{dataset_id}_{aggregation}.parquet'
+            aggregate_df.to_parquet(os.path.join(result_path, name), engine='pyarrow', compression='gzip')
+        result_df.to_parquet(os.path.join(result_path, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
+        shutil.rmtree(self.tmp_dir)
 
     def _ingest_distributed(self, pdf_directory, dataset_id):
         raise NotImplementedError("Distributed setup currently not implemented via Ingest class. Set a tmp directory.")
