@@ -113,8 +113,10 @@ class Ingest:
                                 }
                     results.append(final_obj)
         result_df = pd.DataFrame(results)
-        #if aggregate:
-        #    result_df = self._aggregate(result_df)
+        result_df['detect_cls'] = result_df['classes'].apply(lambda x: x[0])
+        result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
+        if aggregate:
+            result_df = self._aggregate(result_df)
         result_df.to_parquet(result_path, engine='pyarrow', compression='gzip')
         #shutil.rmtree(self.tmp_dir)
 
