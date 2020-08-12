@@ -1,7 +1,6 @@
 """
 Retriever interface
 """
-import pickle
 
 class Retriever:
     def search(self, query):

@@ -5,9 +5,11 @@ import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+import os
+
 
 class ElasticRerankingRetriever(Retriever):
-    def __init__(self, client, hosts=['localhost']):
+    def __init__(self, client, hosts=[os.environ["ELASTIC_ADDRESS"]]):
         self.elastic_retriever = ElasticRetriever(hosts)
         self.reranker = BertRerankingRetriever(client)
 
@@ -18,8 +20,8 @@ class ElasticRerankingRetriever(Retriever):
     def rerank(self, query, contexts):
         return self.reranker.rerank(query, contexts)
 
-    def build_index(self, input_path):
-        self.elastic_retriever.build_index(input_path)
+    def build_index(self, document_parquet, section_parquet):
+        self.elastic_retriever.build_index(document_parquet, section_parquet)
 
     def delete(self, dataset_id):
         self.elastic_retriever.delete(dataset_id)

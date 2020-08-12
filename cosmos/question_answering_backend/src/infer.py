@@ -21,7 +21,7 @@ from pytorch_transformers import (BertConfig, BertForQuestionAnswering, BertToke
 from torch.utils.data import TensorDataset, DataLoader
 
 
-model_path = "models/bert_base_uncased_finetuned_squad_2.0/"
+model_path = "../../../deployment/weights/bert_base_squad2/"
 #Initialising parameters
 max_query_length = 60
 max_seq_length = 384

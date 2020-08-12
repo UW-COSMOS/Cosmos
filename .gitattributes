@@ -6,3 +6,4 @@ services/question_answering_backend/src/models/** filter=lfs diff=lfs merge=lfs 
 cosmos/process_pages/process/weights/** filter=lfs diff=lfs merge=lfs -text
 cosmos/weights/** filter=lfs diff=lfs merge=lfs -text
 cosmos/ingestion/tests/images/** filter=lfs diff=lfs merge=lfs -text
+cosmos/deployment/weight/** filter=lfs diff=lfs merge=lfs -text

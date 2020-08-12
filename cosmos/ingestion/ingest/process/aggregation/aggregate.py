@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 def check_y_overlap(bb1, bb2):
     _, x1, _, x2 = bb1
     _, y1, _, y2 = bb2
@@ -52,7 +51,7 @@ def order_page(page_group):
 
 
 def group_section(obj_list):
-    section = {'pdf_name': obj_list[0]['pdf_name']}
+    section = {'pdf_name': obj_list[0]['pdf_name'], 'dataset_id': obj_list[0]['dataset_id']}
     if obj_list[0]['postprocess_cls'] == 'Section Header':
         section['section_header'] = obj_list[0]['content']
         section['section_header_page'] = obj_list[0]['page_num']
@@ -90,6 +89,8 @@ def aggregate_pdf(pdf):
     for ind, row in pdf.iterrows():
         if 'pdf_name' not in pdf_obj:
             pdf_obj['pdf_name'] = row['pdf_name']
+        if 'dataset_id' not in pdf_obj:
+            pdf_obj['dataset_id'] = row['dataset_id']
         content += f' {row["content"]}'
         obj_pages.append(row['page_num'])
         obj_bbs.append(row['bounding_box'])

@@ -4,8 +4,7 @@ from transformers import BertForSequenceClassification
 from distributed.diagnostics.plugin import WorkerPlugin
 import os
 import click
-from dask.distributed import Client
-from dask.distributed import get_worker
+from dask.distributed import Client, get_worker
 import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -36,7 +35,7 @@ class BertRerankingRetriever(Retriever):
 
     @classmethod
     def _rerank(cls, query, contexts):
-        contexts = [c for c in contexts if c != '']
+        contexts = [c for c in contexts if c['content'] != '']
         worker = get_worker()
         dp = None
         for plg in worker.plugins:
@@ -46,7 +45,9 @@ class BertRerankingRetriever(Retriever):
         if dp is None:
             raise Exception('No reranking plugin registered')
         model = dp.model
+        print(contexts)
         result = model.infer(query, contexts)
+        print(result)
         #contexts, scores = zip(*result)
         #result = {'contexts': contexts, 'scores': scores}
         return result

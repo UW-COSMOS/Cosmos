@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 setup(
-    name="cosmos-ingest",
-    version="0.2",
+    name="cosmos-api",
+    version="0.0.1",
     author="Ankur Goswami",
     author_email="ankur.goswami12@gmail.com",
-    description="The COSMOS pdf ingestion package",
+    description="The COSMOS api package",
     url="https://github.com/UW-COSMOS/Cosmos",
     packages=find_packages(),
     classifiers=[
@@ -14,4 +14,3 @@ setup(
     ],
     python_requires='>=3.6',
 )
-

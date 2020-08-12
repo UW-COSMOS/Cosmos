@@ -27,14 +27,20 @@ class Inference:
                                 shuffle=False, 
                                 collate_fn=InferenceDataset.collate,)
         full_scores = []
+        full_ids = []
+        full_docnames = []
         for batch in dataloader:
-            xs = cudafy(batch)
+            xs, ids, docnames = batch
+            xs = cudafy(xs)
             logits = self.model(**xs)[0]
             scores = logits[:, 1]
             scores = scores.squeeze()
             scores = list(scores.detach().cpu().numpy().flatten())
             full_scores.extend(scores)
-        cs = zip(contexts, full_scores)
+            full_ids.extend(ids)
+            full_docnames.extend(docnames)
+        cs = zip(contexts, full_scores, full_ids, full_docnames)
         cs = sorted(cs, key=lambda x: x[1], reverse=True)
+        cs = [{'query': query, 'context': q['content'], 'score': s, 'id': i, 'docname': d} for q, s, i, d in cs]
         return cs
 
