@@ -3,7 +3,7 @@ export OMP_NUM_THREADS=2
 export MODEL_CONFIG=cosmos/ingestion/ingest/process/configs/model_config.yaml
 export WEIGHTS_PTH=cosmos/weights/model_weights.pth
 export PP_WEIGHTS_PTH=cosmos/weights/pp_model_weights.pth
-export CLASSES_PTH=cosmos/ingestion/ingest/process/configs/classes.yaml
+export CLASSES_PTH=cosmos/ingestion/ingest/process/configs/model_config.yaml
 export DEVICE=cuda
 declare -a bgpids
 
