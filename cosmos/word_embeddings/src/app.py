@@ -50,6 +50,11 @@ bigram_cleaned_model_path = "./data_cleaned/model_streamed_bigram"
 trigram_cleaned_model_path = "./data_cleaned/model_streamed_trigram"
 bibjsons['cleaned'] = "./data_cleaned/bibjson"
 
+lowered_cleaned_model_path = "./data_lowered_cleaned/model_streamed"
+bigram_lowered_cleaned_model_path = "./data_lowered_cleaned/model_streamed_bigram"
+trigram_lowered_cleaned_model_path = "./data_lowered_cleaned/model_streamed_trigram"
+bibjsons['lowered_cleaned'] = "./data_lowered_cleaned/bibjson"
+
 sys.stdout.write("Loading model from '{}'... ".format(model_path))
 sys.stdout.flush()
 
@@ -74,8 +79,19 @@ try:
     sys.stdout.write("Loaded cleaned trigrams")
     sys.stdout.flush()
 
+    models['default_lowered_cleaned'] = Word2Vec.load(lowered_cleaned_model_path)
+    sys.stdout.write("Loaded lowered + cleaned monograms")
+    sys.stdout.flush()
+    models['bigram_lowered_cleaned'] = Word2Vec.load(bigram_lowered_cleaned_model_path)
+    sys.stdout.write("Loaded lowered + cleaned bigrams")
+    sys.stdout.flush()
+    models['trigram_lowered_cleaned'] = Word2Vec.load(trigram_lowered_cleaned_model_path)
+    sys.stdout.write("Loaded lowered + cleaned trigrams")
+    sys.stdout.flush()
+
 except:
     sys.stdout.write("Error: not found.\n")
+    sys.execinfo()
     sys.exit(2)
 
 
@@ -98,6 +114,11 @@ def hello_world():
     """Data service node: this is the root node for version 1 of this data service."""
     return node_response('XDD APPLICATION PROGRAM INTERFACE v1')
 
+@app.route('/models')
+def get_models():
+    """Data service node: this is the root node for version 1 of this data service."""
+    return data_response({"models" : list(models.keys())})
+
 @app.route('/cosmul', methods=['GET', 'POST'])
 def cosmul():
     """Data service operation: execute a vector query on the specified word."""
@@ -106,10 +127,17 @@ def cosmul():
     logging.info(f"Cosmul with pos : {pos} and negative: {neg}")
 
     model_name=request.values.get('model', 'default')
+    lowered=request.values.get('lowered', 'false')
+    if lowered.lower()== "true" and "lowered" not in model_name:
+        model_name += "_lowered"
     cleaned=request.values.get('cleaned', 'false')
-    if cleaned.lower()== "true":
+    if cleaned.lower()== "true" and "cleaned" not in model_name:
         model_name += "_cleaned"
     n_responses=int(request.values.get('n', '10'))
+
+    if "lowered" in model_name:
+        pos = [i.lower() for i in pos]
+        neg = [i.lower() for i in neg]
 
     if pos or neg:
         try:
@@ -126,11 +154,19 @@ def most_similar_to():
     entity=request.values.get('entity', '')
     entities_list=request.values.get('entities_list', '').split(',')
     model_name=request.values.get('model', 'default')
+    lowered=request.values.get('lowered', 'false')
+    if lowered.lower()== "true" and "lowered" not in model_name:
+        model_name += "_lowered"
     cleaned=request.values.get('cleaned', 'false')
-    if cleaned.lower()== "true":
+    if cleaned.lower()== "true" and "cleaned" not in model_name:
         model_name += "_cleaned"
     if entity=='' or entities_list=='' or isinstance(entity, list):
         return error_400(f"You must specify valid entity (single term) and entities_list (comma-separated) parameters! {entity}, {entities_list}")
+
+    if "lowered" in model_name:
+        entity = entity.lower()
+        entities_list = [i.lower() for i in entities_list]
+
     try:
         a = models[model_name].wv.most_similar_to_given(entity, entities_list)
     except KeyError:
@@ -143,10 +179,18 @@ def most_similar():
     pos=request.values.get('positive', '').split(',')
     neg=request.values.get('negative', '').split(',')
     model_name=request.values.get('model', 'default')
+    lowered=request.values.get('lowered', 'false')
+    if lowered.lower()== "true" and "lowered" not in model_name:
+        model_name += "_lowered"
     cleaned=request.values.get('cleaned', 'false')
-    if cleaned.lower()== "true":
+    if cleaned.lower()== "true" and "cleaned" not in model_name:
         model_name += "_cleaned"
     n_responses=int(request.values.get('n', '10'))
+
+    if "lowered" in model_name:
+        pos = [i.lower() for i in pos]
+        neg = [i.lower() for i in neg]
+
     logging.info(f"most_similar with positive={pos} and negative={neg}")
 
     if pos or neg:
@@ -165,10 +209,17 @@ def word2vec():
     """Data service operation: execute a vector query on the specified word."""
     query_word=preprocess(request.values.get('word'))
     model_name=request.values.get('model', 'default')
+    lowered=request.values.get('lowered', 'false')
+    if lowered.lower()== "true" and "lowered" not in model_name:
+        model_name += "_lowered"
     cleaned=request.values.get('cleaned', 'false')
-    if cleaned.lower()== "true":
+    if cleaned.lower()== "true" and "cleaned" not in model_name:
         model_name += "_cleaned"
     n_responses=int(request.values.get('n', '10'))
+    if "lowered" in model_name:
+        query_word = [i.lower() for i in query_word]
+    logging.info(query_word)
+    logging.info(model_name)
 
     if query_word:
         try:
@@ -187,12 +238,18 @@ def word2vec():
         return error_400("You must specify a value for the argument 'word'")
 
 @app.route('/bibjson', methods=['GET'])
+def bibjson():
     model_name=request.values.get('model', 'default')
+    if lowered.lower()== "true" and "lowered" not in model_name:
+        model_name += "_lowered"
     cleaned=request.values.get('cleaned', 'false')
-    if cleaned.lower()== "true":
+    if cleaned.lower()== "true" and "cleaned" not in model_name:
         model_name += "_cleaned"
     if "cleaned" in model_name:
-        return send_file(bibjsons['cleaned'])
+        if "lowered" in model_name:
+            return send_file(bibjsons['lowered_cleaned'])
+        else:
+            return send_file(bibjsons['cleaned'])
     else:
         return send_file(bibjsons['default'])
 
@@ -217,9 +274,13 @@ def tensors():
         model_name = body['model']
     else:
         model_name = 'default'
+    if lowered.lower()== "true" and "lowered" not in model_name:
+        model_name += "_lowered"
     cleaned=request.values.get('cleaned', 'false')
-    if cleaned.lower()== "true":
+    if cleaned.lower()== "true" and "cleaned" not in model_name:
         model_name += "_cleaned"
+    if "lowered" in model_name:
+        terms = [i.lower() for i in terms]
     products = get_tensors(terms)
     zipfile = generate_zip(products)
     zipfile.seek(0)
@@ -249,7 +310,6 @@ def error_500(message):
     """Return a 500 response with a JSON body indicating an internal error."""
     return json_response('{ "status": "500", "error": "A server error occurred." }', 500)
 
-def bibjson():
 def json_response(content, status):
     r = Response(content, status, mimetype="application/json")
     r.headers["Content-Type"] = "application/json; charset=utf-8"
