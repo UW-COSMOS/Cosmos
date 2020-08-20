@@ -1,0 +1,56 @@
+version: "3"
+
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network 
+
+services:
+
+    adminer:
+        image: adminer
+        ports:
+            - 8080:8080
+
+    mysql-server-1:
+      env_file:
+        - ./database/innodb-cluster/mysql-server.env
+      image: mysql/mysql-server:8.0.12
+      volumes:
+          - ${DB_PTH}:/var/lib/mysql
+          - ${DB_TMP_PTH}:/tmp
+      ports:
+        - "3301:3306"
+      command: ["mysqld","--server_id=1","--binlog_checksum=NONE","--gtid_mode=ON","--enforce_gtid_consistency=ON","--log_bin","--log_slave_updates=ON","--master_info_repository=TABLE","--relay_log_info_repository=TABLE","--transaction_write_set_extraction=XXHASH64","--user=mysql","--skip-host-cache","--skip-name-resolve", "--default_authentication_plugin=mysql_native_password", "--max-connections=1024", "--innodb_buffer_pool_size=16g", "--group-concat-max-len=4294967295", "--innodb-log-file-size=1G"]
+
+    scheduler:
+        image: uwcosmos/ingestion:dev
+        command: "dask-scheduler"
+
+    agg_worker1:
+        image: uwcosmos/aggregate_sections:dev
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+            - CUDA_VISIBLE_DEVICES=''
+#        depends_on:
+#            - scheduler
+        command: "dask-worker tcp://scheduler:8786 --nprocs 5 --resources 'agg=1'"
+        volumes:
+            - ${TMP_PTH}:/tmp
+
+    table_worker1:
+        image: uwcosmos/extract_tables:dev
+        environment:
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+            - CUDA_VISIBLE_DEVICES=''
+        command: "dask-worker tcp://scheduler:8786 --nprocs 16 --resources 'extract_tables=1'"
+#        depends_on:
+#            - scheduler
+#
+#

@@ -1,0 +1,28 @@
+version: "3"
+networks:
+  default:
+    external:
+      name: cosmos_swarm_network
+
+services:
+    preprocess:
+        image: uwcosmos/retrieval:latest
+        environment:
+            - DATASET_ID
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT
+        volumes:
+            - ${DATASET_INDEX_DIR}:/index_dir
+        command: "python write_dataset.py"
+#
+    ingest_elastic:
+        image: uwcosmos/es_ingest:latest
+        command: "python ingest_elastic.py"
+        environment:
+            - DATASET_ID
+            - MYSQL_USER
+            - MYSQL_PASSWORD
+            - MYSQL_HOST
+            - MYSQL_PORT

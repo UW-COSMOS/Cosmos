@@ -181,7 +181,7 @@ def process_dataset(client):
 
 
 def run():
-    client = Client('scheduler:8788')
+    client = Client('scheduler:8786')
     process_dataset(client)
 
 

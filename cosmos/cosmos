@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+# A simple wrapper around docker-compose to manage the COSMOS services.
+# General usage: `up` command will start the worker services, `run` will push documents and datasets through the stages.
+# Usage:
+#   - Bring up services via `cosmos [stage] up`, where stage is one of [ingest, extract, recall, all]
+#   - Run a set of PDFs through the ingestion phase: `cosmos ingest run`
+#   - Investigate their output by browsing 'Page-level Extractions' on localhost:8081
+#   - Aggregate sections and extract table objects via `cosmos extract run`
+#   - Start up Knowledgebase search creation and interface services via `cosmos recall up`
+#   - Build ANSERINI and Elasticsearch index via `cosmos recall run`
+#   - Search for objects by browsing on localhost:8082
+# TODO: word2vec
+# TODO: 'run all' doesn't exist because the extract and recall steps don't watch for new documents. They must be kicked off directly.
+
+from os.path import join, dirname, exists
+from os import chdir, environ, makedirs, chmod, getcwd
+from subprocess import run
+from shlex import split
+import argparse
+from sys import argv, exit
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('stage', metavar='stage', type=str,
+        help='')
+parser.add_argument('action', metavar='action', type=str,
+        help='')
+parser.add_argument('pdf_dir', metavar='pdf_dir', type=str, default="./pdfs",
+        help='')
+parser.add_argument('dataset_id', metavar='dataset_id', type=str, default="cosmos",
+        help='')
+
+def cmd(*v):
+    val = " ".join(v)
+    print(val)
+    return run(split(val))
+
+args = parser.parse_args()
+
+paths = {
+    'dataset_index_dir' : join(getcwd(), './anserini_index/'),
+    'es_index_dir' : join(getcwd(), './es_index/'),
+    'db_pth' : join(getcwd(), './db'),
+    'db_tmp_pth' : join(getcwd(), './dbtmp'),
+    'tmp_pth' : join(getcwd(), './tmp'),
+}
+
+allowed_stages = {'ingest' : 'Ingest PDF, apply segmentation to find regions and apply detection to classify those regions.',
+                    'extract' : "Aggregate sections of text, associate tables and figures with their captions",
+                    'recall' : "Index and search for relevant objects (and contexts)",
+                    'all' : "The entire pipeline"}
+try:
+    stage = args.stage
+    assert stage in allowed_stages.keys()
+except (AssertionError, IndexError):
+    print(f"Please provide an argument for which stage of the pipeline. Allowed:")
+    for k,v in allowed_stages.items():
+        print(f"\t{k} : {v}")
+    exit(1)
+
+allowed_actions = {'up': "Bring up the services and workers relevant to the specified stage.",
+        'run' : "Trigger processing aand computations of the stage.",
+        'down' : "Shut down the services and workers relevant to the specified stage."}
+try:
+    action = args.action
+    assert action in allowed_actions.keys()
+except (AssertionError, IndexError):
+    print(f"Please supply action argument. Allowed:")
+    for k, v in allowed_actions.items():
+        print(f"\t{k} : {v}")
+    exit(1)
+
+environ['MYSQL_USER']='myuser'
+environ['MYSQL_DATABASE']='cosmos'
+environ['MYSQL_PASSWORD']='cosmos123'
+environ['MYSQL_HOST']='mysql-server-1'
+environ['MYSQL_PORT']='3306'
+
+
+environ['DB_PTH']=paths['db_pth']
+environ['DB_TMP_PTH']=paths['db_tmp_pth']
+environ['TMP_PTH']=paths['tmp_pth']
+environ['DATASET_INDEX_DIR']=paths['dataset_index_dir']
+environ['ES_INDEX_DIR']=paths['es_index_dir']
+
+environ['DIR'] = args.pdf_dir
+environ['DATASET_ID'] = args.dataset_id
+
+if 'COSMOS_HOME' in environ:
+    chdir(environ['COSMOS_HOME'])
+print(getcwd())
+
+for _, pt in paths.items():
+    if not exists(pt):
+        makedirs(pt)
+    try:
+        chmod(pt, 0o777)
+    except PermissionError:
+        print(f"Warning! Permissions may not be set correctly on {pt}")
+
+if action=="up" and (stage=="all" or stage=="ingest"):
+    cmd('docker stack deploy cosmos --compose-file docker-compose.yml')
+
+if action=="run" and (stage=="all" or stage=="ingest"):
+    print("Ingesting some documents.")
+    cmd('sh', './scripts/process_dir.sh', args.pdf_dir, args.dataset_id)
+
+if (action=="up") and (stage=="all" or stage=="extract"): 
+    cmd('docker stack deploy cosmos --compose-file docker-compose-extraction.yml')
+
+if (action=="run") and (stage=="all" or stage=="extract"): 
+    cmd('docker-compose -f docker-compose-extraction-run.yml up')
+
+if action=="up" and (stage=="all" or stage=="recall"): # or action="run;?
+    cmd('docker stack deploy cosmos --compose-file docker-compose-recall.yml')
+
+if action=="run" and (stage=="all" or stage=="recall"): 
+    cmd('docker-compose -f docker-compose-recall-createindexes.yml up')
+
+if action=="down" and stage=='ingest':
+    for service in ['adminer', 'mysql-server-1', 'ingestion', 'scheduler', 'worker1', 'worker2', 'mysql-shell', 'create_schema', 'dbwebapp', 'gateway', 'search_backend']:
+        cmd("docker", "service", "rm", f"cosmos_{service}")
+
+if action=="down" and stage=='extract':
+    for service in ['adminer', 'mysql-server-1', 'agg_worker1', 'table_worker1']:
+        cmd("docker", "service", "rm", f"cosmos_{service}")
+
+if action=="down" and stage=='recall':
+    for service in ['mysql-server-1', 'birdnest_backend', 'es01', 'kbviz']:
+        cmd("docker", "service", "rm", f"cosmos_{service}")
+
+if action=="down" and stage=='all':
+    cmd("docker", "stack", "rm", "cosmos")
+
+def cmd(*v):
+    val = " ".join(v)
+    print(val)
+    return run(split(val))
+#
+#
+#def compose(*v):
+#    return cmd("docker-compose", *v)
+#
+#
+#res = compose("up -d --force-recreate --build")
+#if res.returncode == 0:
+#    compose("logs -f")
+#else:
+#    print("Error starting containers")

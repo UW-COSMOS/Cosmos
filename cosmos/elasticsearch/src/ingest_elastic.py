@@ -32,7 +32,7 @@ class Object(Document):
     pdf_name = Text()
 
     class Index:
-        name = 'object_updated'
+        name = 'object'
         settings = {
                 'number_of_shards': 1,
                 'number_of_replicas': 0
@@ -53,7 +53,7 @@ class Context(Document):
 #    postprocessing_confidence = Float()
 
     class Index:
-        name = 'context_updated'
+        name = 'context'
         settings = {
                 'number_of_shards': 1,
                 'number_of_replicas': 0
