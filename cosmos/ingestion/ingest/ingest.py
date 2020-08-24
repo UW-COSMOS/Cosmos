@@ -114,6 +114,9 @@ class Ingest:
                                  'postprocess_score': postprocess_score
                                 }
                     results.append(final_obj)
+        if len(results) == 0:
+            logger.info('No objects found')
+            return
         result_df = pd.DataFrame(results)
         result_df['detect_cls'] = result_df['classes'].apply(lambda x: x[0])
         result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
@@ -122,7 +125,6 @@ class Ingest:
             name = f'{dataset_id}_{aggregation}.parquet'
             aggregate_df.to_parquet(os.path.join(result_path, name), engine='pyarrow', compression='gzip')
         result_df.to_parquet(os.path.join(result_path, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
-        shutil.rmtree(self.tmp_dir)
 
     def _ingest_distributed(self, pdf_directory, dataset_id):
         raise NotImplementedError("Distributed setup currently not implemented via Ingest class. Set a tmp directory.")
