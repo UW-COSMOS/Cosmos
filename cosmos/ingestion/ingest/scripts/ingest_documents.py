@@ -1,5 +1,6 @@
 import click
 from ingest.ingest import Ingest
+import os
 
 
 @click.command()
@@ -34,8 +35,9 @@ def ingest_documents(cluster,
     ingest.ingest(input_path,
                   dataset_id,
                   output_path,
-                  visualize_proposals=visualize_proposals,
+                  os.path.join(output_path, 'images'),
                   skip_ocr=skip_ocr,
+                  visualize_proposals=visualize_proposals,
                   aggregations=aggregation)
 
 

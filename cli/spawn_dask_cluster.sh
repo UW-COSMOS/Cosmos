@@ -1,4 +1,3 @@
-#!/bin/bash
 export OMP_NUM_THREADS=2
 export MODEL_CONFIG=deployment/configs/model_config.yaml
 export WEIGHTS_PTH=deployment/weights/model_weights.pth

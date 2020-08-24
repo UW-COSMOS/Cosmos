@@ -16,6 +16,7 @@ logging.basicConfig(format='%(levelname)s :: %(filename) :: %(funcName)s :: %(as
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
+
 def regroup(pkl_path):
     with open(pkl_path, 'rb') as rf:
         obj = pickle.load(rf)

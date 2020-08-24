@@ -17,6 +17,7 @@ class ProcessPlugin(WorkerPlugin):
         with open(self.classes_pth) as stream:
             self.classes = yaml.load(stream)["CLASSES"]
 
+
 @click.command()
 def dask_setup(worker):
     worker._pending_plugins = [ProcessPlugin()]

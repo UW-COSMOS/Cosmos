@@ -10,7 +10,6 @@ import glob
 from ingest.process_page import propose_and_pad, xgboost_postprocess, rules_postprocess
 from ingest.detect import detect
 from dask.distributed import Client, progress
-import dask.dataframe as dd
 from ingest.utils.preprocess import resize_png
 from ingest.utils.pdf_helpers import get_pdf_names
 from ingest.utils.pdf_extractor import parse_pdf
@@ -31,7 +30,7 @@ logging.getLogger("ingest.process.detection.src.utils.ingest_images").setLevel(l
 logging.getLogger("ingest.process.detection.src.torch_model.train.data_layer.xml_loader").setLevel(logging.ERROR)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.INFO)
 
 
 class Ingest:
@@ -56,18 +55,20 @@ class Ingest:
         if self.client is not None:
             self.client.close()
 
-    def ingest(self, pdf_directory, dataset_id, result_path, skip_ocr=True, visualize_proposals=False, aggregations=[]):
+    def ingest(self, pdf_directory, dataset_id, result_path, images_pth, skip_ocr=True, visualize_proposals=False, aggregations=[]):
         if self.tmp_dir is not None:
             self._ingest_local(pdf_directory,
                                dataset_id,
                                result_path,
+                               images_pth,
                                visualize_proposals=visualize_proposals,
                                skip_ocr=skip_ocr,
                                aggregations=aggregations)
         else:
             self._ingest_distributed(pdf_directory, dataset_id)
 
-    def _ingest_local(self, pdf_directory, dataset_id, result_path, visualize_proposals=False, aggregate=False, skip_ocr=True, aggregations=[]):
+    def _ingest_local(self, pdf_directory, dataset_id, result_path, images_pth, visualize_proposals=False, skip_ocr=True, aggregations=[]):
+        os.makedirs(images_pth, exist_ok=True)
         pdfnames = get_pdf_names(pdf_directory)
         pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
         logger.info('Starting ingestion. Converting PDFs to images.')
@@ -105,7 +106,8 @@ class Ingest:
                         _, postprocess_cls, _, postprocess_score = obj['xgboost_content'][ind]
                     final_obj = {'pdf_name': obj['pdf_name'], 
                                  'dataset_id': obj['dataset_id'],
-                                 'page_num': obj['page_num'], 
+                                 'page_num': obj['page_num'],
+                                 'img_pth': obj['pad_img'],
                                  'bounding_box': list(bb),
                                  'classes': classes,
                                  'scores': scores,
@@ -121,7 +123,7 @@ class Ingest:
         result_df['detect_cls'] = result_df['classes'].apply(lambda x: x[0])
         result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
         for aggregation in aggregations:
-            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation)
+            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=images_pth)
             name = f'{dataset_id}_{aggregation}.parquet'
             aggregate_df.to_parquet(os.path.join(result_path, name), engine='pyarrow', compression='gzip')
         result_df.to_parquet(os.path.join(result_path, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
