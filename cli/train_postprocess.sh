@@ -1,12 +1,12 @@
 python -m ingest.scripts.train_postprocess \
-    --logdir logs/ --modelcfg cosmos/config/model_config.yaml \
-    --detect-weights cosmos/weights/amfam_weights.pth \
+    --logdir logs/ --modelcfg /ssd/ankur/Cosmos/deployment/configs/model_config.yaml \
+    --detect-weights /ssd/ankur/Cosmos/deployment/weights/model_weights.pth \
     --device cuda  \
-    --train-img-dir       contracts/train/images \
-    --train-proposals-dir contracts/train/proposals \
-    --train-xml-dir       contracts/train/annotations \
-    --val-img-dir       contracts/val/images \
-    --val-proposals-dir contracts/val/proposals \
-    --val-xml-dir       contracts/val/annotations \
-    --num-processes 40 --classcfg cosmos/config/model_config.yaml \
-    --output-path cosmos/weights/pp_amfam_weights.pth
+    --train-img-dir       /ssd/ankur/train_dir/images \
+    --train-proposals-dir /ssd/ankur/train_dir/proposals \
+    --train-xml-dir       /ssd/ankur/train_dir/annotations \
+    --val-img-dir       /ssd/ankur/val_dir/images \
+    --val-proposals-dir /ssd/ankur/val_dir/proposals \
+    --val-xml-dir       /ssd/ankur/val_dir/annotations \
+    --num-processes 40 --classcfg /ssd/ankur/Cosmos/deployment/configs/model_config.yaml \
+    --output-path /ssd/ankur/Cosmos/deployment/weights/pp_model_weights.pth

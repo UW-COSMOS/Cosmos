@@ -197,9 +197,14 @@ class Ingest:
         try:
             meta, limit = parse_pdf(filename)
             logger.debug(f'Limit: {limit}')
+        except TypeError as te:
+            logger.error(str(te), exc_info=True)
+            logger.error(f'Logging TypeError for pdf: {pdf_name}')
+            return []
         except Exception as e:
             logger.error(str(e), exc_info=True)
-            raise Exception('Parsing error', str(e))
+            logger.error(f'Logging parsing error for pdf: {pdf_name}')
+            return []
         subprocess.run(['gs', '-dBATCH',
                         '-dNOPAUSE',
                         '-sDEVICE=png16m',
