@@ -1,3 +1,8 @@
+"""
+ingest.py
+
+Main file for handling ingestion related activities
+"""
 import pickle
 import shutil
 import functools
@@ -34,8 +39,20 @@ logger.setLevel(logging.ERROR)
 
 
 class Ingest:
+    """
+    Ingest class
+    Handles running the ingestion pipeline
+    """
     def __init__(self, scheduler_address, use_semantic_detection=False, client=None,
                        tmp_dir=None, use_xgboost_postprocess=False, use_rules_postprocess=False):
+        """
+        :param scheduler_address: Address to existing Dask scheduler
+        :param use_semantic_detection: Whether or not to run semantic detection
+        :param client: A Dask client. Can be passed in. If None, one will be created to connect to the scheduler
+        :param tmp_dir: Path to temporary directory which intermediate files and images will be written
+        :param use_xgboost_postprocess: Whether to use the XGBoost postprocessing model
+        :param use_rules_postprocess: Whether to utilize the rules postprocessing, which is specific to scientific docs
+        """
         logger.info("Initializing Ingest object")
         self.client = client
         if self.client is None:
@@ -46,28 +63,45 @@ class Ingest:
         self.use_rules_postprocess = use_rules_postprocess
         self.use_semantic_detection = use_semantic_detection
         self.tmp_dir = tmp_dir
-        if self.tmp_dir is not None:
-            # Create a subdirectory for tmp files
-            self.images_tmp = os.path.join(self.tmp_dir, 'images')
-            os.makedirs(self.images_tmp, exist_ok=True)
+        if tmp_dir is None:
+            raise ValueError("tmp_dir must be passed in")
+        # Create a subdirectory for tmp files
+        self.images_tmp = os.path.join(self.tmp_dir, 'images')
+        os.makedirs(self.images_tmp, exist_ok=True)
 
     def __del__(self):
+        """Simple client cleanup"""
         if self.client is not None:
             self.client.close()
 
-    def ingest(self, pdf_directory, dataset_id, result_path, images_pth, skip_ocr=True, visualize_proposals=False, aggregations=[]):
-        if self.tmp_dir is not None:
-            self._ingest_local(pdf_directory,
-                               dataset_id,
-                               result_path,
-                               images_pth,
-                               visualize_proposals=visualize_proposals,
-                               skip_ocr=skip_ocr,
-                               aggregations=aggregations)
-        else:
-            self._ingest_distributed(pdf_directory, dataset_id)
+    def ingest(self,
+               pdf_directory,
+               dataset_id,
+               result_path,
+               images_pth,
+               skip_ocr=True,
+               visualize_proposals=False,
+               aggregations=[]):
+        """
+        Handler for ingestion pipeline.
 
-    def _ingest_local(self, pdf_directory, dataset_id, result_path, images_pth, visualize_proposals=False, skip_ocr=True, aggregations=[]):
+        Given a directory of PDFs, run the cosmos ingestion pipeline. This will identifies page objects, and optionally
+        perform aggregations over objects (eg associating tables with table captions in scientific document pipelines)
+
+        By default, a single parquet file will be written, containing each identified page object and its text.
+
+        If additional aggregations are defined, a parquet file will be written for each defined aggregation.
+
+        For additional information on the aggregations and schemas for the output files, see the documentation.
+
+        :param pdf_directory: path to a directory of PDFs to process
+        :param dataset_id: The dataset id for this PDF set
+        :param result_path: Path to output directory where parquets and additional images will be written
+        :param images_pth: Path to where images can be written to (tmp, not output images directory)
+        :param skip_ocr: If True, PDFs with no metadata associated will be skipped. If False, OCR will be performed
+        :param visualize_proposals: Debugging option, will write images with bounding boxes from proposals to tmp
+        :param aggregations: List of aggregations to run over resulting objects
+        """
         os.makedirs(images_pth, exist_ok=True)
         pdfnames = get_pdf_names(pdf_directory)
         pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
@@ -142,10 +176,12 @@ class Ingest:
             aggregate_df.to_parquet(os.path.join(result_path, name), engine='pyarrow', compression='gzip')
         result_df.to_parquet(os.path.join(result_path, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
 
-    def _ingest_distributed(self, pdf_directory, dataset_id):
-        raise NotImplementedError("Distributed setup currently not implemented via Ingest class. Set a tmp directory.")
-
     def write_images_for_annotation(self, pdf_dir, img_dir):
+        """
+        Helper function that will write images from PDFs for annotation.
+        :param pdf_dir: Path to PDFs to write images for
+        :param img_dir: Output directory where images will be written
+        """
         logger.info(f"Converting PDFs to images and writing to target directory: {img_dir}")
         pdfnames = get_pdf_names(pdf_dir)
         pdf_to_images = functools.partial(Ingest.pdf_to_images, 'na', self.images_tmp)
@@ -164,6 +200,11 @@ class Ingest:
 
     @classmethod
     def remove_watermarks(cls, pdf_directory, target_directory):
+        """
+        Experimental function that can remove watermarks. Note that all watermarks are not removed.
+        :param pdf_directory: Directory to PDF
+        :param target_directory: Target directory to write PDFs
+        """
         logger.info(f'Removing watermarks. Moving to {target_directory}')
         remove_w_target = functools.partial(Ingest._remove_watermark, target_directory=target_directory)
         pdfs = glob.glob(os.path.join(pdf_directory, "*"))
@@ -208,6 +249,13 @@ class Ingest:
 
     @classmethod
     def pdf_to_images(cls, dataset_id, tmp_dir, filename):
+        """
+        Convert PDFs to images, and log image-pdf provenance. Writes pickle files that will be handled later.
+        :param dataset_id: Dataset id for this PDF set
+        :param tmp_dir: tmp directory where images and pickle files will be written
+        :param filename: Path to PDF file
+        :return: [(tmp_dir, pdf_name, page_num)], list of each pdf and the pages associated with it
+        """
         if filename is None:
             return None
         pdf_name = os.path.basename(filename)
