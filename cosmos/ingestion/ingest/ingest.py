@@ -9,8 +9,7 @@ import subprocess
 import glob
 from ingest.process_page import propose_and_pad, xgboost_postprocess, rules_postprocess
 from ingest.detect import detect
-from dask.distributed import Client, progress
-import dask.dataframe as dd
+from dask.distributed import Client, progress, as_completed
 from ingest.utils.preprocess import resize_png
 from ingest.utils.pdf_helpers import get_pdf_names
 from ingest.utils.pdf_extractor import parse_pdf
@@ -19,7 +18,7 @@ from ingest.process.aggregation.aggregate import aggregate_router
 from tqdm import tqdm
 import pikepdf
 import pandas as pd
-
+import signal
 import logging
 logging.basicConfig(format='%(levelname)s :: %(filename) :: %(funcName)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.ERROR)
@@ -56,23 +55,39 @@ class Ingest:
         if self.client is not None:
             self.client.close()
 
-    def ingest(self, pdf_directory, dataset_id, result_path, skip_ocr=True, visualize_proposals=False, aggregations=[]):
+    def ingest(self, pdf_directory, dataset_id, result_path, images_pth, skip_ocr=True, visualize_proposals=False, aggregations=[]):
         if self.tmp_dir is not None:
             self._ingest_local(pdf_directory,
                                dataset_id,
                                result_path,
+                               images_pth,
                                visualize_proposals=visualize_proposals,
                                skip_ocr=skip_ocr,
                                aggregations=aggregations)
         else:
             self._ingest_distributed(pdf_directory, dataset_id)
 
-    def _ingest_local(self, pdf_directory, dataset_id, result_path, visualize_proposals=False, aggregate=False, skip_ocr=True, aggregations=[]):
+    def _ingest_local(self, pdf_directory, dataset_id, result_path, images_pth, visualize_proposals=False, skip_ocr=True, aggregations=[]):
+        os.makedirs(images_pth, exist_ok=True)
         pdfnames = get_pdf_names(pdf_directory)
         pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
         logger.info('Starting ingestion. Converting PDFs to images.')
         images = [self.client.submit(pdf_to_images, pdf, resources={'process': 1}) for pdf in pdfnames]
-        progress(images)
+        class TimeOutError(Exception):
+            pass
+        def raise_timeout(var1, var2):
+            raise TimeOutError
+        signal.signal(signal.SIGALRM, raise_timeout)
+
+        try:
+            for _ in as_completed(images):
+                signal.alarm(0)
+                signal.alarm(90)
+        except TimeOutError:
+            images = [i for i in images if i.status == 'finished']
+            pass
+        else:
+            signal.alarm(0)
         logger.info('Done converting to images. Starting detection and text extraction')
         images = [i.result() for i in images]
         images = [i for i in images if i is not None]
@@ -105,7 +120,8 @@ class Ingest:
                         _, postprocess_cls, _, postprocess_score = obj['xgboost_content'][ind]
                     final_obj = {'pdf_name': obj['pdf_name'], 
                                  'dataset_id': obj['dataset_id'],
-                                 'page_num': obj['page_num'], 
+                                 'page_num': obj['page_num'],
+                                 'img_pth': obj['pad_img'],
                                  'bounding_box': list(bb),
                                  'classes': classes,
                                  'scores': scores,
@@ -114,15 +130,17 @@ class Ingest:
                                  'postprocess_score': postprocess_score
                                 }
                     results.append(final_obj)
+        if len(results) == 0:
+            logger.info('No objects found')
+            return
         result_df = pd.DataFrame(results)
         result_df['detect_cls'] = result_df['classes'].apply(lambda x: x[0])
         result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
         for aggregation in aggregations:
-            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation)
+            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=images_pth)
             name = f'{dataset_id}_{aggregation}.parquet'
             aggregate_df.to_parquet(os.path.join(result_path, name), engine='pyarrow', compression='gzip')
         result_df.to_parquet(os.path.join(result_path, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
-        shutil.rmtree(self.tmp_dir)
 
     def _ingest_distributed(self, pdf_directory, dataset_id):
         raise NotImplementedError("Distributed setup currently not implemented via Ingest class. Set a tmp directory.")
@@ -194,12 +212,19 @@ class Ingest:
             return None
         pdf_name = os.path.basename(filename)
         limit = None
+
         try:
             meta, limit = parse_pdf(filename)
             logger.debug(f'Limit: {limit}')
+        except TypeError as te:
+            logger.error(str(te), exc_info=True)
+            logger.error(f'Logging TypeError for pdf: {pdf_name}')
+            return []
         except Exception as e:
-            logger.error(str(e), exc_info=True)
-            raise Exception('Parsing error', str(e))
+            logger.warning(str(e), exc_info=True)
+            logger.warning(f'Logging parsing error for pdf: {pdf_name}')
+            return []
+
         subprocess.run(['gs', '-dBATCH',
                         '-dNOPAUSE',
                         '-sDEVICE=png16m',
@@ -219,7 +244,13 @@ class Ingest:
             with open(image, 'rb') as bimage:
                 bstring = bimage.read()
             bytesio = io.BytesIO(bstring)
-            img = Image.open(bytesio).convert('RGB')
+            try:
+                img = Image.open(bytesio).convert('RGB')
+            except Exception as e:
+                logger.error(str(e), exc_info=True)
+                logger.error(f'Image opening error pdf: {pdf_name}')
+                return []
+
             orig_w, orig_h = img.size
             meta2 = None
             img, img_size = resize_png(img, return_size=True)

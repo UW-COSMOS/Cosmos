@@ -1,9 +1,86 @@
 import pandas as pd
+import functools
+from PIL import Image
+import uuid
+import os
+
 
 def check_y_overlap(bb1, bb2):
     _, x1, _, x2 = bb1
     _, y1, _, y2 = bb2
     return y2 >= x1 and x2 >= x1
+
+
+def aggregate_equations(page_group, write_images_pth):
+    targets = []
+    objs = []
+    for ind, p in page_group.iterrows():
+        if p['postprocess_cls'] == 'Equation':
+            targets.append(p)
+        else:
+            objs.append(p)
+    page_content = ' '.join([p['content'] for p in objs])
+    final_objs = []
+    for t in targets:
+        img = Image.open(t['img_pth']).convert('RGB').crop(t['bounding_box'])
+        imgid = uuid.uuid4()
+        pth = os.path.join(write_images_pth, f'{imgid}.png')
+        img.save(pth)
+        eq_obj = {'pdf_name': t['pdf_name'], 'dataset_id': t['dataset_id'], 'equation_bb': t['bounding_box'], 'equation_page': t['page_num'], 'content': page_content, 'img_pth': pth}
+        final_objs.append(eq_obj)
+    return final_objs
+
+
+def caption_associate(page_group, caption_class, write_images_pth):
+    captions = []
+    objs = []
+    for ind, p in page_group.iterrows():
+        if p['postprocess_cls'] == caption_class:
+            captions.append(p)
+        else:
+            objs.append(p)
+    final_objs = []
+    for caption in captions:
+        cbb = caption['bounding_box']
+        tlx, tly, brx, bry = cbb
+        mid_x = (tlx + brx) / 2
+        mid_y = (tly + bry) / 2
+        min_sdist = None
+        min_ind = None
+        group_obj = {'pdf_name': caption['pdf_name'], 'dataset_id': caption['dataset_id'], 'caption_content': caption['content'], 'caption_page': caption['page_num'], 'caption_bb': caption['bounding_box']}
+        if len(objs) == 0:
+            continue
+        for ind, obj in enumerate(objs):
+            tlx, tly, brx, bry = obj['bounding_box']
+            o_mid_x = (tlx + brx) / 2
+            o_mid_y = (tly + bry) / 2
+            sdist = (mid_x - o_mid_x)**2 + (mid_y-o_mid_y)**2
+            if min_sdist is None:
+                min_sdist = sdist
+                min_ind = ind
+                continue
+            if min_sdist > sdist:
+                min_sdist = sdist
+                min_ind = ind
+        min_obj = objs.pop(min_ind)
+        group_obj['content'] = min_obj['content']
+        group_obj['obj_page'] = min_obj['page_num']
+        group_obj['obj_bbs'] = min_obj['bounding_box']
+        img = Image.open(min_obj['img_pth']).convert('RGB').crop(min_obj['bounding_box'])
+        imgid = uuid.uuid4()
+        pth = os.path.join(write_images_pth, f'{imgid}.png')
+        img.save(pth)
+        group_obj['img_pth'] = pth
+        final_objs.append(group_obj)
+    for obj in objs:
+        img = Image.open(obj['img_pth']).convert('RGB').crop(obj['bounding_box'])
+        imgid = uuid.uuid4()
+        pth = os.path.join(write_images_pth, f'{imgid}.png')
+        img.save(pth)
+        group_obj = {'pdf_name': obj['pdf_name'], 'dataset_id': obj['dataset_id'], 'caption_content': None, 'caption_page': None, 'caption_bb': None,
+                  'content': obj['content'], 'obj_page': obj['page_num'], 'obj_bbs': obj['bounding_box'], 'img_pth': pth}
+        final_objs.append(group_obj)
+    return final_objs
 
 
 def order_page(page_group):
@@ -81,6 +158,26 @@ def aggregate_sections(pdf):
     return sections
 
 
+def aggregate_tables(pdf, write_images_pth):
+    pdf = pdf[pdf['postprocess_cls'].isin(['Table', 'Table Caption'])]
+    tc_associate = functools.partial(caption_associate, caption_class='Table Caption', write_images_pth=write_images_pth)
+    grouped = pdf.groupby('page_num').apply(tc_associate)
+    final_ordering = []
+    for ind, order in grouped.iteritems():
+        final_ordering.extend(order)
+    return final_ordering
+
+
+def aggregate_figures(pdf, write_images_pth):
+    pdf = pdf[pdf['postprocess_cls'].isin(['Figure', 'Figure Caption'])]
+    tc_associate = functools.partial(caption_associate, caption_class='Figure Caption', write_images_pth=write_images_pth)
+    grouped = pdf.groupby('page_num').apply(tc_associate)
+    final_ordering = []
+    for ind, order in grouped.iteritems():
+        final_ordering.extend(order)
+    return final_ordering
+
+
 def aggregate_pdf(pdf):
     pdf_obj = {}
     content = ''
@@ -101,16 +198,31 @@ def aggregate_pdf(pdf):
 
 
 stream_types = ['sections', 'pdfs']
-association_types = []
+association_types = ['tables', 'figures']
+full_page_types = ['equations']
 
 
-def aggregate_router(ddf, aggregate_type):
+def aggregate_router(ddf, aggregate_type, write_images_pth):
     if aggregate_type in stream_types:
         return stream_aggregate(ddf, aggregate_type)
     elif aggregate_type in association_types:
-        association_aggregate(ddf, aggregate_type)
+        return association_aggregate(ddf, aggregate_type, write_images_pth)
+    elif aggregate_type in full_page_types:
+        return full_page_aggregate(ddf, aggregate_type, write_images_pth)
     else:
         raise ValueError(f'Passed type not support for aggregation. Supported types are {stream_types + association_types}')
+
+
+def full_page_aggregate(ddf, aggregate_type, write_images_pth):
+    if aggregate_type == 'equations':
+        ae = functools.partial(aggregate_equations, write_images_pth=write_images_pth)
+        result = ddf.groupby('pdf_name').apply(ae)
+        results = []
+        for pdf_name, sections in result.iteritems():
+            for section in sections:
+                results.append(section)
+        results_df = pd.DataFrame(results)
+        return results_df
 
 
 def stream_aggregate(ddf, aggregate_type):
@@ -131,5 +243,22 @@ def stream_aggregate(ddf, aggregate_type):
         return result_df
 
 
-def association_aggregate(ddf, aggregate_type):
-    raise NotImplementedError('Implement association aggregate')
+def association_aggregate(ddf, aggregate_type, write_images_pth):
+    if aggregate_type == 'tables':
+        atab = functools.partial(aggregate_tables, write_images_pth=write_images_pth)
+        result = ddf.groupby('pdf_name').apply(atab)
+        results = []
+        for pdf_name, tables in result.iteritems():
+            for table in tables:
+                results.append(table)
+        results_df = pd.DataFrame(results)
+        return results_df
+    if aggregate_type == 'figures':
+        afig = functools.partial(aggregate_figures, write_images_pth=write_images_pth)
+        result = ddf.groupby('pdf_name').apply(afig)
+        results = []
+        for pdf_name, tables in result.iteritems():
+            for table in tables:
+                results.append(table)
+        results_df = pd.DataFrame(results)
+        return results_df

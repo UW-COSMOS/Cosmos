@@ -1,0 +1,65 @@
+version: '3.4'
+
+networks:
+  swarm_network:
+    driver: overlay
+    attachable: true
+
+services:
+  scheduler:
+    image: $BASE_IMAGE
+    command: "dask-scheduler"
+    ports:
+      - 8787:8787
+    networks:
+      swarm_network:
+
+  detect_worker:
+    image: $DETECT_IMAGE
+    environment:
+      - MODEL_CONFIG=/configs/model_config.yaml
+      - WEIGHTS_PTH=/weights/model_weights.pth
+      - DEVICE=cuda
+      - OMP_NUM_THREADS=2
+    volumes:
+      - ${INPUT_DIR}:/input
+      - ${TMP_DIR}:/mytmp
+      - ${OUTPUT_DIR}:/output
+    command: "dask-worker tcp://scheduler:8786 --nprocs ${DETECT_PROCS} --nthreads 2 --memory-limit 0 --resources 'GPU=1' --preload ingest.preload_plugins.detect_setup"
+    networks:
+      swarm_network:
+    depends_on:
+      - scheduler
+
+  worker:
+    image: $WORKER_IMAGE
+    environment:
+      - OMP_NUM_THREADS=2
+      - MODEL_CONFIG=/configs/model_config.yaml
+      - CLASSES_PTH=/configs/model_config.yaml
+      - PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
+    volumes:
+      - ${INPUT_DIR}:/input
+      - ${TMP_DIR}:/mytmp
+      - ${OUTPUT_DIR}:/output
+    command: "dask-worker tcp://scheduler:8786 --nprocs ${WORKER_PROCS} --nthreads 1 --memory-limit 0 --resources 'process=1' --preload ingest.preload_plugins.process_setup"
+    networks:
+      swarm_network:
+    depends_on:
+      - scheduler
+
+  runner:
+    image: $WORKER_IMAGE
+    environment:
+      - OMP_NUM_THREADS=2
+      - MODEL_CONFIG=/configs/model_config.yaml
+      - CLASSES_PTH=/configs/model_config.yaml
+      - PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
+    volumes:
+      - ${INPUT_DIR}:/input
+      - ${TMP_DIR}:/mytmp
+      - ${OUTPUT_DIR}:/output
+    networks:
+      swarm_network:
+    depends_on:
+      - scheduler

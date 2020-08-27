@@ -1,0 +1,62 @@
+version: '3.4'
+
+services:
+  api:
+    image: $BASE_IMAGE
+    ports:
+      - 4000:4000
+    environment:
+      - ELASTIC_ADDRESS
+      - SCHEDULER_ADDRESS
+    command: "gunicorn -w 4 -b 127.0.0.1:4000 'cosmos:create_app()'"
+
+  scheduler:
+    image: $BASE_IMAGE
+    command: "dask-scheduler"
+    ports:
+      - 8787:8787
+
+  rerank_model:
+    image: $RETRIEVAL_IMAGE
+    environment:
+      - RERANKING_MODEL_PATH=/weights/bert_reranker
+      - RERANKING_BASE_MODEL=bert-base-uncased
+      - RERANKING_BATCH_SIZE=16
+      - RERANKING_DEVICE=cuda
+      - RERANKING_NUM_WORKERS=1
+      - OMP_NUM_THREADS=8
+    command: "dask-worker tcp://scheduler:8786 --nprocs 1 --nthreads 8 --memory-limit 0 --resources 'retrieval=1' --preload retrieval.bert_reranker.bert_reranking_retriever"
+
+  qa_model:
+    image: $EXTRACTION_IMAGE
+    environment:
+      - QA_MODEL_PATH=/weights/bert_base_squad2
+      - QA_DEVICE=cuda
+      - OMP_NUM_THREADS=8
+    command: "dask-worker tcp://scheduler:8786 --nprocs 1 --nthreads 8 --memory-limit 0 --resources 'qa=1' --preload extraction.qa_extractor"
+
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+    container_name: es01
+    environment:
+      - node.name=es01
+      - discovery.seed_hosts=es02
+      - cluster.initial_master_nodes=es01,es02
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata01:/ssd/ankur/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - esnet
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
