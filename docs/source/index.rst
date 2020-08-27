@@ -21,10 +21,12 @@ build and access search indices over the ingested PDFs.
 3. **Extraction** of information. Cosmos enables the extraction of relational information using state of the art language
 and question answering models.
 
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents
 
+   getting_started.rst
    ingest.rst
    retrieval.rst
    extraction.rst
