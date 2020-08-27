@@ -9,7 +9,7 @@ import subprocess
 import glob
 from ingest.process_page import propose_and_pad, xgboost_postprocess, rules_postprocess
 from ingest.detect import detect
-from dask.distributed import Client, progress
+from dask.distributed import Client, progress, as_completed
 from ingest.utils.preprocess import resize_png
 from ingest.utils.pdf_helpers import get_pdf_names
 from ingest.utils.pdf_extractor import parse_pdf
@@ -18,7 +18,7 @@ from ingest.process.aggregation.aggregate import aggregate_router
 from tqdm import tqdm
 import pikepdf
 import pandas as pd
-
+import signal
 import logging
 logging.basicConfig(format='%(levelname)s :: %(filename) :: %(funcName)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.ERROR)
@@ -30,7 +30,7 @@ logging.getLogger("ingest.process.detection.src.utils.ingest_images").setLevel(l
 logging.getLogger("ingest.process.detection.src.torch_model.train.data_layer.xml_loader").setLevel(logging.ERROR)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.ERROR)
 
 
 class Ingest:
@@ -73,7 +73,21 @@ class Ingest:
         pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
         logger.info('Starting ingestion. Converting PDFs to images.')
         images = [self.client.submit(pdf_to_images, pdf, resources={'process': 1}) for pdf in pdfnames]
-        progress(images)
+        class TimeOutError(Exception):
+            pass
+        def raise_timeout(var1, var2):
+            raise TimeOutError
+        signal.signal(signal.SIGALRM, raise_timeout)
+
+        try:
+            for _ in as_completed(images):
+                signal.alarm(0)
+                signal.alarm(90)
+        except TimeOutError:
+            images = [i for i in images if i.status == 'finished']
+            pass
+        else:
+            signal.alarm(0)
         logger.info('Done converting to images. Starting detection and text extraction')
         images = [i.result() for i in images]
         images = [i for i in images if i is not None]
@@ -198,6 +212,7 @@ class Ingest:
             return None
         pdf_name = os.path.basename(filename)
         limit = None
+
         try:
             meta, limit = parse_pdf(filename)
             logger.debug(f'Limit: {limit}')
@@ -206,9 +221,10 @@ class Ingest:
             logger.error(f'Logging TypeError for pdf: {pdf_name}')
             return []
         except Exception as e:
-            logger.error(str(e), exc_info=True)
-            logger.error(f'Logging parsing error for pdf: {pdf_name}')
+            logger.warning(str(e), exc_info=True)
+            logger.warning(f'Logging parsing error for pdf: {pdf_name}')
             return []
+
         subprocess.run(['gs', '-dBATCH',
                         '-dNOPAUSE',
                         '-sDEVICE=png16m',
@@ -228,7 +244,13 @@ class Ingest:
             with open(image, 'rb') as bimage:
                 bstring = bimage.read()
             bytesio = io.BytesIO(bstring)
-            img = Image.open(bytesio).convert('RGB')
+            try:
+                img = Image.open(bytesio).convert('RGB')
+            except Exception as e:
+                logger.error(str(e), exc_info=True)
+                logger.error(f'Image opening error pdf: {pdf_name}')
+                return []
+
             orig_w, orig_h = img.size
             meta2 = None
             img, img_size = resize_png(img, return_size=True)
