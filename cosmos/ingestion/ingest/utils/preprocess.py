@@ -23,8 +23,13 @@ def resize_png(im, return_size = False, size: int = 1920) -> Image:
 
 def resize_image(im, new_h):
     w, h = im.size
-    ratio = float(new_h)/h
-    new_w = round(ratio*w)
-    im = im.resize((new_w, new_h), resample=Image.LANCZOS)
+    if h > w:
+        ratio = float(new_h)/h
+        new_w = round(ratio*w)
+        im = im.resize((new_w, new_h), resample=Image.LANCZOS)
+    else:
+        ratio = float(new_h)/w
+        new_w = round(ratio*h)
+        im = im.resize((new_h, new_w), resample=Image.LANCZOS)
     return im
 

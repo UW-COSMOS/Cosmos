@@ -116,7 +116,7 @@ class Ingest:
         try:
             for _ in as_completed(images):
                 signal.alarm(0)
-                signal.alarm(90)
+                signal.alarm(180)
         except TimeOutError:
             images = [i for i in images if i.status == 'finished']
             pass
