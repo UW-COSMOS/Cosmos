@@ -25,6 +25,7 @@ import pikepdf
 import pandas as pd
 import signal
 import logging
+from itertools import islice
 logging.basicConfig(format='%(levelname)s :: %(filename) :: %(funcName)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.ERROR)
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
@@ -81,7 +82,8 @@ class Ingest:
                images_pth,
                skip_ocr=True,
                visualize_proposals=False,
-               aggregations=[]):
+               aggregations=[],
+               batch_size=2000):
         """
         Handler for ingestion pipeline.
 
@@ -125,21 +127,23 @@ class Ingest:
         logger.info('Done converting to images. Starting detection and text extraction')
         images = [i.result() for i in images]
         images = [i for i in images if i is not None]
-        images = [i for il in images for i in il]
-
-        partial_propose = functools.partial(propose_and_pad, visualize=visualize_proposals)
-        images = self.client.map(partial_propose, images, resources={'process': 1}, priority=8)
-        if self.use_semantic_detection:
-            images = self.client.map(detect, images, resources={'GPU': 1}, priority=8)
-            images = self.client.map(regroup, images, resources={'process': 1})
-            pool_text_ocr_opt = functools.partial(pool_text, skip_ocr=skip_ocr)
-            images = self.client.map(pool_text_ocr_opt, images, resources={'process': 1})
-            if self.use_xgboost_postprocess:
-                images = self.client.map(xgboost_postprocess, images, resources={'process': 1})
-                if self.use_rules_postprocess:
-                    images = self.client.map(rules_postprocess, images, resources={'process': 1})
-        progress(images)
-        images = [i.result() for i in images]
+        images_queue = [i for il in images for i in il]
+        images = []
+        iterator = iter(images_queue)
+        while chunk := list(islice(iterator, batch_size)):
+            partial_propose = functools.partial(propose_and_pad, visualize=visualize_proposals)
+            chunk = self.client.map(partial_propose, chunk, resources={'process': 1}, priority=8)
+            if self.use_semantic_detection:
+                chunk = self.client.map(detect, chunk, resources={'GPU': 1}, priority=8)
+                chunk = self.client.map(regroup, chunk, resources={'process': 1})
+                pool_text_ocr_opt = functools.partial(pool_text, skip_ocr=skip_ocr)
+                chunk = self.client.map(pool_text_ocr_opt, chunk, resources={'process': 1})
+                if self.use_xgboost_postprocess:
+                    chunk = self.client.map(xgboost_postprocess, chunk, resources={'process': 1})
+                    if self.use_rules_postprocess:
+                        chunk = self.client.map(rules_postprocess, chunk, resources={'process': 1})
+            progress(chunk)
+            images.extend([i.result() for i in chunk])
         results = []
         for i in images:
             with open(i, 'rb') as rf:
