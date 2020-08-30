@@ -26,7 +26,14 @@ def aggregate_equations(page_group, write_images_pth):
         imgid = uuid.uuid4()
         pth = os.path.join(write_images_pth, f'{imgid}.png')
         img.save(pth)
-        eq_obj = {'pdf_name': t['pdf_name'], 'dataset_id': t['dataset_id'], 'equation_bb': t['bounding_box'], 'equation_page': t['page_num'], 'content': page_content, 'img_pth': pth}
+        eq_obj = {'pdf_name': t['pdf_name'],
+                  'dataset_id': t['dataset_id'],
+                  'detect_score': t['detect_score'],
+                  'postprocess_score': t['postprocess_score'],
+                  'equation_bb': t['bounding_box'],
+                  'equation_page': t['page_num'],
+                  'content': page_content,
+                  'img_pth': pth}
         final_objs.append(eq_obj)
     return final_objs
 
@@ -47,7 +54,11 @@ def caption_associate(page_group, caption_class, write_images_pth):
         mid_y = (tly + bry) / 2
         min_sdist = None
         min_ind = None
-        group_obj = {'pdf_name': caption['pdf_name'], 'dataset_id': caption['dataset_id'], 'caption_content': caption['content'], 'caption_page': caption['page_num'], 'caption_bb': caption['bounding_box']}
+        group_obj = {'pdf_name': caption['pdf_name'],
+                     'dataset_id': caption['dataset_id'],
+                     'caption_content': caption['content'],
+                     'caption_page': caption['page_num'],
+                     'caption_bb': caption['bounding_box']}
         if len(objs) == 0:
             continue
         for ind, obj in enumerate(objs):
@@ -66,6 +77,8 @@ def caption_associate(page_group, caption_class, write_images_pth):
         group_obj['content'] = min_obj['content']
         group_obj['obj_page'] = min_obj['page_num']
         group_obj['obj_bbs'] = min_obj['bounding_box']
+        group_obj['detect_score'] = min_obj['detect_score']
+        group_obj['postprocess_score'] = min_obj['postprocess_score']
         img = Image.open(min_obj['img_pth']).convert('RGB').crop(min_obj['bounding_box'])
         imgid = uuid.uuid4()
         pth = os.path.join(write_images_pth, f'{imgid}.png')
@@ -77,8 +90,17 @@ def caption_associate(page_group, caption_class, write_images_pth):
         imgid = uuid.uuid4()
         pth = os.path.join(write_images_pth, f'{imgid}.png')
         img.save(pth)
-        group_obj = {'pdf_name': obj['pdf_name'], 'dataset_id': obj['dataset_id'], 'caption_content': None, 'caption_page': None, 'caption_bb': None,
-                  'content': obj['content'], 'obj_page': obj['page_num'], 'obj_bbs': obj['bounding_box'], 'img_pth': pth}
+        group_obj = {'pdf_name': obj['pdf_name'],
+                     'dataset_id': obj['dataset_id'],
+                     'caption_content': None,
+                     'caption_page': None,
+                     'caption_bb': None,
+                     'detect_score': obj['detect_score'],
+                     'postprocess_score': obj['postprocess_score'],
+                     'content': obj['content'],
+                     'obj_page': obj['page_num'],
+                     'obj_bbs': obj['bounding_box'],
+                     'img_pth': pth}
         final_objs.append(group_obj)
     return final_objs
 
@@ -129,6 +151,8 @@ def order_page(page_group):
 
 def group_section(obj_list):
     section = {'pdf_name': obj_list[0]['pdf_name'], 'dataset_id': obj_list[0]['dataset_id']}
+    section['detect_score'] = obj_list[0]['detect_score']
+    section['postprocess_score'] = obj_list[0]['postprocess_score']
     if obj_list[0]['postprocess_cls'] == 'Section Header':
         section['section_header'] = obj_list[0]['content']
         section['section_header_page'] = obj_list[0]['page_num']
@@ -139,6 +163,7 @@ def group_section(obj_list):
     section['content'] = content
     section['obj_pages'] = [obj['page_num'] for obj in obj_list]
     section['obj_bbs'] = [obj['bounding_box'] for obj in obj_list]
+
     return section
 
 
