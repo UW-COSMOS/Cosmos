@@ -1,0 +1,21 @@
+version: '3.4'
+
+networks:
+  deployment_swarm_network:
+    external: true
+
+services:
+  upload:
+    image: ${UPLOAD_IMAGE}
+    environment:
+      - ELASTIC_ADDRESS
+    networks:
+      deployment_swarm_network:
+    volumes:
+      - ${OUTPUT_DIR}:/upload
+    command: "python -m retrieval.scripts.build_elastic_index
+             --host es01 --sections-parquet /upload/covid_sections.parquet
+             --documents-parquet /upload/covid_pdfs.parquet
+             --tables-parquet /upload/covid_tables.parquet
+             --figures-parquet /upload/covid_figures.parquet
+             --equations-parquet /upload/covid_equations.parquet"

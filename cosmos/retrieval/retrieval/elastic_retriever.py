@@ -13,12 +13,14 @@ logger.setLevel(logging.DEBUG)
 
 class Object(Document):
     cls = Text(fields={'raw': Keyword()})
-    score = Float()
+    detect_score = Float()
+    postprocess_score = Float()
     dataset_id = Text(fields={'raw': Keyword()})
+    header_content = Text()
     content = Text()
     area = Integer()
     pdf_name = Text(fields={'raw': Keyword()})
-    page_num = Integer()
+    img_pth = Text(fields={'raw': Keyword()})
 
     class Index:
         name = 'object'
@@ -67,7 +69,7 @@ class ElasticRetriever(Retriever):
                 contexts.append({'id': context.meta.id, 'pdf_name': context['pdf_name'], 'content': context['content']})
         return contexts
 
-    def build_index(self, document_parquet, section_parquet):
+    def build_index(self, document_parquet, section_parquet, tables_parquet, figures_parquet, equations_parquet):
         if self.awsauth is not None:
             connections.create_connection(hosts=self.hosts,
                                           http_auth=self.awsauth,
@@ -89,10 +91,60 @@ class ElasticRetriever(Retriever):
         df = pd.read_parquet(section_parquet)
         for ind, row in df.iterrows():
             Object(cls='Section',
-                   dataset_id='none', #row['dataset_id'],
+                   dataset_id=row['dataset_id'],
                    content=row['content'],
+                   header_content=row['section_header'],
+                   area=50,
+                   detect_score=row['detect_score'],
+                   postprocess_score=row['postprocess_score'],
                    pdf_name=row['pdf_name'],
                    ).save()
+        logger.info('Done building section index')
+
+        if tables_parquet != '':
+            df = pd.read_parquet(tables_parquet)
+            for ind, row in df.iterrows():
+                Object(cls='Table',
+                       dataset_id=row['dataset_id'],
+                       content=row['content'],
+                       header_content=row['caption_content'],
+                       area=50,
+                       detect_score=row['detect_score'],
+                       postprocess_score=row['postprocess_score'],
+                       pdf_name=row['pdf_name'],
+                       img_pth=row['img_pth'],
+                       ).save()
+            logger.info('Done building tables index')
+        if figures_parquet != '':
+            df = pd.read_parquet(figures_parquet)
+            for ind, row in df.iterrows():
+                Object(cls='Figure',
+                       dataset_id=row['dataset_id'],
+                       content=row['content'],
+                       header_content=row['caption_content'],
+                       area=50,
+                       detect_score=row['detect_score'],
+                       postprocess_score=row['postprocess_score'],
+                       pdf_name=row['pdf_name'],
+                       img_pth=row['img_pth'],
+                       ).save()
+            logger.info('Done building figures index')
+
+        if equations_parquet != '':
+            df = pd.read_parquet(equations_parquet)
+            for ind, row in df.iterrows():
+                Object(cls='Equation',
+                       dataset_id=row['dataset_id'],
+                       content=row['content'],
+                       header_content='',
+                       area=50,
+                       detect_score=row['detect_score'],
+                       postprocess_score=row['postprocess_score'],
+                       pdf_name=row['pdf_name'],
+                       img_pth=row['img_pth'],
+                       ).save()
+            logger.info('Done building equations index')
+
         logger.info('Done building object index')
 
     def delete(self, dataset_id):
@@ -107,12 +159,12 @@ class ElasticRetriever(Retriever):
             connections.create_connection(hosts=self.hosts)
         s = Search(index='fulldocument')
         q = Q()
-        q = q & Q('match', dataset_id=dataset_id)
+        q = q & Q('match', dataset_id__raw=dataset_id)
         result = s.query(q).delete()
         logger.info(result)
         s = Search(index='object')
         q = Q()
-        q = q & Q('match', dataset_id=dataset_id)
+        q = q & Q('match', dataset_id__raw=dataset_id)
         result = s.query(q).delete()
         logger.info(result)
 
