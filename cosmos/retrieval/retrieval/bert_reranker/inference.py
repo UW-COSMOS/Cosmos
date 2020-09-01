@@ -17,8 +17,7 @@ class Inference:
         self.bsz = bsz
         self.num_workers = num_workers
         self.tokenizer = BertTokenizerFast.from_pretrained(model_pth)
-        logger.error(self.tokenizer.pad_token_id)
-                                          
+
 
     def infer(self, query, contexts):
         dataset = InferenceDataset(query, contexts, self.tokenizer)

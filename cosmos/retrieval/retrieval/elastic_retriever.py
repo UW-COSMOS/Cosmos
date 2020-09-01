@@ -48,7 +48,7 @@ class ElasticRetriever(Retriever):
         self.hosts = hosts
         self.awsauth = awsauth
 
-    def search(self, query):
+    def search(self, query, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None):
         if self.awsauth is not None:
             connections.create_connection(hosts=self.hosts,
                                           http_auth=self.awsauth,
@@ -59,15 +59,38 @@ class ElasticRetriever(Retriever):
         else:
             connections.create_connection(hosts=self.hosts)
         q = Q('match', content=query)
-        s = Search(index='fulldocument').query(q)[:30]
+        start = page * ndocs
+        end = start + ndocs
+        s = Search(index='fulldocument').query(q)[start:end]
         response = s.execute()
+        logger.error('Done finding docs')
         contexts = []
         for result in response:
-            q = Q('match', pdf_name__raw=result['name'])
-            s = Search(index='object').query(q)
+            s = Search(index='object')
+            s = s.filter('term', pdf_name__raw=result['name'])
+            if cls is not None:
+                s = s.filter('term', cls__raw=cls)
+            if detect_min is not None:
+                s = s.filter('range', detect_score={'gte': detect_min})
+            if postprocess_min is not None:
+                s = s.filter('range', postprocess_score={'gte': postprocess_min})
+
             for context in s.scan():
                 contexts.append({'id': context.meta.id, 'pdf_name': context['pdf_name'], 'content': context['content']})
+        logger.error(f'Found {len(contexts)} contexts')
         return contexts
+
+    def get_object(self, id):
+        if self.awsauth is not None:
+            connections.create_connection(hosts=self.hosts,
+                                          http_auth=self.awsauth,
+                                          use_ssl=True,
+                                          verify_certs=True,
+                                          connection_class=RequestsHttpConnection
+                                          )
+        else:
+            connections.create_connection(hosts=self.hosts)
+        return Object.get(id=id)
 
     def build_index(self, document_parquet, section_parquet, tables_parquet, figures_parquet, equations_parquet):
         if self.awsauth is not None:
@@ -86,7 +109,7 @@ class ElasticRetriever(Retriever):
         # This is a parquet file to load from
         df = pd.read_parquet(document_parquet)
         for ind, row in df.iterrows():
-            FullDocument(name=row['pdf_name'], dataset_id='none', content=row['content']).save()
+            FullDocument(name=row['pdf_name'], dataset_id=row['dataset_id'], content=row['content']).save()
         logger.info('Done building document index')
         df = pd.read_parquet(section_parquet)
         for ind, row in df.iterrows():

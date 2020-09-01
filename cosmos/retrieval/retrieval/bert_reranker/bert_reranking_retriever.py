@@ -45,11 +45,7 @@ class BertRerankingRetriever(Retriever):
         if dp is None:
             raise Exception('No reranking plugin registered')
         model = dp.model
-        print(contexts)
         result = model.infer(query, contexts)
-        print(result)
-        #contexts, scores = zip(*result)
-        #result = {'contexts': contexts, 'scores': scores}
         return result
 
     def build_index(self, path):

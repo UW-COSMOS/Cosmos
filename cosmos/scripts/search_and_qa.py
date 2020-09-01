@@ -4,8 +4,8 @@ import pandas as pd
 
 
 def run():
-    ret = ElasticRerankingRetriever('tcp://localhost:8786')
-    qa_model = QAExtractor('tcp://localhost:8786')
+    ret = ElasticRerankingRetriever('tcp://scheduler:8786')
+    qa_model = QAExtractor('tcp://scheduler:8786')
     print('Building index')
     ret.build_index('/ssd/ankur/contracts/c_pdfs.parquet', '/ssd/ankur/contracts/c_sections.parquet')
     print('Done building index.')
