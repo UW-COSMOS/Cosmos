@@ -1,7 +1,0 @@
-version: '3.4'
-
-services:
-    test:
-        image: ankurgos/ingest:latest
-        command: "pytest /ingestion/tests"
-
