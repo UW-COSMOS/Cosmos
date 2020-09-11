@@ -15,7 +15,7 @@ trap "cleanup" SIGINT SIGTERM
 
 dask-scheduler &
 bgpids+=("$!")
-CUDA_VISIBLE_DEVICES=0 dask-worker tcp://localhost:8786 --nprocs $2 --nthreads 2 --memory-limit 0 --resources "GPU=1" --preload ingest.preload_plugins.detect_setup &
+CUDA_VISIBLE_DEVICES=1 dask-worker tcp://localhost:8786 --nprocs $2 --nthreads 2 --memory-limit 0 --resources "GPU=1" --preload ingest.preload_plugins.detect_setup &
 bgpids+=("$!")
 dask-worker tcp://localhost:8786 --nprocs $1 --nthreads 1 --memory-limit 0 --resources "process=1" --preload ingest.preload_plugins.process_setup &
 bgpids+=("$!")
