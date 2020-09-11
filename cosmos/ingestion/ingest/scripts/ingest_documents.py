@@ -16,6 +16,8 @@ import os
 @click.option('--visualize-proposals/--no-visualize-proposals', type=bool, default='False', help='enable or disable proposal viz')
 @click.option('--skip-ocr/--no-skip-ocr', type=bool, default='True',
               help='Use OCR over documents with no metadata. Requires Tesseract v4 installed on system.')
+@click.option('--compute-word-vecs/--no-compute-word-vecs', type=bool, default='False', help='Compute word vectors')
+@click.option('--ngram', type=int, default=3, help='ngram for computing word vecs')
 def ingest_documents(cluster,
                      tmp_dir,
                      use_semantic_detection,
@@ -26,7 +28,9 @@ def ingest_documents(cluster,
                      dataset_id,
                      output_path,
                      visualize_proposals,
-                     skip_ocr):
+                     skip_ocr,
+                     compute_word_vecs,
+                     ngram):
     ingest = Ingest(cluster,
                     tmp_dir=tmp_dir,
                     use_semantic_detection=use_semantic_detection,
@@ -38,7 +42,9 @@ def ingest_documents(cluster,
                   os.path.join(output_path, 'images'),
                   skip_ocr=skip_ocr,
                   visualize_proposals=visualize_proposals,
-                  aggregations=aggregation)
+                  aggregations=aggregation,
+                  compute_word_vecs=compute_word_vecs,
+                  ngram=ngram)
 
 
 if __name__ == '__main__':

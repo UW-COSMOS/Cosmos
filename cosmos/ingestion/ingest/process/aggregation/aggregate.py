@@ -58,7 +58,8 @@ def caption_associate(page_group, caption_class, write_images_pth):
                      'dataset_id': caption['dataset_id'],
                      'caption_content': caption['content'],
                      'caption_page': caption['page_num'],
-                     'caption_bb': caption['bounding_box']}
+                     'caption_bb': caption['bounding_box'],
+                     'pdf_dims': caption['pdf_dims']}
         if len(objs) == 0:
             continue
         for ind, obj in enumerate(objs):
@@ -95,6 +96,7 @@ def caption_associate(page_group, caption_class, write_images_pth):
                      'caption_content': None,
                      'caption_page': None,
                      'caption_bb': None,
+                     'pdf_dims': obj['pdf_dims'],
                      'detect_score': obj['detect_score'],
                      'postprocess_score': obj['postprocess_score'],
                      'content': obj['content'],

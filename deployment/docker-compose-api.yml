@@ -17,7 +17,7 @@ services:
       - IMAGE_DIR
     command: "gunicorn -b 0.0.0.0:5010 --log-level debug 'cosmos:create_app()'"
     volumes:
-      - ${IMAGE_DIR}:/images
+      - ${OUTPUT_DIR}:/data
       - ${TEST_DIR}:/test
     networks:
       swarm_network:
@@ -49,7 +49,7 @@ services:
   #    - QA_MODEL_PATH=/weights/bert_base_squad2
   #    - QA_DEVICE=cuda
   #    - OMP_NUM_THREADS=8
-  #  command: "dask-worker tcp://scheduler:8786 --nprocs 1 --nthreads 8 --memory-limit 0 --resources 'qa=1' --preload extraction.qa_extractor"
+  #  command: "dask-worker tcp://scheduler:8786 --nprocs 1 --nthreads 1 --memory-limit 0 --resources 'qa=1' --preload extraction.qa_extractor"
   #  networks:
   #    swarm_network:
   frontend:

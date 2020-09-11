@@ -20,6 +20,7 @@ from ingest.utils.pdf_helpers import get_pdf_names
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
 from ingest.process.aggregation.aggregate import aggregate_router
+from ingest.process.representation_learning.compute_word_vecs import make_vecs
 from tqdm import tqdm
 import pikepdf
 import pandas as pd
@@ -83,7 +84,9 @@ class Ingest:
                skip_ocr=True,
                visualize_proposals=False,
                aggregations=[],
-               batch_size=2000):
+               batch_size=2000,
+               compute_word_vecs=False,
+               ngram=1):
         """
         Handler for ingestion pipeline.
 
@@ -103,6 +106,8 @@ class Ingest:
         :param skip_ocr: If True, PDFs with no metadata associated will be skipped. If False, OCR will be performed
         :param visualize_proposals: Debugging option, will write images with bounding boxes from proposals to tmp
         :param aggregations: List of aggregations to run over resulting objects
+        :param compute_word_vecs: Whether to compute word vectors over the corpus
+        :param ngram: n in ngram for word vecs
         """
         os.makedirs(images_pth, exist_ok=True)
         pdfnames = get_pdf_names(pdf_directory)
@@ -160,6 +165,7 @@ class Ingest:
                                  'dataset_id': obj['dataset_id'],
                                  'page_num': obj['page_num'],
                                  'img_pth': obj['pad_img'],
+                                 'pdf_dims': list(obj['pdf_limit']),
                                  'bounding_box': list(bb),
                                  'classes': classes,
                                  'scores': scores,
@@ -178,6 +184,8 @@ class Ingest:
             aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=images_pth)
             name = f'{dataset_id}_{aggregation}.parquet'
             aggregate_df.to_parquet(os.path.join(result_path, name), engine='pyarrow', compression='gzip')
+        if compute_word_vecs:
+            make_vecs(result_df, ngram)
         result_df.to_parquet(os.path.join(result_path, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
 
     def write_images_for_annotation(self, pdf_dir, img_dir):
