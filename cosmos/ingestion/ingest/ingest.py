@@ -21,8 +21,6 @@ from ingest.utils.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
 from ingest.process.aggregation.aggregate import aggregate_router
 from ingest.process.representation_learning.compute_word_vecs import make_vecs
-from tqdm import tqdm
-import pikepdf
 import pandas as pd
 import signal
 import logging
@@ -209,55 +207,6 @@ class Ingest:
             shutil.copy(path, os.path.join(img_dir, new_bname))
         logger.info('Done.')
         shutil.rmtree(self.tmp_dir)
-
-    @classmethod
-    def remove_watermarks(cls, pdf_directory, target_directory):
-        """
-        Experimental function that can remove watermarks. Note that all watermarks are not removed.
-        :param pdf_directory: Directory to PDF
-        :param target_directory: Target directory to write PDFs
-        """
-        logger.info(f'Removing watermarks. Moving to {target_directory}')
-        remove_w_target = functools.partial(Ingest._remove_watermark, target_directory=target_directory)
-        pdfs = glob.glob(os.path.join(pdf_directory, "*"))
-        for p in tqdm(pdfs):
-            remove_w_target(p)
-            # TODO: client.submit wasn't writing to target correctly, fix later
-        logger.info('Done')
-
-    @classmethod
-    def _remove_watermark(cls, filename, target_directory):
-        try:
-            target = pikepdf.Pdf.open(filename)
-            new = pikepdf.Pdf.new()
-            for ind, page in enumerate(target.pages):
-                commands = []
-                BDC = False
-                for operands, operator in pikepdf.parse_content_stream(page):
-                    if str(operator) == 'BDC':
-                        BDC = True
-                        continue
-                    if BDC:
-                        if str(operator) == 'EMC':
-                            BDC = False
-                            continue
-                        continue
-                    commands.append((operands, operator))
-                new_content_stream = pikepdf.unparse_content_stream(commands)
-                new.add_blank_page()
-                new.pages[ind].Contents = new.make_stream(new_content_stream)
-                new.pages[ind].Resources = new.copy_foreign(target.make_indirect(target.pages[ind].Resources))
-            new.remove_unreferenced_resources()
-            new.save(os.path.join(target_directory, os.path.basename(filename)))
-            return filename
-        except pikepdf._qpdf.PdfError as e:
-            logger.error(f'Error in file: {filename}')
-            logger.error(e)
-            return
-        except RuntimeError as e:
-            logger.error(f'Error in file: {filename}')
-            logger.error(e)
-            return
 
     @classmethod
     def pdf_to_images(cls, dataset_id, tmp_dir, filename):
