@@ -23,7 +23,7 @@ to answer queries with subspans retrieved from the retrieval module.
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents
 
    getting_started.rst
@@ -32,3 +32,4 @@ to answer queries with subspans retrieved from the retrieval module.
    extraction.rst
    docker_builds.rst
    existing_es.rst
+   aggregations.rst

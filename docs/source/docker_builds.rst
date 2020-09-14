@@ -2,18 +2,19 @@ Building the docker images
 ===========================
 
 Base image
-==========
+-----------
 
 From the deployment directory, run:
 
 .. code-block:: bash
+
     docker build -t BASE_NAME:BASE_TAG -f cosmos.Dockerfile .
 
 where BASE_NAME and BASE_TAG are specified name and tag.
 
 
 Ingestion
-=========
+----------
 
 The ingestion image builds the dependencies to deploy the ingestion pipeline.
 
@@ -21,12 +22,13 @@ Inside ingestion.Dockerfile, ensure that the FROM statement matches the BASE_NAM
 If not, it will pull from docker hub. Then, from the root Cosmos directory run:
 
 .. code-block:: bash
+
     docker build -t INGEST_NAME:INGEST_TAG -f ingestion.Dockerfile .
 
 where INGEST_NAME and INGEST_TAG are the specified name and tag.
 
 Retrieval
-=========
+----------
 
 Retrieval builds the retrieval image, which handles the semantic reranking model deployment.
 
@@ -34,12 +36,13 @@ Inside retrieval.Dockerfile, ensure that the FROM statement matches the BASE_NAM
 If not, it will pull from docker hub. Then, from the root Cosmos directory run:
 
 .. code-block:: bash
+
     docker build -t RETRIEVAL_NAME:RETRIEVAL_TAG -f retrieval.Dockerfile .
 
 where RETRIEVAL_NAME and RETRIEVAL_TAG are the specified name and tag.
 
 Extraction
-==========
+----------
 
 Extraction builds the extraction image, which currently handles the extractive QA model.
 
@@ -47,14 +50,16 @@ Inside retrieval.Dockerfile, ensure that the FROM statement matches the BASE_NAM
 If not, it will pull from docker hub. Then, from the root Cosmos directory run:
 
 .. code-block:: bash
+
     docker build -t EXTRACTION_NAME:EXTRACTION_TAG -f extraction.Dockerfile .
 
 where EXTRACTION_NAME and EXTRACTION_TAG are the specified name and tag.
 
 
 API
-====
+----
 
 .. code-block:: bash
+
     docker build -t API_NAME:API_TAG -f api.Dockerfile .
 

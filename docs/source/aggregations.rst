@@ -1,5 +1,4 @@
-.. _aggregations
-
+.. _aggregations:
 
 Aggregations
 ============
