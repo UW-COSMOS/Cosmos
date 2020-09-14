@@ -19,7 +19,7 @@ services:
     environment:
       - MODEL_CONFIG=/configs/model_config.yaml
       - WEIGHTS_PTH=/weights/model_weights.pth
-      - DEVICE=cuda
+      - DEVICE
       - OMP_NUM_THREADS=2
     volumes:
       - ${INPUT_DIR}:/input

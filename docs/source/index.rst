@@ -6,20 +6,20 @@
 Cosmos
 ==================================
 
-Cosmos is a library to automate the retrieval of information from PDF documents. While created with the intention of
-automating the process of scientific discovery and analysis, the components can be applied generally to stacks of
-documents.
+Cosmos is an open source semantic search engine that focuses on the retrieval of information from PDF documents.
+While created with the intention of automating the process of scientific discovery and analysis, the components
+can be applied generally to stacks of documents.
 
 Cosmos is composed of three parts:
 
 1. **Ingestion** of information in PDF documents. Cosmos automates the process of extracting text, tables, figures, and
 other components commonly found in PDF documents.
 
-2. **Retrieval** of information across stacks of documents. Cosmos is packaged with several algorithms used to
-build and access search indices over the ingested PDFs.
+2. **Retrieval** of information across stacks of documents. Cosmos utilizes ElasticSearch and an optional
+neural reranker.
 
-3. **Extraction** of information. Cosmos enables the extraction of relational information using state of the art language
-and question answering models.
+3. **Extraction** of information. Cosmos is also packaged with a question answering model that can be deployed
+to answer queries with subspans retrieved from the retrieval module.
 
 
 .. toctree::
@@ -30,3 +30,5 @@ and question answering models.
    ingest.rst
    retrieval.rst
    extraction.rst
+   docker_builds.rst
+   existing_es.rst
