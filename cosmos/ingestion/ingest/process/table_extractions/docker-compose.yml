@@ -12,12 +12,15 @@ services:
         command: "python3 -m tableextractions.pdf_table_extractions"
 #        command: "tail -f /dev/null"
         volumes:
-            - /hdd/iaross/covid_docs_25Mar/xaa_docs:/input
+#            - /hdd/iaross/covid_docs_3Apr/xaa_dir:/input
+            - ${DIR}:/input
+#            - /home/iaross/test_pdfs/:/input
         environment:
             - DATASET_ID
             - MYSQL_USER=myuser
-            - MYSQL_DATABASE=cosmos
             - MYSQL_PASSWORD=cosmos123
+            - MYSQL_HOST=mysql-server-1
+            - MYSQL_PORT=3306
         #networks:
         #    cosmos_swarm_network:
         depends_on:
@@ -30,16 +33,17 @@ services:
         command: "dask-scheduler --port 8788"
         ports:
             - 8786:8786
-
+#
     worker1:
         image: iaross/extract_tables_test:latest
         environment:
             - MYSQL_USER=myuser
-            - MYSQL_DATABASE=cosmos
             - MYSQL_PASSWORD=cosmos123
+            - MYSQL_HOST=mysql-server-1
+            - MYSQL_PORT=3306
             - CUDA_VISIBLE_DEVICES=''
-        command: "dask-worker tcp://scheduler:8788 --nprocs 10 --resources 'extract_tables=1'"
+        command: "dask-worker tcp://scheduler:8788 --nprocs 16 --resources 'extract_tables=1'"
         depends_on:
             - scheduler
-
-
+#
+#

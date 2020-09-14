@@ -61,6 +61,11 @@ class PageObject(Base):
     confidence = Column(Numeric(precision=9, scale=6))
     classification_success = Column(Boolean, unique=False, default=None)
     proposal_success = Column(Boolean, unique=False, default=None)
+    summary = Column(Text())
+    keywords = Column(Text())
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 class Table(Base):
     __tablename__ = 'tables'
@@ -91,7 +96,8 @@ class ObjectContext(Base):
     header_id = Column(Integer, ForeignKey('page_objects.id'))
     header_content = Column(Text())
     content = Column(Text(2**32-1))
-
+    summary = Column(Text())
+    keywords = Column(Text())
 
 def ping_healthcheck():
     try:
@@ -113,9 +119,7 @@ def main(sqlite):
         time.sleep(1)
 
     logger.info('DB Up, creating schema')
-    username = os.environ['DBUSER']
-    password = os.environ['DBPASS']
-    engine = create_engine(f'mysql://{username}:{password}@mysql-router:6446/cosmos')
+    engine = create_engine(f'mysql://{os.environ["MYSQL_USER"]}:{os.environ["MYSQL_PASSWORD"]}@{os.environ["MYSQL_HOST"]}:{os.environ["MYSQL_PORT"]}/cosmos', pool_pre_ping=True)
     Base.metadata.create_all(engine)
     alembic_cfg = Config(os.environ['ALEMBIC_CFG'])
     command.stamp(alembic_cfg, "head")
