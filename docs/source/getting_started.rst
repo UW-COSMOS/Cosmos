@@ -8,7 +8,8 @@ having to worry about installing things locally.
 First, clone the Cosmos repository, and change into the root directory of the repository.
 Open a file named .env in the directory, and populate it with the following:
 
-.. code-block:: bash
+.. code-block:: console
+
     BASE_IMAGE=uwcosmos/cosmos-base:latest
     DETECT_IMAGE=uwcosmos/cosmos-ingestion:latest
     WORKER_IMAGE=uwcosmos/cosmos-ingestion:latest
@@ -39,7 +40,8 @@ directory with sufficient hard drive space to write images and such, and an outp
 
 To process the images, run the following line:
 
-.. code-block:: bash
+.. code-block:: console
+
     docker-compose -f deployment/docker-compose-ingest.yml -p cosmos up
 
 The output directory you defined will now be populated with a set of _Parquet files, as well as an images directory
@@ -50,7 +52,7 @@ Deploying the COSMOS search interface
 
 To deploy the search interface over this processed dataset, run the following command:
 
-.. code-block:: bash
+.. code-block:: console
     docker-compose -f deployment/docker-compose-api.yml up
 
 This will create an elasticsearch service for you. If you already have a ElasticSearch cluster online, see
@@ -61,7 +63,8 @@ Reading ingested data into ElasticSearch
 
 The files outputted by ingestion must now be read into ElasticSearch indices. In a separate window, run:
 
-.. code-block:: bash
+.. code-block:: console
+
     docker-compose -f deployment/docker-compose-api-upload.yml up
 
 This could take some time, depending on the size of your document stack.

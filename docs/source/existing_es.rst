@@ -9,6 +9,7 @@ docker-compose-api.yml, remove the es01 service.
 Then in your .env file, redefine the following environment variable:
 
 .. code-block:: bash
+
     ELASTIC_ADDRESS=your.elasticsearch.address
 
 The retrieval and upload images will then look at the updated ELASTIC_ADDRESS.
