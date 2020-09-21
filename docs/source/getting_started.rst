@@ -48,7 +48,7 @@ The output directory you defined will now be populated with a set of _Parquet fi
 containing object specific images, and saved word embeddings over the input corpus.
 
 Deploying the COSMOS search interface
-===================================
+-----------------------------------
 
 To deploy the search interface over this processed dataset, run the following command:
 
@@ -59,7 +59,7 @@ This will create an elasticsearch service for you. If you already have a Elastic
 :ref:`Existing ElasticSearch Cluster`. Its datapath is will be set to the environment variable set in the .env file.
 
 Reading ingested data into ElasticSearch
-========================================
+----------------------------------------
 
 The files outputted by ingestion must now be read into ElasticSearch indices. In a separate window, run:
 
@@ -70,7 +70,7 @@ The files outputted by ingestion must now be read into ElasticSearch indices. In
 This could take some time, depending on the size of your document stack.
 
 Viewing output
-==============
+--------------
 
 You should now be able to navigate to localhost:8082 in your browser to access the search interface.
 
