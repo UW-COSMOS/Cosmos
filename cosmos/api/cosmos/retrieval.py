@@ -38,7 +38,6 @@ def search():
     obj_type = request.args.get('type', type=str)
     if obj_type == 'Body Text':
         obj_type = 'Section'
-    area = request.args.get('area', type=int)
     page_num = request.args.get('page', type=int)
     ignore_bytes = request.args.get('ignore_bytes', type=bool)
     if page_num is None:
@@ -49,31 +48,26 @@ def search():
 
 
     if request.endpoint == 'count':
-        #return jsonify({'total_results': 1})
         count = current_app.retriever.search(query, ndocs=30, page=page_num, cls=obj_type,
                                                detect_min=base_confidence, postprocess_min=postprocessing_confidence,
                                                get_count=True)
         return jsonify({'total_results': count})
-    with open('/test/search.json', 'r') as rf:
-        o = json.load(rf)
     results = current_app.retriever.search(query, ndocs=30, page=page_num, cls=obj_type,
                                          detect_min=base_confidence, postprocess_min=postprocessing_confidence)
     if len(results) == 0:
         return {'page': 0, 'objects': []}
-    image_dir = '/images'
+    image_dir = '/data/images'
     for result in results:
         bjson = get_bibjson(result['pdf_name'])
-        if bjson is None:
-            bjson = o['objects'][0]['bibjson']
-        result['bibjson'] = bjson #get_bibjson(result['pdf_name'])
+        result['bibjson'] = bjson
 
         for child in result['children']:
-            if child['bytes'] is not None:
+            if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
                 with open(os.path.join(image_dir, img_pth), 'rb') as imf:
                     child['bytes'] = base64.b64encode(imf.read()).decode('ascii')
             else:
-                child['bytes'] = o['objects'][0]['children'][0]['bytes']
+                child['bytes'] = None
 
     return jsonify({'page': page_num, 'objects': results})
 
