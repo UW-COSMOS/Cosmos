@@ -36,7 +36,7 @@ logging.getLogger("ingest.process.detection.src.utils.ingest_images").setLevel(l
 logging.getLogger("ingest.process.detection.src.torch_model.train.data_layer.xml_loader").setLevel(logging.ERROR)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 
 class Ingest:
@@ -103,6 +103,7 @@ class Ingest:
         :param skip_ocr: If True, PDFs with no metadata associated will be skipped. If False, OCR will be performed
         :param visualize_proposals: Debugging option, will write images with bounding boxes from proposals to tmp
         :param aggregations: List of aggregations to run over resulting objects
+        :param batch_size: number of images for pipeline to process at once, 2000 is good.
         """
         os.makedirs(images_pth, exist_ok=True)
         pdfnames = get_pdf_names(pdf_directory)
@@ -140,6 +141,7 @@ class Ingest:
                 chunk = self.client.map(pool_text_ocr_opt, chunk, resources={'process': 1})
                 if self.use_xgboost_postprocess:
                     chunk = self.client.map(xgboost_postprocess, chunk, resources={'process': 1})
+                    chunk = [i for i in chunk if i.result() != '']
                     if self.use_rules_postprocess:
                         chunk = self.client.map(rules_postprocess, chunk, resources={'process': 1})
             progress(chunk)

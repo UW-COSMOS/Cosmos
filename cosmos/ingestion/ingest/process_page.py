@@ -69,6 +69,9 @@ def xgboost_postprocess(pkl_path):
 
     objects = obj['content']
     objects = postprocess(dp.postprocess_model, dp.classes, objects)
+    # remove empty strings returned from postprocess
+    objects = [i for i in objects if i != '']
+
     obj['xgboost_content'] = objects
     with open(pkl_path, 'wb') as wf:
         pickle.dump(obj, wf)
