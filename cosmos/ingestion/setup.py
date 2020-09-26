@@ -12,6 +12,29 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.8',
+    install_requires=[
+        "click",
+        "Pillow",
+        "opencv-python",
+        "matplotlib",
+        "tqdm",
+        "pandas",
+        "bs4",
+        "pyyaml",
+        "joblib",
+        "xgboost",
+        "dask",
+        "distributed",
+        "torch",
+        "scikit-image",
+        "torchvision",
+        "sqlalchemy",
+        "pascal-voc-writer",
+        "pdfminer",
+        "pytesseract",
+        "pikepdf",
+        "sklearn"
+    ]
 )
 
