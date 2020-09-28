@@ -53,6 +53,7 @@ Deploying the COSMOS search interface
 To deploy the search interface over this processed dataset, run the following command:
 
 .. code-block:: console
+
     docker-compose -f deployment/docker-compose-api.yml up
 
 This will create an elasticsearch service for you. If you already have a ElasticSearch cluster online, see
