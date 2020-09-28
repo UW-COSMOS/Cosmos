@@ -1,11 +1,11 @@
-FROM ankurgos/cosmos-base:latest
+FROM uwcosmos/cosmos-base:latest
 
 COPY cosmos/retrieval /retrieval
 WORKDIR /retrieval
-RUN pip install .
+RUN python3.8 -m pip install .
 
 COPY cosmos/api /api
 WORKDIR /api
-RUN pip install .
+RUN python3.8 -m pip install .
 
 
