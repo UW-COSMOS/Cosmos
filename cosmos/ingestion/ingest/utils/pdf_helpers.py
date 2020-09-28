@@ -5,29 +5,26 @@ import uuid
 import glob
 import os
 import base64
+import pickle
+import json
+import subprocess
+import logging
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
+logging.getLogger("pdfminer").setLevel(logging.WARNING)
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
-def create_objs(payload):
-    filename, dataset_id = payload
-    with open(filename, 'rb') as rf:
-        bstring = base64.b64encode(rf.read()).decode()
 
-def prepare_pdf_objs(directory: str, dataset_id=None):
+def get_pdf_names(directory: str):
     """
     :param directory: Directory to process
     :param dataset_id: The dataset id. This allows you to group datasets together.
-    :return: 
+    :return: None if tmp_dir is set, else a list of pdf objects
     """
-    if dataset_id is None:
-        dataset_id = str(uuid.uuid4())
-
     files = glob.glob(os.path.join(directory, '*.pdf'))
     if len(files) == 0:
-        print('Empty input directory')
-        return
-    objs = []
-    for filename in files:
-        with open(filename, 'rb') as rf:
-            bstring = base64.b64encode(rf.read()).decode()
-        objs.append({'pdf': bstring, 'dataset_id': dataset_id, 'pdf_name': os.path.basename(filename)})
-    return objs
+        raise ValueError('Empty input directory')
+    return files
+
+
 

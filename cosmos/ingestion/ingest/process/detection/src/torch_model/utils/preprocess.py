@@ -1,9 +1,7 @@
 """
 Convert a directory of PDFs to a directory
 of XML annotations.
-Author: Josh McGrath
 """
-from tqdm import tqdm
 from time import sleep
 from os import mkdir, listdir
 from subprocess import call
@@ -49,7 +47,7 @@ def pdf2png(input_dir, tmp_dir):
 
     dir_names = map(build_path, files)
     # this is more parallelizable than we're taking advantage of
-    for name in tqdm(dir_names):
+    for name in dir_names:
         mkdir(join(tmp_dir, name))
         # now call ghostscript each file
         call(["./ghost.sh", name, f"{join(input_dir,name)}.pdf", tmp_dir])

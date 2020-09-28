@@ -86,9 +86,13 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, mi
     :param blank_row_height: row height parameter
     :param filter_thres: Filter object size threshold parameter
     """
-    fn = lambda x : 0 if x > white_thresh else 255
+    def remove_fn(x):
+        if x > white_thresh:
+            return 0
+        return 255
     img_np = np.array(img.convert('RGB'))
-    bmap_np = np.array(img.convert('L').point(fn, mode='1')).astype(np.uint8)
+    bmap_np = np.array(img.convert('L').point(remove_fn, mode='1')).astype(np.uint8)
+
     img_np_orig = img_np
     bmap_np, img_np, left_shave = balance_margins(bmap_np, img_np)
     img_height = bmap_np.shape[0]

@@ -1,7 +1,0 @@
-tensorboardX
-pytest
-boto3
-regex
-flask
-click
-logger

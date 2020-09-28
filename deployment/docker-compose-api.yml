@@ -1,0 +1,91 @@
+version: '3.4'
+
+networks:
+  swarm_network:
+    driver: overlay
+    attachable: true
+
+services:
+  birdnest_backend:
+    container_name: cosmos_birdnest_backend
+    image: $API_IMAGE
+    ports:
+      - 5010:5010
+    environment:
+      - ELASTIC_ADDRESS
+      - SCHEDULER_ADDRESS
+      - IMAGE_DIR
+    command: "gunicorn -b 0.0.0.0:5010 --log-level debug 'cosmos:create_app()'"
+    volumes:
+      - ${OUTPUT_DIR}:/data
+    networks:
+      swarm_network:
+
+  scheduler:
+    image: $BASE_IMAGE
+    command: "dask-scheduler"
+    ports:
+      - 8787:8787
+    networks:
+      swarm_network:
+
+  rerank_model:
+    image: $RETRIEVAL_IMAGE
+    environment:
+      - RERANKING_MODEL_PATH=/weights/bert_reranker
+      - RERANKING_BASE_MODEL=bert-base-uncased
+      - RERANKING_BATCH_SIZE=16
+      - RERANKING_DEVICE=cuda
+      - RERANKING_NUM_WORKERS=1
+      - OMP_NUM_THREADS=8
+    command: "dask-worker tcp://scheduler:8786 --nprocs 1 --nthreads 1 --memory-limit 0 --resources 'retrieval=1' --preload retrieval.bert_reranker.bert_reranking_retriever"
+    networks:
+      swarm_network:
+
+  #qa_model:
+  #  image: $EXTRACTION_IMAGE
+  #  environment:
+  #    - QA_MODEL_PATH=/weights/bert_base_squad2
+  #    - QA_DEVICE=cuda
+  #    - OMP_NUM_THREADS=8
+  #  command: "dask-worker tcp://scheduler:8786 --nprocs 1 --nthreads 1 --memory-limit 0 --resources 'qa=1' --preload extraction.qa_extractor"
+  #  networks:
+  #    swarm_network:
+  frontend:
+    image: $VISUALIZER_IMAGE
+    ports:
+      - 8082:80
+    environment:
+      - ENVIRONMENT=production
+      - MODE=${MODE:-visualizer}
+      - PUBLIC_URL=/
+      - API_ERROR_MESSAGE
+      - WORD2VEC_API_BASE_URL=/word2vec
+    networks:
+      swarm_network:
+
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.0
+    container_name: es01
+    environment:
+      - node.name=es01
+      - discovery.seed_hosts=es01
+      - cluster.initial_master_nodes=es01
+      - cluster.name=es-docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ${ELASTIC_DATA_PATH}:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      swarm_network:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 10s
+      retries: 5

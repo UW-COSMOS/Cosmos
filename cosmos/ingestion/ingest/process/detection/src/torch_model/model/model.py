@@ -9,6 +9,10 @@ from .layers.featurization import Featurizer
 from .head.object_classifier import MultiModalClassifier
 from .utils.config_manager import ConfigManager
 from .utils.shape_utils import get_shape_info
+import logging
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
+logger = logging.getLogger(__name__)
+
 class MMFasterRCNN(nn.Module):
     def __init__(self, cfg):
         """
@@ -17,24 +21,24 @@ class MMFasterRCNN(nn.Module):
         """
         super(MMFasterRCNN, self).__init__()
         cfg = ConfigManager(cfg)
-        print("===== BUILDING MODEL ======")
+        logger.info("===== BUILDING MODEL ======")
         self.featurizer = Featurizer(cfg)
-        print(f"Built backbone {cfg.BACKBONE}")
-        print("Building downstream components via shape testing")
+        logger.info(f"Built backbone {cfg.BACKBONE}")
+        logger.info("Building downstream components via shape testing")
         N, D, H,W  = get_shape_info(self.featurizer.backbone, (1, 3, cfg.WARPED_SIZE, cfg.WARPED_SIZE))
-        print("done shape testing, building, attention mechanisms")
+        logger.info("done shape testing, building, attention mechanisms")
         self.attention = MultiHeadAttention(cfg.NHEADS, cfg.EMBEDDING_DIM)
-        print("built multi head attention")
-        print(f"{H}, {W}, {D}")
+        logger.info("built multi head attention")
+        logger.info(f"{H}, {W}, {D}")
         self.embedder = ImageEmbedder(H,D, cfg.EMBEDDING_INTERMEDIATE, cfg.EMBEDDING_DIM)
-        print("built embeddings")
+        logger.info("built embeddings")
         self.head = MultiModalClassifier(H,
                                          W,
                                          D,
                                          cfg.HEAD_DIM,
                                          cfg.NHEADS,
                                          len(cfg.CLASSES))
-        print("done")
+        logger.info("done")
         self.cls_names = cfg.CLASSES
 
 

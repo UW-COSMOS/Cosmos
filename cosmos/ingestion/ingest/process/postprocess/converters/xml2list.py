@@ -16,6 +16,9 @@ def mapper(obj):
     score = float(diff.text) if diff is not None else 0
     bnd = obj.find("bndbox")
     coords = ["xmin", "ymin", "xmax", "ymax"]
+    cls = obj.find("name").text
+    if cls == 'unlabelled':
+        return None
     return obj.find("name").text, [int(float(bnd.find(coord).text)) for coord in coords], score
 
 
@@ -76,7 +79,7 @@ def xml2list(fp, tres=0, feather=False):
     root = tree.getroot()
     objects = root.findall("object")
     lst = [mapper(obj) for obj in objects]
-    print(lst)
+    lst = [i for i in lst if i is not None]
     new_lst = [l for l in lst]
     feathered_new_lst = None
     if feather:

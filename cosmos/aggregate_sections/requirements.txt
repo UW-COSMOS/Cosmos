@@ -1,9 +1,0 @@
-pillow
-pyyaml
-click
-joblib
-Pillow
-tqdm
-sqlalchemy
-mysqlclient
-alembic

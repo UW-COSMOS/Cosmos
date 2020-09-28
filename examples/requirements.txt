@@ -36,3 +36,5 @@ jupyter
 jupyterlab
 dask[distributed]
 bokeh
+cosmos-ingest
+pascal-voc-writer

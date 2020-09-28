@@ -1,11 +1,5 @@
-from argparse import ArgumentParser
-import yaml 
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
-import pandas as pd
-import joblib
-from xgboost import XGBClassifier
-from sklearn.metrics import accuracy_score
 
 
 class PostProcessTrainer:
@@ -18,18 +12,16 @@ class PostProcessTrainer:
         self.model_path = model_path
         self.classes = classes
 
-    def train(self):        
+    def train(self, skip_val=False):        
         self.model.fit(self.train_set_x, self.train_set_y)
         accuracy, classification_list = self.validate()
-        print("Val Accuracy: {} \n".format(accuracy*100))
-        print(classification_list)
-        #run_evaluate(classification_list, classes)
-        joblib.dump(self.model, self.model_path)
-        
+        if not skip_val:
+            print("Val Accuracy: {} \n".format(accuracy*100))
+            print(classification_list)
+        self.model.save_model(self.model_path)
+
     def validate(self):
         classification_list = []
-        correct = 0
-        total = 0
         predicted = self.model.predict(self.val_set_x)
         correct = sum(predicted == self.val_set_y)
         total = len(predicted)
@@ -74,7 +66,6 @@ def run_evaluate(classification_list, classes):
     class_recalls = {}
     print('DEBUG')
     for p_cls in class_counts:
-        #print(class_counts)
         tp = class_counts[p_cls][p_cls] if p_cls in class_counts[p_cls] else 0
         fn = 0
         for p2_cls in class_counts:

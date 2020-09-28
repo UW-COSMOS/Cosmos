@@ -16,11 +16,13 @@ from .transforms import NormalizeWrapper
 import pickle
 from collections import namedtuple
 from uuid import uuid4
-from tqdm import tqdm
 from ingest.process.detection.src.torch_model.utils.bbox import BBoxes
 from ingest.process.detection.src.torch_model.utils.matcher import match
 from ingest.process.detection.src.utils.ingest_images import db_ingest, get_example_for_uuid, compute_neighborhoods, ImageDB
 from dataclasses import dataclass
+import logging
+logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
+logger = logging.getLogger(__name__)
 
 normalizer = NormalizeWrapper()
 
@@ -91,10 +93,10 @@ class XMLLoader(Dataset):
         self.nproposals = ingest_objs.nproposals
         self.class_stats = ingest_objs.class_stats
         self.classes = classes
-        print("printing class stats")
+        logger.debug("printing class stats")
         self.print_stats()
-        print(f"# of gt boxes:{self.ngt_boxes}")
-        print(f"# of proposals:{self.nproposals}")
+        logger.debug(f"# of gt boxes:{self.ngt_boxes}")
+        logger.debug(f"# of proposals:{self.nproposals}")
 
 
     def __len__(self):
@@ -105,7 +107,6 @@ class XMLLoader(Dataset):
         ex = get_example_for_uuid(uuid, self.session)
         neighbors = ex.neighbors(True, self.uuids, self.session)
         colorfulness = get_colorfulness(ex.window)
-        #print(len(neighbors), " neighbors")
         if len(neighbors) == 0:
            neighbor_boxes = [torch.zeros(4), torch.zeros(4)]
            neighbor_windows = [torch.zeros(ex.window.shape), torch.zeros(ex.window.shape)]
@@ -116,6 +117,8 @@ class XMLLoader(Dataset):
            neighbor_windows = [n.window for n in neighbors]
            neighbor_radii = get_radii(ex.bbox, torch.stack(neighbor_boxes))
            neighbor_angles = get_angles(ex.bbox, torch.stack(neighbor_boxes))
+        if ex.label == 'unlabelled':
+            ex.label = self.classes[-1]
         label = torch.Tensor([self.classes.index(ex.label)]) if ex.label is not None else None
         return Example(ex.bbox, label, ex.window, neighbor_boxes, neighbor_windows, neighbor_radii, neighbor_angles,colorfulness)
 
@@ -147,7 +150,7 @@ class XMLLoader(Dataset):
             else:
                 weight_per_class[name] = N/float(self.class_stats[name])                                 
         weight = [0] * N                                              
-        for idx, uuid in tqdm(enumerate(self.uuids)):
+        for idx, uuid in enumerate(self.uuids):
             lst = get_example_for_uuid(uuid, self.session)
             weight[idx] = weight_per_class[lst.label]
         return weight
@@ -155,11 +158,11 @@ class XMLLoader(Dataset):
 
     def print_stats(self):
         tot = len(self.uuids)
-        print(f"There are {tot} objects")
+        logger.debug(f"There are {tot} objects")
         for key in self.class_stats:
             sub = self.class_stats[key]
             percentage = float(sub)/tot
-            print(f"{key}: {sub} ({percentage})")
+            logger.debug(f"{key}: {sub} ({percentage})")
 
 
 

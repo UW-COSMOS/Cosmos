@@ -1,6 +1,0 @@
-gensim
-flask
-flask_cors
-nltk
-mysqlclient
-sqlalchemy
