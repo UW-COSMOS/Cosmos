@@ -18,7 +18,6 @@ services:
     command: "gunicorn -b 0.0.0.0:5010 --log-level debug 'cosmos:create_app()'"
     volumes:
       - ${OUTPUT_DIR}:/data
-      - ${TEST_DIR}:/test
     networks:
       swarm_network:
 
@@ -80,7 +79,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - esdata1:/usr/share/elasticsearch/data
+      - ${ELASTIC_DATA_PATH}:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
     networks:
@@ -90,8 +89,3 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
-
-volumes:
-  esdata1:
-    driver: local
-

@@ -1,4 +1,4 @@
-FROM basetest:latest
+FROM uwcosmos/cosmos-base:latest
 
 COPY deployment/weights/model_weights.pth /weights/model_weights.pth
 COPY deployment/weights/pp_model_weights.pth /weights/pp_model_weights.pth

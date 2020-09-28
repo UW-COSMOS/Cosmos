@@ -33,7 +33,6 @@ setup(
         "pascal-voc-writer",
         "pdfminer",
         "pytesseract",
-        "pikepdf",
         "sklearn"
     ]
 )
