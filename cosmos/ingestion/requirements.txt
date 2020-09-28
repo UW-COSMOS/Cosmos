@@ -38,5 +38,3 @@ dask
 distributed
 pyarrow
 fsspec>=0.3.3
-pikepdf
-
