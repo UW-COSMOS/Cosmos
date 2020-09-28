@@ -9,7 +9,7 @@ Cosmos is composed of three parts:
 
 3. Extraction of information. Cosmos is also packaged with a question answering model that can be deployed to answer queries with subspans retrieved from the retrieval module.
 
-See https://uwcosmos.github.io/Cosmos for full documentation.
+See https://uw-cosmos.github.io/Cosmos/ for full documentation.
  
 # License and Acknowledgements
 All development work supported by DAPRA ASKE HR00111990013 and UW-Madison.
