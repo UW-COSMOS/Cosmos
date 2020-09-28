@@ -1,0 +1,281 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Getting Started &mdash; Cosmos 0.0.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Ingestion" href="ingest.html" />
+    <link rel="prev" title="Cosmos" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> Cosmos
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#deploying-the-cosmos-search-interface">Deploying the COSMOS search interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reading-ingested-data-into-elasticsearch">Reading ingested data into ElasticSearch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#viewing-output">Viewing output</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ingest.html">Ingestion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="retrieval.html">Retrieval</a></li>
+<li class="toctree-l1"><a class="reference internal" href="extraction.html">Extraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker_builds.html">Building the docker images</a></li>
+<li class="toctree-l1"><a class="reference internal" href="existing_es.html">Reading data into an existing ElasticSearch cluster</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Cosmos</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Getting Started</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/getting_started.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="getting-started">
+<h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<p>To get started with Cosmos, we highly suggest utilizing some of our prebuilt _Docker images.
+These handle building dependencies and running your documents through the pipeline without
+having to worry about installing things locally.</p>
+<p>First, clone the Cosmos repository, and change into the root directory of the repository.
+Open a file named .env in the directory, and populate it with the following:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">BASE_IMAGE=uwcosmos/cosmos-base:latest</span>
+<span class="go">DETECT_IMAGE=uwcosmos/cosmos-ingestion:latest</span>
+<span class="go">WORKER_IMAGE=uwcosmos/cosmos-ingestion:latest</span>
+<span class="go">UPLOAD_IMAGE=uwcosmos/cosmos-upload:latest</span>
+<span class="go">RETRIEVAL_IMAGE=uwcosmos/cosmos-retrieval:latest</span>
+<span class="go">EXTRACTION_IMAGE=ankurgos/cosmos-extraction:latest</span>
+<span class="go">VISUALIZER_IMAGE=uwcosmos/visualizer_kb:latest</span>
+<span class="go">API_IMAGE=uwcosmos/cosmos-api:latest</span>
+<span class="go">DETECT_PROCS=1</span>
+<span class="go">WORKER_PROCS=7</span>
+<span class="go">DEVICE=cuda</span>
+<span class="go">RERANKING_DEVICE=cuda</span>
+<span class="go">INPUT_DIR=/path/to/input/dir</span>
+<span class="go">TMP_DIR=/path/to/tmp/dir</span>
+<span class="go">OUTPUT_DIR=/path/to/output/dir</span>
+<span class="go">ELASTIC_DATA_PATH=/path/to/es/directory</span>
+<span class="go">ELASTIC_ADDRESS=es01</span>
+</pre></div>
+</div>
+<p>The first seven lines in the file define which images to use. The default cosmos images assumes access to a CUDA
+enabled GPU. To utilize a CPU, append to each image “-cpu”. For example, change uwcosmos/cosmos-base:latest to
+uwcosmos/cosmos-base-cpu:latest. If you use the CPU version, make sure to change all <a href="#id1"><span class="problematic" id="id2">*</span></a>_DEVICE from ‘cuda’ to ‘cpu’.</p>
+<p>Depending on your machine, you can scale the process by setting DETECT_PROCS and WORKER_PROCS to the desired number of
+processes.</p>
+<p>Finally, make sure to set the final three directories, denoting the input directory pointing to your PDFs, a temporary
+directory with sufficient hard drive space to write images and such, and an output directory to write information.</p>
+<p>To process the images, run the following line:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">docker-compose -f deployment/docker-compose-ingest.yml -p cosmos up</span>
+</pre></div>
+</div>
+<p>The output directory you defined will now be populated with a set of _Parquet files, as well as an images directory
+containing object specific images, and saved word embeddings over the input corpus.</p>
+<div class="section" id="deploying-the-cosmos-search-interface">
+<h2>Deploying the COSMOS search interface<a class="headerlink" href="#deploying-the-cosmos-search-interface" title="Permalink to this headline">¶</a></h2>
+<p>To deploy the search interface over this processed dataset, run the following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">docker-compose -f deployment/docker-compose-api.yml up</span>
+</pre></div>
+</div>
+<p>This will create an elasticsearch service for you. If you already have a ElasticSearch cluster online, see
+<span class="xref std std-ref">Existing ElasticSearch Cluster</span>. Its datapath is will be set to the environment variable set in the .env file.</p>
+</div>
+<div class="section" id="reading-ingested-data-into-elasticsearch">
+<h2>Reading ingested data into ElasticSearch<a class="headerlink" href="#reading-ingested-data-into-elasticsearch" title="Permalink to this headline">¶</a></h2>
+<p>The files outputted by ingestion must now be read into ElasticSearch indices. In a separate window, run:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">docker-compose -f deployment/docker-compose-api-upload.yml up</span>
+</pre></div>
+</div>
+<p>This could take some time, depending on the size of your document stack.</p>
+</div>
+<div class="section" id="viewing-output">
+<h2>Viewing output<a class="headerlink" href="#viewing-output" title="Permalink to this headline">¶</a></h2>
+<p>You should now be able to navigate to localhost:8082 in your browser to access the search interface.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="ingest.html" class="btn btn-neutral float-right" title="Ingestion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Cosmos" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, UW-Cosmos
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
