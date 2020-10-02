@@ -5,7 +5,16 @@ import xgboost
 import numpy as np
 import logging
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
+
+
 def run_inference(model, classes, page_objs):
+    # TODO: WRITE TEST CASE
+    if len(page_objs) == 0:
+        logger.error('run_inference (postprocess) was passed 0 page_objs')
+        return ''
+
     p_bb, _, texts = zip(*page_objs)
 
     objs = load_data_objs(page_objs, classes)

@@ -143,6 +143,7 @@ class Ingest:
                 chunk = self.client.map(pool_text_ocr_opt, chunk, resources={'process': 1})
                 if self.use_xgboost_postprocess:
                     chunk = self.client.map(xgboost_postprocess, chunk, resources={'process': 1})
+                    chunk = [i for i in chunk if i.result() != '']
                     if self.use_rules_postprocess:
                         chunk = self.client.map(rules_postprocess, chunk, resources={'process': 1})
             progress(chunk)
