@@ -6,4 +6,4 @@ docker run \
 -v /hdd/iaross/train_dir:/train_dir \
 -v /hdd/iaross/val_dir:/val_dir \
 -v /hdd/iain/train_postprocess_out:/out \
-iain:train_postprocess
+train_postprocess:latest
