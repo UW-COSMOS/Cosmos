@@ -78,3 +78,15 @@ You should now be able to navigate to localhost:8082 in your browser to access t
 .. _Docker: https://www.docker.com/
 .. _Parquet: https://parquet.apache.org/
 .. _ElasticSearch: https://www.elastic.co/home
+
+Training the postprocess model
+------------------------------
+
+Once the train_postprocess docker image is built launch the training process by executing script train_postprocess/docker_launch.sh in the cli/ dir.
+the last argument in that the bash script should be the TRAIN-POSTPROCESS:TRAIN-POSTPROCESS:TAG you build the train_postprocess image with.
+You can choose which GPU to use with the -e CUDA_VISIBLE_DEVICES=1 argument or omit that argument if it doesn't matter to you.
+specify bind mounts for the trained model output, and training and validation images with the -v arguments:
+
+    1. -v <local_full_path_to_training_data>:/train_dir \
+    2. -v <local_full_path_to_validation_data>:/val_dir \
+    3. -v <local_full_path_to_output_pth_location>:/out \
