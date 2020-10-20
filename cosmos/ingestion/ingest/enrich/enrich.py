@@ -85,7 +85,6 @@ class Enrich:
             pass
 
     def get_score_histogram(self, post_process_class, filepath):
-        filepath = '/hdd/iain/covid_output/'
         # post_process_class = 'Table Caption'
         ax = self.df[self.df['postprocess_cls'] == post_process_class].postprocess_score.plot.hist()
         ax.get_figure().savefig(filepath)
@@ -110,7 +109,7 @@ class Enrich:
         logger.info('df tables:')
         logger.info(self.df[self.df['postprocess_cls'] == 'Table'].head())
 
-    def semantic_enrichment(self):
+    def semantic_enrichment(self, filename):
         logger.info('setting table labels')
         self.set_table_ids()
         # logger.info(self.df[self.df['table_label'].notna()].head())
@@ -119,7 +118,7 @@ class Enrich:
         self.create_semantic_contexts()
         logger.info(self.df[self.df['semantic_context'].notna()].head(10))
 
-        self.export_data('/hdd/iain/semantic_context.parquet')
+        self.export_data(filename)
 
     def set_table_ids(self):
         """
@@ -127,17 +126,15 @@ class Enrich:
         column 'table_id' = <pdf_name><table_label>
         """
         # get all tables table ID is pdf, and table reference
-        self.df['table_label'] = self.df.apply(self.apply_table_labels, axis=1)
+        self.df['table_label'] = self.df.apply(self.apply_table_labels, args=(0.9,), axis=1)
 
-    def apply_table_labels(self, row):
+    def apply_table_labels(self, row, threshold):
         """
         Call this from df.apply()
-        applied to a dataframe, return new column in data frame that is pdfname+first two words of content
+        applied to a dataframe, return new column in data frame that == first two 'words' of content
         for each table caption
         """
         output = None
-        threshold = 0.9
-        # TODO:parameterize threshold
         # append table_id to every row in dataframe if its a table caption and score meets threshold
         if (row['postprocess_cls'] == 'Table Caption') & (row['postprocess_score'] >= threshold):
             table_label = ' '.join(row['content'].split()[:2])
