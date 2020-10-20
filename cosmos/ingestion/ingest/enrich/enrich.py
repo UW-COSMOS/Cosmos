@@ -126,14 +126,15 @@ class Enrich:
         column 'table_id' = <pdf_name><table_label>
         """
         # get all tables table ID is pdf, and table reference
-        self.df['table_label'] = self.df.apply(self.apply_table_labels, args=(0.9,), axis=1)
+        self.df['table_label'] = self.df.apply(self.apply_table_labels, threshold=0.9, axis=1)
 
-    def apply_table_labels(self, row, threshold):
+    def apply_table_labels(self, row, **kwargs):
         """
         Call this from df.apply()
         applied to a dataframe, return new column in data frame that == first two 'words' of content
         for each table caption
         """
+        threshold = kwargs['threshold']
         output = None
         # append table_id to every row in dataframe if its a table caption and score meets threshold
         if (row['postprocess_cls'] == 'Table Caption') & (row['postprocess_score'] >= threshold):
@@ -161,10 +162,10 @@ class Enrich:
             table_pdf_name = row['pdf_name']
             table_label = row['table_label']
 
-            # strip non alpha numerics from table label to prevent special characters being interpreted as additional
+            # strip non alpha numerics from table label
+            # prevent special characters being interpreted as additional regex components
             # keeps spaces and full stops though
             pattern = re.compile("[^0-9a-zA-Z. ]+")
-            # TODO: search for multiple different patterns?
             table_label = pattern.sub('', table_label)
 
             logger.info(f'table_pdf_name: {table_pdf_name}')
@@ -176,7 +177,7 @@ class Enrich:
             logger.info(f'pdf_content: {pdf_content}')
 
             # for each content find table label and return sentence containing it (from start . to end .)
-            # TODO get two sentences.
+            # TODO: change from regex to spans
             re_search_string = r"([^.]*?"+table_label+r"[^.]*\.)"
             output = re.findall(re_search_string, pdf_content)
             # re search returns list, make sure all are strings
@@ -184,13 +185,12 @@ class Enrich:
             # concatenate list
             output = ' '.join(output).strip()
             logger.info(f'output type: {type(output)} output: {output}')
-            # if result doesn't have any chars in it, chuck it.
 
         return output
 
     def export_data(self, filename):
         """
-        output parquet file with the doc, reference, and two sentence sets for each reference.
+        output parquet file with only semantic enhancement for table captions rows
         """
         logger.info(f'outputting {filename}')
         self.df[self.df['semantic_context'].notna()].to_parquet(filename)
