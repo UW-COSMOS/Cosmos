@@ -84,33 +84,33 @@ class Enrich:
             logger.info('no standard output')
             pass
 
+    def get_score_histogram(self, post_process_class, filepath):
+        filepath = '/hdd/iain/covid_output/'
+        # post_process_class = 'Table Caption'
+        ax = self.df[self.df['postprocess_cls'] == post_process_class].postprocess_score.plot.hist()
+        ax.get_figure().savefig(filepath)
+
     def show_table_rows(self):
         pd.options.display.max_columns = 999
         pd.options.display.max_colwidth = 250
 
         # LOOK AT TABLE CAPTION ROW SCORES IN DF
-        # logger.info('df table captions')
-        # logger.info('post_process_score')
-        # max_vals = self.df[self.df['postprocess_cls'] == 'Table Caption'].postprocess_score.max(axis=0)
-        # min_vals = self.df[self.df['postprocess_cls'] == 'Table Caption'].postprocess_score.min(axis=0)
-        # mean_vals = self.df[self.df['postprocess_cls'] == 'Table Caption'].postprocess_score.mean(axis=0)
-        # logger.info(f'max:{max_vals}')
-        # logger.info(f'min:{min_vals}')
-        # logger.info(f'mean:{mean_vals}')
-
-        # SAVE HISTORGRAM OF TABLE CAPTION SCORES
-        # filepath = '/hdd/iain/covid_output/'
-        # dataset_id = 'covid_docs_all'
-        # self.load_data_with_pandas(filepath, dataset_id)
-        # ax = self.pdd[self.pdd['postprocess_cls'] == 'Table Caption'].postprocess_score.plot.hist()
-        # ax.get_figure().savefig('/hdd/iain/table_caption_post_process_score.png')
+        logger.info('df table captions')
+        logger.info('post_process_score')
+        max_vals = self.df[self.df['postprocess_cls'] == 'Table Caption'].postprocess_score.max(axis=0)
+        min_vals = self.df[self.df['postprocess_cls'] == 'Table Caption'].postprocess_score.min(axis=0)
+        mean_vals = self.df[self.df['postprocess_cls'] == 'Table Caption'].postprocess_score.mean(axis=0)
+        logger.info(f'max:{max_vals}')
+        logger.info(f'min:{min_vals}')
+        logger.info(f'mean:{mean_vals}')
 
         # Show top 5 rows from parquet with table caption or table class
-        # logger.info(self.df.columns)
-        # logger.info(self.df[self.df['postprocess_cls'] == 'Table Caption'].head())
-        # logger.info('df tables:')
-        # logger.info(self.df[self.df['postprocess_cls'] == 'Table'].head())
+        logger.info(self.df.columns)
+        logger.info(self.df[self.df['postprocess_cls'] == 'Table Caption'].head())
+        logger.info('df tables:')
+        logger.info(self.df[self.df['postprocess_cls'] == 'Table'].head())
 
+    def semantic_enrichment(self):
         logger.info('setting table labels')
         self.set_table_ids()
         # logger.info(self.df[self.df['table_label'].notna()].head())
@@ -127,25 +127,24 @@ class Enrich:
         column 'table_id' = <pdf_name><table_label>
         """
         # get all tables table ID is pdf, and table reference
-        self.df['table_label'] = self.df.apply(self.apply_table_ids, axis=1)
+        self.df['table_label'] = self.df.apply(self.apply_table_labels, axis=1)
 
-    def apply_table_ids(self, row):
+    def apply_table_labels(self, row):
         """
         Call this from df.apply()
         applied to a dataframe, return new column in data frame that is pdfname+first two words of content
         for each table caption
         """
         output = None
-
+        threshold = 0.9
         # TODO:parameterize threshold
         # append table_id to every row in dataframe if its a table caption and score meets threshold
-        if (row['postprocess_cls'] == 'Table Caption') & (row['postprocess_score'] >= 0.9):
+        if (row['postprocess_cls'] == 'Table Caption') & (row['postprocess_score'] >= threshold):
             table_label = ' '.join(row['content'].split()[:2])
             if table_label:
                 output = table_label
 
         return output
-
 
     def create_semantic_contexts(self):
         """
@@ -159,15 +158,14 @@ class Enrich:
         """
         output = None
 
-        # for each row with a table id
-        # TODO: make this more efficient
+        # for each row with a table label
         if row['table_label'] is not None:
             # get pdf for that table label
             table_pdf_name = row['pdf_name']
             table_label = row['table_label']
 
             # strip non alpha numerics from table label to prevent special characters being interpreted as additional
-            # keeps spaces and full stops
+            # keeps spaces and full stops though
             pattern = re.compile("[^0-9a-zA-Z. ]+")
             # TODO: search for multiple different patterns?
             table_label = pattern.sub('', table_label)
@@ -181,7 +179,7 @@ class Enrich:
             logger.info(f'pdf_content: {pdf_content}')
 
             # for each content find table label and return sentence containing it (from start . to end .)
-            # TODO get two sentences. recursive?
+            # TODO get two sentences.
             re_search_string = r"([^.]*?"+table_label+r"[^.]*\.)"
             output = re.findall(re_search_string, pdf_content)
             # re search returns list, make sure all are strings
@@ -192,7 +190,6 @@ class Enrich:
             # if result doesn't have any chars in it, chuck it.
 
         return output
-
 
     def export_data(self, filename):
         """

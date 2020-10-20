@@ -10,7 +10,7 @@ dataset_id = 'covid_docs_all'
 
 def enrich_ingest_output(filepath, dataset_id):
     enrich = Enrich(filepath, dataset_id)
-    enrich.show_table_rows()
+    enrich.semantic_enrichment()
 
 
 enrich_ingest_output(filepath=filepath,
