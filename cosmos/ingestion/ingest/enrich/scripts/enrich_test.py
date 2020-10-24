@@ -10,7 +10,7 @@ dataset_id = 'covid_docs_all'
 
 def enrich_ingest_output(filepath, dataset_id):
     enrich = Enrich(filepath, dataset_id)
-    enrich.semantic_enrichment('/hdd/iain/semantic_context.parquet')
+    enrich.semantic_enrichment('/hdd/iain/semantic_context_spans.parquet', spans=20)
 
 
 enrich_ingest_output(filepath=filepath,

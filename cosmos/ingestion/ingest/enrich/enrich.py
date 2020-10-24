@@ -109,13 +109,13 @@ class Enrich:
         logger.info('df tables:')
         logger.info(self.df[self.df['postprocess_cls'] == 'Table'].head())
 
-    def semantic_enrichment(self, filename):
+    def semantic_enrichment(self, filename, spans):
         logger.info('setting table labels')
         self.set_table_ids()
         # logger.info(self.df[self.df['table_label'].notna()].head())
 
         logger.info('getting semantic context')
-        self.create_semantic_contexts()
+        self.create_semantic_contexts(spans=spans)
         logger.info(self.df[self.df['semantic_context'].notna()].head(10))
 
         self.export_data(filename)
@@ -144,30 +144,28 @@ class Enrich:
 
         return output
 
-    def create_semantic_contexts(self):
+    def create_semantic_contexts(self, spans=None):
         """
         get the sentence with the reference, and the preceding sentence
         """
-        self.df['semantic_context'] = self.df.apply(self.get_semantic_context, axis=1)
+        self.df['semantic_context'] = self.df.apply(self.get_semantic_context, spans=spans, axis=1)
 
-    def get_semantic_context(self, row):
+    def get_semantic_context(self, row, **kwargs):
         """
         call this from df.apply - get body text that mentions the relevant table label
+        :param row - passed to function when called from df.apply(), get row of dataframe to parse.
+        :param spans - number of words either side of the table label to extract from pdf_content
+            if spans == None, search is bases on regex comparison.
+        returns output - for each row: text that contains the table label - sentence or span.
         """
         output = None
+        spans = kwargs['spans']
 
         # for each row with a table label
         if row['table_label'] is not None:
             # get pdf for that table label
             table_pdf_name = row['pdf_name']
             table_label = row['table_label']
-
-            # strip non alpha numerics from table label
-            # prevent special characters being interpreted as additional regex components
-            # keeps spaces and full stops though
-            pattern = re.compile("[^0-9a-zA-Z. ]+")
-            table_label = pattern.sub('', table_label)
-
             logger.info(f'table_pdf_name: {table_pdf_name}')
             logger.info(f'table_label: {table_label}')
 
@@ -176,15 +174,65 @@ class Enrich:
             pdf_content = ' '.join(pdf_content)
             logger.info(f'pdf_content: {pdf_content}')
 
-            # for each content find table label and return sentence containing it (from start . to end .)
-            # TODO: change from regex to spans
-            re_search_string = r"([^.]*?"+table_label+r"[^.]*\.)"
-            output = re.findall(re_search_string, pdf_content)
-            # re search returns list, make sure all are strings
-            output = [str(x) for x in output]
-            # concatenate list
-            output = ' '.join(output).strip()
-            logger.info(f'output type: {type(output)} output: {output}')
+            if spans:
+                # find label in content, and return spans 'words' from either side
+
+                # search over pdf content as a list
+                words = pdf_content.split()
+                # compare table label as a list ot the content list
+                parts = table_label.split()
+
+                # get all indexes in pdf content for the table_label
+                label_indexes = []
+                for i in range(len(words)-len(parts)):
+                    label_match = 0
+                    for j in range(len(parts)):
+                        if parts[j].lower() == words[i+j].lower():
+                            # increment for each match
+                            label_match += 1
+                        else:
+                            # if any part of label doesn't match, stop comparing and move on
+                            break
+                    if label_match == len(parts):
+                        # if whole label matches, record index
+                        label_indexes.append(i)
+                logger.info(f'label_indexes: {label_indexes}')
+
+                # get words either side of the label index, concatenate and return.
+                output = []
+                for i in label_indexes:
+                    try:
+                        prefix = words[i-spans:i]
+                    except IndexError:
+                        prefix = words[0:i]
+
+                    try:
+                        suffix = words[i:i+spans]
+                    except IndexError:
+                        suffix = words[i:i+len(words)]
+
+                    output.append(' '.join(prefix+suffix))
+
+                # output = ' '.join(output)
+                logger.info(output)
+
+            else:
+                # for each content find table label and return sentence containing it (from start . to end .)
+
+                # strip non alpha numerics from table label
+                # prevent special characters being interpreted as additional regex components
+                # keeps spaces and full stops though
+                pattern = re.compile("[^0-9a-zA-Z. ]+")
+                table_label = pattern.sub('', table_label)
+
+                # use regex to find table label and return string between two fullstops either side of it
+                re_search_string = r"([^.]*?"+table_label+r"[^.]*\.)"
+                output = re.findall(re_search_string, pdf_content)
+                # re search returns list, make sure all are strings
+                output = [str(x) for x in output]
+                # concatenate list
+                output = ' '.join(output).strip()
+                logger.info(f'output type: {type(output)} output: {output}')
 
         return output
 
