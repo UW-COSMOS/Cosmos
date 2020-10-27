@@ -8,17 +8,22 @@ from os.path import isfile, join
 import spacy
 from tqdm import tqdm
 
-tqdm.pandas()
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+# use tqdm with df.progress_apply()
+tqdm.pandas()
 
 
 class Enrich:
     """enhance semantic content associated with tables/entities in ingestion pipeline output parquets"""
-    def __init__(self, parquet_files_dir, dataset_id, use_dask=False):
+    def __init__(self, parquet_files_dir, dataset_id, spacy_model='en_core_web_md', use_dask=False):
         """
         load all ingest pipeline output files into dask dataframes
+        :param parquet_files_dir directory containing ingestion pipeline output .parquet files
+        :param dataset_id the string used as the dataset id to generate the .parquet files - should be in filenames
+        :param use_dask for very large .parquet files load dataframes as dask dataframes
+        :param spacy_model specify a model from spaCy to use for NER
         """
         # get all files names in a specified dir
         list_of_files = [f for f in listdir(parquet_files_dir) if isfile(join(parquet_files_dir, f))]
@@ -26,8 +31,8 @@ class Enrich:
         # load specific files that are US-COSMOS ingest pipeline output
         logger.info('files found:')
         if use_dask:
+            logger.info('Loading files with Dask')
             for f in list_of_files:
-                logger.info('using dask')
                 if f == dataset_id + '_pdfs.parquet':
                     logger.info(f'loading {f}')
                     self.df_pdfs = dd.read_parquet(join(parquet_files_dir, f))
@@ -50,7 +55,8 @@ class Enrich:
                     logger.info(f'loading {f}')
                     self.df = pd.read_parquet(join(parquet_files_dir, f))
 
-        self.nlp = spacy.load('en_core_web_sm')
+        logger.info(f'loaded spaCy model: {spacy_model}')
+        self.nlp = spacy.load(spacy_model)
 
     def get_file_structure(self):
         """
@@ -196,7 +202,11 @@ class Enrich:
             else:
                 output = self.get_labels_and_sentences_with_regex(table_label, pdf_content)
 
-            return output
+        # catch empty lists and convert to None
+        if not output:
+            output = None
+
+        return output
 
     def get_labels_and_spans_from_content(self, table_label, pdf_content, spans):
         """
@@ -276,15 +286,19 @@ class Enrich:
         :param row - row from dataframe
         :return list of named entities
         """
-        # get list of semantic contexts from row
-        context_list = row['semantic_context']
         ners = []
-
+        # get list of semantic contexts from row
         # iterate over contexts, finding entities, appending to list. One list for all contexts.
-        for cont in context_list:
+        for cont in row['semantic_context']:
             doc = self.nlp(cont)
-            for ent in doc:
+            for ent in doc.ents:
+                logger.info(f'ent dir: {dir(ent)}')
+                logger.info(f'{ent.text}, {ent.start_char}, {ent.end_char}, {ent.label_}')
                 ners.append(ent.text)
+
+        # if empty list return None
+        if not ners:
+            ners = None
 
         return ners
 
