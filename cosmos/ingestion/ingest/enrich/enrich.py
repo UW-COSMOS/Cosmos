@@ -1,3 +1,4 @@
+from typing import List
 import pandas as pd
 import re
 import logging
@@ -109,10 +110,9 @@ class Enrich:
         logger.info('df tables:')
         logger.info(self.df[self.df['postprocess_cls'] == 'Table'].head())
 
-    def semantic_enrichment(self, filename, spans):
+    def semantic_enrichment(self, filename, threshold=0.9, spans=20):
         logger.info('setting table labels')
-        self.set_table_ids()
-        # logger.info(self.df[self.df['table_label'].notna()].head())
+        self.set_table_ids(threshold=threshold)
 
         logger.info('getting semantic context')
         self.create_semantic_contexts(spans=spans)
@@ -120,13 +120,13 @@ class Enrich:
 
         self.export_data(filename)
 
-    def set_table_ids(self):
+    def set_table_ids(self, threshold):
         """
         identify and collect references for all tables in output parquets, per document
         column 'table_id' = <pdf_name><table_label>
         """
         # get all tables table ID is pdf, and table reference
-        self.df['table_label'] = self.df.apply(self.apply_table_labels, threshold=0.9, axis=1)
+        self.df['table_label'] = self.df.apply(self.apply_table_labels, threshold=threshold, axis=1)
 
     def apply_table_labels(self, row, **kwargs):
         """
@@ -175,66 +175,82 @@ class Enrich:
             logger.info(f'pdf_content: {pdf_content}')
 
             if spans:
-                # find label in content, and return spans 'words' from either side
-
-                # search over pdf content as a list
-                words = pdf_content.split()
-                # compare table label as a list ot the content list
-                parts = table_label.split()
-
-                # get all indexes in pdf content for the table_label
-                label_indexes = []
-                for i in range(len(words)-len(parts)):
-                    label_match = 0
-                    for j in range(len(parts)):
-                        if parts[j].lower() == words[i+j].lower():
-                            # increment for each match
-                            label_match += 1
-                        else:
-                            # if any part of label doesn't match, stop comparing and move on
-                            break
-                    if label_match == len(parts):
-                        # if whole label matches, record index
-                        label_indexes.append(i)
-                logger.info(f'label_indexes: {label_indexes}')
-
-                # get words either side of the label index, concatenate and return.
-                output = []
-                for i in label_indexes:
-                    try:
-                        prefix = words[i-spans:i]
-                    except IndexError:
-                        prefix = words[0:i]
-
-                    try:
-                        suffix = words[i:i+spans]
-                    except IndexError:
-                        suffix = words[i:i+len(words)]
-
-                    output.append(' '.join(prefix+suffix))
-
-                # output = ' '.join(output)
-                logger.info(output)
-
+                output = self.get_labels_and_spans_from_content(table_label, pdf_content, spans)
             else:
-                # for each content find table label and return sentence containing it (from start . to end .)
+                output = self.get_labels_and_sentences_with_regex(table_label, pdf_content)
 
-                # strip non alpha numerics from table label
-                # prevent special characters being interpreted as additional regex components
-                # keeps spaces and full stops though
-                pattern = re.compile("[^0-9a-zA-Z. ]+")
-                table_label = pattern.sub('', table_label)
+            return output
 
-                # use regex to find table label and return string between two fullstops either side of it
-                re_search_string = r"([^.]*?"+table_label+r"[^.]*\.)"
-                output = re.findall(re_search_string, pdf_content)
-                # re search returns list, make sure all are strings
-                output = [str(x) for x in output]
-                # concatenate list
-                output = ' '.join(output).strip()
-                logger.info(f'output type: {type(output)} output: {output}')
+    def get_labels_and_spans_from_content(self, table_label, pdf_content, spans):
+        """
+        :param table_label the label of the table to retrieve context for
+        :param pdf_content current pdf content field
+        :param spans the count of words to fetch as context on each side of the table_label
+        return list of strings, table label in middle of each with span count of words from pdf content each side
+        """
+        # find label in content, and return spans # of words from either side
 
+        # get number of words/parts in table label
+        parts = len(table_label.split())
+        # get pdf   content as a list
+        words = pdf_content.split()
+
+        # get all indexes in pdf content for the table_label
+        label_indexes = []
+        for i in range(len(words)-parts):
+            if table_label == ' '.join(words[i:i+parts]):
+                label_indexes.append(i)
+        logger.info(f'label_indexes: {label_indexes}')
+
+        # get words either side of the label index, concatenate and return.
+        output = []
+        for i in label_indexes:
+            try:
+                prefix = words[i-spans:i]
+            except IndexError:
+                # if start of pdf_content is < # of words in span from table label mention, just go from start
+                prefix = words[0:i]
+
+            try:
+                suffix = words[i:i+spans]
+            except IndexError:
+                # if end of pdf_content is < # of words in span from table label mention, just go to the end
+                suffix = words[i:i+len(words)]
+
+            output.append(' '.join(prefix+suffix))
+
+        # output = ' '.join(output)
+        logger.info(output)
         return output
+
+    def get_labels_and_sentences_with_regex(self, table_label: str, pdf_content: str) -> List[str]:
+        """
+        :param table_label
+        :param pdf_content
+        returns list of string each the slice between two full stops containing the table label
+        """
+        # for each content find table label and return sentence containing it (from start . to end .)
+
+        # strip non alpha numerics from table label
+        # prevent special characters being interpreted as additional regex components
+        # keeps spaces and full stops though
+        pattern = re.compile("[^0-9a-zA-Z. ]+")
+        table_label = pattern.sub('', table_label)
+
+        # use regex to find table label and return string between two fullstops either side of it
+        re_search_string = r"([^.]*?"+table_label+r"[^.]*\.)"
+        output = re.findall(re_search_string, pdf_content)
+        # re search returns list, make sure all are strings
+        output = [str(x) for x in output]
+        # concatenate list
+        # output = ' '.join(output).strip()
+        logger.info(f'output type: {type(output)} output: {output}')
+        return output
+
+    def get_entities(self, row, **kwargs):
+        """
+        return all named entities in a list per row passed
+        """
 
     def export_data(self, filename):
         """
