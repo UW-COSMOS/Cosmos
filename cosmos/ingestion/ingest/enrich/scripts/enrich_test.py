@@ -15,5 +15,7 @@ def enrich_ingest_output(filepath, dataset_id):
                                threshold=0.9)
 
 
-enrich_ingest_output(filepath=filepath,
-                     dataset_id=dataset_id)
+if __name__ == '__main__':
+    enrich_ingest_output(filepath=filepath,
+                         dataset_id=dataset_id)
+

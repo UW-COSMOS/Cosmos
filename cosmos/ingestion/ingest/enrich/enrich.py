@@ -5,6 +5,10 @@ import logging
 from dask import dataframe as dd
 from os import listdir
 from os.path import isfile, join
+import spacy
+from tqdm import tqdm
+
+tqdm.pandas()
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -45,6 +49,8 @@ class Enrich:
                 elif f == dataset_id + '.parquet':
                     logger.info(f'loading {f}')
                     self.df = pd.read_parquet(join(parquet_files_dir, f))
+
+        self.nlp = spacy.load('en_core_web_sm')
 
     def get_file_structure(self):
         """
@@ -114,8 +120,19 @@ class Enrich:
         logger.info('setting table labels')
         self.set_table_ids(threshold=threshold)
 
+        logger.info('removing rows with no table label')
+        self.df = self.df[self.df['table_label'].notna()]
+
         logger.info('getting semantic context')
         self.create_semantic_contexts(spans=spans)
+
+        logger.info('removing rows with no semantic context')
+        self.df = self.df[self.df['semantic_context'].notna()]
+
+        logger.info('getting named entities')
+        self.create_entities_lists()
+
+
         logger.info(self.df[self.df['semantic_context'].notna()].head(10))
 
         self.export_data(filename)
@@ -126,7 +143,7 @@ class Enrich:
         column 'table_id' = <pdf_name><table_label>
         """
         # get all tables table ID is pdf, and table reference
-        self.df['table_label'] = self.df.apply(self.apply_table_labels, threshold=threshold, axis=1)
+        self.df['table_label'] = self.df.progress_apply(self.apply_table_labels, threshold=threshold, axis=1)
 
     def apply_table_labels(self, row, **kwargs):
         """
@@ -148,7 +165,7 @@ class Enrich:
         """
         get the sentence with the reference, and the preceding sentence
         """
-        self.df['semantic_context'] = self.df.apply(self.get_semantic_context, spans=spans, axis=1)
+        self.df['semantic_context'] = self.df.progress_apply(self.get_semantic_context, spans=spans, axis=1)
 
     def get_semantic_context(self, row, **kwargs):
         """
@@ -166,13 +183,13 @@ class Enrich:
             # get pdf for that table label
             table_pdf_name = row['pdf_name']
             table_label = row['table_label']
-            logger.info(f'table_pdf_name: {table_pdf_name}')
-            logger.info(f'table_label: {table_label}')
+            logger.debug(f'table_pdf_name: {table_pdf_name}')
+            logger.debug(f'table_label: {table_label}')
 
             # get all content in that pdf
             pdf_content = self.df[self.df['pdf_name'] == table_pdf_name].content.tolist()
             pdf_content = ' '.join(pdf_content)
-            logger.info(f'pdf_content: {pdf_content}')
+            logger.debug(f'pdf_content: {pdf_content}')
 
             if spans:
                 output = self.get_labels_and_spans_from_content(table_label, pdf_content, spans)
@@ -200,7 +217,7 @@ class Enrich:
         for i in range(len(words)-parts):
             if table_label == ' '.join(words[i:i+parts]):
                 label_indexes.append(i)
-        logger.info(f'label_indexes: {label_indexes}')
+        logger.debug(f'label_indexes: {label_indexes}')
 
         # get words either side of the label index, concatenate and return.
         output = []
@@ -220,7 +237,7 @@ class Enrich:
             output.append(' '.join(prefix+suffix))
 
         # output = ' '.join(output)
-        logger.info(output)
+        logger.debug(output)
         return output
 
     def get_labels_and_sentences_with_regex(self, table_label: str, pdf_content: str) -> List[str]:
@@ -244,13 +261,32 @@ class Enrich:
         output = [str(x) for x in output]
         # concatenate list
         # output = ' '.join(output).strip()
-        logger.info(f'output type: {type(output)} output: {output}')
+        logger.debug(f'output type: {type(output)} output: {output}')
         return output
 
-    def get_entities(self, row, **kwargs):
+    def create_entities_lists(self):
+        """
+        detect named entities in semantic context
+        """
+        self.df['named_entities'] = self.df.progress_apply(self.get_named_entities, axis=1)
+
+    def get_named_entities(self, row, **kwargs) -> List:
         """
         return all named entities in a list per row passed
+        :param row - row from dataframe
+        :return list of named entities
         """
+        # get list of semantic contexts from row
+        context_list = row['semantic_context']
+        ners = []
+
+        # iterate over contexts, finding entities, appending to list. One list for all contexts.
+        for cont in context_list:
+            doc = self.nlp(cont)
+            for ent in doc:
+                ners.append(ent.text)
+
+        return ners
 
     def export_data(self, filename):
         """
