@@ -5,6 +5,7 @@ import logging
 from dask import dataframe as dd
 from os import listdir
 from os.path import isfile, join
+import scispacy
 import spacy
 from tqdm import tqdm
 
@@ -17,7 +18,7 @@ tqdm.pandas()
 
 class Enrich:
     """enhance semantic content associated with tables/entities in ingestion pipeline output parquets"""
-    def __init__(self, parquet_files_dir, dataset_id, spacy_model='en_core_web_md', use_dask=False):
+    def __init__(self, parquet_files_dir, dataset_id, scispacy_models=['en_core_sci_md'], use_dask=False):
         """
         load all ingest pipeline output files into dask dataframes
         :param parquet_files_dir directory containing ingestion pipeline output .parquet files
@@ -55,8 +56,10 @@ class Enrich:
                     logger.info(f'loading {f}')
                     self.df = pd.read_parquet(join(parquet_files_dir, f))
 
-        logger.info(f'loaded spaCy model: {spacy_model}')
-        self.nlp = spacy.load(spacy_model)
+        logger.info(f'loading spaCy models:')
+        self.models = {}
+        for name in tqdm(scispacy_models):
+            self.models[name] = spacy.load(name)
 
     def get_file_structure(self):
         """
@@ -278,7 +281,8 @@ class Enrich:
         """
         detect named entities in semantic context
         """
-        self.df['named_entities'] = self.df.progress_apply(self.get_named_entities, axis=1)
+        for model_name, model in self.models.items():
+            self.df['named_entities_'+model_name] = self.df.progress_apply(self.get_named_entities, model=model, axis=1)
 
     def get_named_entities(self, row, **kwargs) -> List:
         """
@@ -287,14 +291,15 @@ class Enrich:
         :return list of named entities
         """
         ners = []
+        model = kwargs['model']
         # get list of semantic contexts from row
         # iterate over contexts, finding entities, appending to list. One list for all contexts.
         for cont in row['semantic_context']:
-            doc = self.nlp(cont)
+            doc = model(cont)
             for ent in doc.ents:
-                logger.info(f'ent dir: {dir(ent)}')
-                logger.info(f'{ent.text}, {ent.start_char}, {ent.end_char}, {ent.label_}')
-                ners.append(ent.text)
+                # logger.debug(f'dir(ent): {dir(ent)}')
+                # logger.debug(f'{ent.text}, {ent.start_char}, {ent.end_char}, {ent.label}')
+                ners.append([ent.text, ent.label_])
 
         # if empty list return None
         if not ners:
