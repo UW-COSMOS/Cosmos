@@ -1,6 +1,9 @@
 import os
 from flask import Flask, jsonify, current_app, request
+from flask_cors import CORS
 from retrieval.elastic_reranking_retriever import ElasticRerankingRetriever
+from retrieval.elastic_retriever import ElasticRetriever
+from retrieval.elastic_page_retriever import ElasticPageRetriever
 import fasttext
 import logging
 import requests
@@ -16,7 +19,8 @@ def create_app():
         os.makedirs(app.instance_path)
     except OSError:
         pass
-    app.retriever = ElasticRerankingRetriever(os.environ['SCHEDULER_ADDRESS'])
+    app.retriever = ElasticRetriever(os.environ['ELASTIC_ADDRESS'])
+    app.page_retriever = ElasticPageRetriever(os.environ['ELASTIC_ADDRESS'])
     try:
         app.word_embeddings_model = fasttext.load_model('/data/vecs.bin')
     except Exception as e:
@@ -25,6 +29,21 @@ def create_app():
 
     from . import retrieval
     app.register_blueprint(retrieval.bp)
+    app.register_blueprint(retrieval.bp, url_prefix='/sets/xdd-covid-19')
+
+    # hack to get url prefixes registered as required/desired IAR - 30.Oct.2020
+    if 'PREFIX' in os.environ:
+        logging.info(f"Stripping {os.environ['PREFIX']}")
+        prefix=os.environ['PREFIX']
+    else:
+        logging.info("No prefix stripped.")
+        prefix=''
+    if "API_VERSION" in os.environ:
+        api_version=os.environ['API_VERSION']
+    else:
+        api_version='v2_beta'
+    if "API_VERSION" in os.environ:
+        app.register_blueprint(retrieval.bp, url_prefix=f"{prefix}/{api_version}")
 
     #from . import extraction
     #app.register_blueprint(extraction.bp)
@@ -32,6 +51,7 @@ def create_app():
     from . import embeddings
     app.register_blueprint(embeddings.bp)
     logger.error(app.url_map)
+    CORS(app)
 
     return app
 

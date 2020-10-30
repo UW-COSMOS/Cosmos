@@ -1,11 +1,10 @@
 import click
 from retrieval.elastic_retriever import ElasticRetriever
-from requests_aws4auth import AWS4Auth
 import os
 
 @click.command()
-@click.option('--sections-parquet', type=str, help='')
-@click.option('--documents-parquet', type=str, help='')
+@click.option('--sections-parquet', type=str, help='', default='')
+@click.option('--documents-parquet', type=str, help='', default='')
 @click.option('--tables-parquet', type=str, help='', default='')
 @click.option('--figures-parquet', type=str, help='', default='')
 @click.option('--equations-parquet', type=str, help='', default='')

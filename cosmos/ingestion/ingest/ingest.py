@@ -234,6 +234,9 @@ class Ingest:
             logger.warning(str(e), exc_info=True)
             logger.warning(f'Logging parsing error for pdf: {pdf_name}')
             return []
+        if meta is None or limit is None:
+            logger.warning(f'parse_pdf returned None for pdf: {pdf_name}')
+            return []
 
         subprocess.run(['gs', '-dBATCH',
                         '-dNOPAUSE',
