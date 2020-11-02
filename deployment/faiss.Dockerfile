@@ -20,4 +20,9 @@ RUN python3.8 -m pip install spacy
 RUN python3.8 -m spacy download en_core_web_sm
 RUN python3.8 -m pip install ipdb
 
+RUN wget https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.3.0/en_core_sci_lg-0.3.0.tar.gz
+RUN python3.8 -m pip install ./en_core_sci_lg-0.3.0.tar.gz
+RUN python3.8 -m pip install fuzzywuzzy
+RUN python3.8 -m pip install scispacy
+
 
