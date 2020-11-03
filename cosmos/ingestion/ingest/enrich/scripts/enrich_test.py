@@ -15,7 +15,7 @@ def enrich_ingest_output(file_path, dataset_id, scispacy_models, output_path, sp
 if __name__ == '__main__':
     file_path = '/hdd/iain/covid_output/'
     dataset_id = 'covid_docs_all'
-    model_names = ['en_core_sci_md',
+    scispacy_models = ['en_core_sci_md',
                    'en_ner_craft_md',
                    'en_ner_bc5cdr_md',
                    'en_ner_bionlp13cg_md',
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     threshold = 0.9
     enrich_ingest_output(file_path=file_path,
                          dataset_id=dataset_id,
-                         scispacy_models=model_names,
+                         scispacy_models=scispacy_models,
                          output_path=output_path,
                          spans=spans,
                          threshold=threshold)

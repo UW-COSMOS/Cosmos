@@ -24,7 +24,7 @@ class Enrich:
         :param parquet_files_dir directory containing ingestion pipeline output .parquet files
         :param dataset_id the string used as the dataset id to generate the .parquet files - should be in filenames
         :param use_dask for very large .parquet files load dataframes as dask dataframes
-        :param spacy_model specify a model from spaCy to use for NER
+        :param scispacy_models specify a model from spaCy to use for NER
         """
         # get all files names in a specified dir
         list_of_files = [f for f in listdir(parquet_files_dir) if isfile(join(parquet_files_dir, f))]
@@ -100,12 +100,16 @@ class Enrich:
             logger.info('no standard output')
             pass
 
-    def get_score_histogram(self, post_process_class, filepath):
+    def get_score_histogram(self, post_process_class: str, filepath: str):
+        """output a histogram of the the postprocess scores for a given class
+        :param post_process_class: class to examine e.g. Body Text, Table Caption, ...
+        :param filepath png file to output chart to"""
         # post_process_class = 'Table Caption'
         ax = self.df[self.df['postprocess_cls'] == post_process_class].postprocess_score.plot.hist()
         ax.get_figure().savefig(filepath)
 
     def show_table_rows(self):
+        """display info about loaded dfs"""
         pd.options.display.max_columns = 999
         pd.options.display.max_colwidth = 250
 
@@ -125,7 +129,14 @@ class Enrich:
         logger.info('df tables:')
         logger.info(self.df[self.df['postprocess_cls'] == 'Table'].head())
 
-    def semantic_enrichment(self, filename, threshold=0.9, spans=20):
+    def semantic_enrichment(self, filename: str, threshold: float = 0.9, spans: int = 20):
+        """
+        main method calls all other processing methods and outputs enriched parquet file
+        :param filename str parquet file to save results to
+        :param threshold float cut off for postprocess table detection score to process as table caption
+        :param spans number of words each side of label to pull in as context for each table label in content text
+                if None will use regex to pull out full stop to full stop span around the table label
+        """
         logger.info('setting table labels')
         self.set_table_ids(threshold=threshold)
 
@@ -140,7 +151,6 @@ class Enrich:
 
         logger.info('getting named entities')
         self.create_entities_lists()
-
 
         logger.info(self.df[self.df['semantic_context'].notna()].head(10))
 
@@ -281,6 +291,7 @@ class Enrich:
         """
         detect named entities in semantic context
         """
+        # run apply for each model instantiated in __init__
         for model_name, model in self.models.items():
             self.df['named_entities_'+model_name] = self.df.progress_apply(self.get_named_entities, model=model, axis=1)
 
