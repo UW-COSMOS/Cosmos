@@ -163,15 +163,15 @@ def search():
 
     count = current_app.retriever.search(query, ndocs=30, page=page_num, cls=obj_type,
                                                detect_min=base_confidence, postprocess_min=postprocessing_confidence,
-                                               get_count=True, final=False, inclusive=False, document_filter_terms=document_filter_terms)
+                                               get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms)
     if 'count' in request.endpoint:
-        return jsonify({'total_results': count})
+        return jsonify({'total_results': count, 'v': VERSION})
     current_app.logger.info(f"page: {page_num}, cls: {obj_type}, detect_min: {base_confidence}, postprocess_min: {postprocessing_confidence}")
     current_app.logger.info(f"Passing in {document_filter_terms}")
     results = current_app.retriever.search(query, ndocs=30, page=page_num, cls=obj_type,
                                          detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms)
     if len(results) == 0:
-        return {'page': 0, 'objects': []}
+        return {'page': 0, 'objects': [], 'v': VERSION}
     image_dir = '/data/images'
     for result in results:
         bjson = get_bibjson(result['pdf_name'])
@@ -186,7 +186,7 @@ def search():
             else:
                 child['bytes'] = None
 
-    return jsonify({'total': count, 'page': page_num, 'objects': results})
+    return jsonify({'total': count, 'page': page_num, 'objects': results, 'v': VERSION})
 
 @bp.route(f'/statistics', endpoint='statistics', methods=['GET'])
 def statistics():
