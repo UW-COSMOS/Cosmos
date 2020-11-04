@@ -11,8 +11,8 @@ class LinkingPlugin(WorkerPlugin):
         nlp = spacy.load('en_core_sci_lg')
         abbreviation_pipe = AbbreviationDetector(nlp)
         nlp.add_pipe(abbreviation_pipe)
-        linker = EntityLinker(resolve_abbreviations=True, name="umls")
-        nlp.add_pipe(linker)
+        self.linker = EntityLinker(resolve_abbreviations=True, name="umls")
+        nlp.add_pipe(self.linker)
         self.nlp = nlp
 
 @click.command()
