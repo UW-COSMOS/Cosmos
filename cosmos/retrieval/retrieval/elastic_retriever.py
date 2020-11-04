@@ -31,9 +31,11 @@ class EntityObjectIndex(Document):
 
 
 class Entity(EntityObjectIndex):
+    canonical_id = Text(fields={'raw': Keyword()})
     name = Text(fields={'raw': Keyword()})
     description = Text()
-    type = Text(fields={'raw': Keyword()})
+    types = Keyword(multi=True)
+    aliases = Text(multi=True)
     dataset_id = Text(fields={'raw': Keyword()})
 
     @classmethod
@@ -45,7 +47,7 @@ class Entity(EntityObjectIndex):
     def search(cls, **kwargs):
         return cls._index.search(**kwargs).filter("term", entity_object="entity")
 
-    def add_object(self, cls, dataset_id, content, header_content, area, detect_score, postprocess_score, pdf_name, commit=True):
+    def add_object(self, cls, dataset_id, content, header_content, area, detect_score, postprocess_score, pdf_name, img_path=None, commit=True):
         obj = Object(
             # required make sure the answer is stored in the same shard
             _routing=self.meta.id,
@@ -62,6 +64,7 @@ class Entity(EntityObjectIndex):
             detect_score=detect_score,
             postprocess_score=postprocess_score,
             pdf_name=pdf_name,
+            img_path=img_path
         )
         if commit:
             obj.save()
@@ -229,15 +232,17 @@ class ElasticRetriever(Retriever):
         logger.info('Done building document index')
         df = pd.read_parquet(entities_parquet)
         for ind, row in df.iterrows():
-            Entity(name=row['name'],
+            Entity(canonical_id=row['id'],
+                   name=row['name'],
                    description=row['description'],
-                   type=row['type'],
+                   types=row['types'].tolist(),
+                   aliases=row['aliases'].tolist(),
                    dataset_id=row['dataset_id']).save()
         logger.info('Done building entities index')
 
         df = pd.read_parquet(section_parquet)
         for ind, row in df.iterrows():
-            entities = row['linked_entities']
+            entities = row['ents_linked']
             for entity in entities:
                 es = Entity.search()
                 es.filter('term', name__raw=entity)
@@ -245,6 +250,7 @@ class ElasticRetriever(Retriever):
                 for hit in response:
                     hit.add_object('Section',
                                    row['dataset_id'],
+                                   row['content'],
                                    row['section_header'],
                                    50,
                                    row['detect_score'],
@@ -255,7 +261,7 @@ class ElasticRetriever(Retriever):
         if tables_parquet != '':
             df = pd.read_parquet(tables_parquet)
             for ind, row in df.iterrows():
-                entities = row['linked_entities']
+                entities = row['ents_linked']
                 for entity in entities:
                     es = Entity.search()
                     es.filter('term', name__raw=entity)
@@ -263,7 +269,8 @@ class ElasticRetriever(Retriever):
                     for hit in response:
                         hit.add_object('Table',
                                        row['dataset_id'],
-                                       row['section_header'],
+                                       row['content'],
+                                       row['caption_content'],
                                        50,
                                        row['detect_score'],
                                        row['postprocess_score'],
@@ -273,7 +280,7 @@ class ElasticRetriever(Retriever):
         if figures_parquet != '':
             df = pd.read_parquet(figures_parquet)
             for ind, row in df.iterrows():
-                entities = row['linked_entities']
+                entities = row['ents_linked']
                 for entity in entities:
                     es = Entity.search()
                     es.filter('term', name__raw=entity)
@@ -281,7 +288,8 @@ class ElasticRetriever(Retriever):
                     for hit in response:
                         hit.add_object('Figure',
                                        row['dataset_id'],
-                                       row['section_header'],
+                                       row['content'],
+                                       row['caption_content'],
                                        50,
                                        row['detect_score'],
                                        row['postprocess_score'],
@@ -292,7 +300,7 @@ class ElasticRetriever(Retriever):
         if equations_parquet != '':
             df = pd.read_parquet(equations_parquet)
             for ind, row in df.iterrows():
-                entities = row['linked_entities']
+                entities = row['ents_linked']
                 for entity in entities:
                     es = Entity.search()
                     es.filter('term', name__raw=entity)
@@ -300,7 +308,8 @@ class ElasticRetriever(Retriever):
                     for hit in response:
                         hit.add_object('Equation',
                                        row['dataset_id'],
-                                       row['section_header'],
+                                       row['content'],
+                                       None,
                                        50,
                                        row['detect_score'],
                                        row['postprocess_score'],

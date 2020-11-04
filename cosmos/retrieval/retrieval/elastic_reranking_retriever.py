@@ -74,8 +74,8 @@ class ElasticRerankingRetriever(Retriever):
     def rerank(self, query, contexts):
         return self.reranker.rerank(query, contexts)
 
-    def build_index(self, document_parquet, section_parquet, tables_parquet, figures_parquet, equations_parquet):
-        self.elastic_retriever.build_index(document_parquet, section_parquet, tables_parquet, figures_parquet, equations_parquet)
+    def build_index(self, document_parquet, entities_parquet, section_parquet, tables_parquet, figures_parquet, equations_parquet):
+        self.elastic_retriever.build_index(document_parquet, entities_parquet, section_parquet, tables_parquet, figures_parquet, equations_parquet)
 
     def delete(self, dataset_id):
         self.elastic_retriever.delete(dataset_id)
