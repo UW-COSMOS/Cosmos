@@ -114,7 +114,7 @@ class Object(EntityObjectIndex):
 
     @classmethod
     def search(cls, **kwargs):
-        return cls._index.search(**kwargs).exclude("term", entity_object="object")
+        return cls._index.search(**kwargs).exclude("term", entity_object="entity")
 
     def save(self, **kwargs):
         # set routing to parents id automatically
@@ -152,7 +152,7 @@ class ElasticRetriever(Retriever):
             connections.create_connection(hosts=self.hosts)
         if entity_search:
             es = Entity.search()
-            q = Q('match', content=query)
+            q = Q('match', name=query)
             response = es.query(q).execute()
             logger.info('Done finding entity')
             for hit in response:
@@ -166,10 +166,13 @@ class ElasticRetriever(Retriever):
                 start = page * ndocs
                 end = start + ndocs
                 contexts = []
-                os_response = s.query(q)[start:end].execute()
+                cq = Q('match', content=query)
+                os_response = s.query(cq)[start:end].execute()
+                print(os_response)
                 for context in os_response:
                     contexts.append({'id': context.meta.id, 'pdf_name': context['pdf_name'], 'content': context['content']})
-                return {'id': hit.meta.id, 'entity': hit.name, 'entity_description': hit.description, 'entity_type': hit.type, 'contexts': contexts}
+                logger.info(f'Found {len(contexts)} contexts')
+                return {'id': hit.meta.id, 'entity': hit.name, 'entity_description': hit.description, 'entity_types': hit.types, 'contexts': contexts}
             return None
         else:
             q = Q('match', content=query)
