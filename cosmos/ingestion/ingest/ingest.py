@@ -143,6 +143,7 @@ class Ingest:
                 chunk = self.client.map(pool_text_ocr_opt, chunk, resources={'process': 1})
                 if self.use_xgboost_postprocess:
                     chunk = self.client.map(xgboost_postprocess, chunk, resources={'process': 1})
+                    chunk = [i for i in chunk if i.result() != '']
                     if self.use_rules_postprocess:
                         chunk = self.client.map(rules_postprocess, chunk, resources={'process': 1})
             progress(chunk)
@@ -159,7 +160,7 @@ class Ingest:
                     postprocess_cls = postprocess_score = None
                     if 'xgboost_content' in obj:
                         _, postprocess_cls, _, postprocess_score = obj['xgboost_content'][ind]
-                    final_obj = {'pdf_name': obj['pdf_name'], 
+                    final_obj = {'pdf_name': obj['pdf_name'],
                                  'dataset_id': obj['dataset_id'],
                                  'page_num': obj['page_num'],
                                  'img_pth': obj['pad_img'],
