@@ -150,6 +150,9 @@ def search():
     context_filter_terms = request.args.get('context_filter_terms', default='', type=str).split(',')
     if context_filter_terms == ['']: context_filter_terms=[]
 
+    docids = request.args.get('docids', default='', type=str).split(',')
+    if docids == ['']: docids=[]
+
 
     if obj_type == 'Body Text':
         obj_type = 'Section'
@@ -163,13 +166,13 @@ def search():
 
     count = current_app.retriever.search(query, ndocs=30, page=page_num, cls=obj_type,
                                                detect_min=base_confidence, postprocess_min=postprocessing_confidence,
-                                               get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms)
+                                               get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids)
     if 'count' in request.endpoint:
         return jsonify({'total_results': count, 'v': VERSION})
     current_app.logger.info(f"page: {page_num}, cls: {obj_type}, detect_min: {base_confidence}, postprocess_min: {postprocessing_confidence}")
     current_app.logger.info(f"Passing in {document_filter_terms}")
     results = current_app.retriever.search(query, ndocs=30, page=page_num, cls=obj_type,
-                                         detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms)
+                                         detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids)
     if len(results) == 0:
         return {'page': 0, 'objects': [], 'v': VERSION}
     image_dir = '/data/images'

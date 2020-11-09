@@ -69,7 +69,7 @@ class ElasticRetriever(Retriever):
         self.hosts = hosts
         self.awsauth = awsauth
 
-    def search(self, query, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[]):
+    def search(self, query, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[]):
         if self.awsauth is not None:
             connections.create_connection(hosts=self.hosts,
                                           http_auth=self.awsauth,
@@ -80,22 +80,31 @@ class ElasticRetriever(Retriever):
         else:
             connections.create_connection(hosts=self.hosts)
         logging.info(f"document_filter_terms: {document_filter_terms}")
-        print(f"document_filter_terms: {document_filter_terms}", flush=True)
         # TODO: document_filter_terms
         # Run a  query against 'fulldocument' index.
+        doc_filter = False
         dq = Q()
+        logging.info(f"docids: {docids}")
+
+        if len(docids) > 0:
+            dq = dq & Q('bool', should=[Q('match_phrase', name=f"{i}.pdf") for i in docids])
+            doc_filter=True
         if len(document_filter_terms) > 0:
             dq = dq & Q('bool', must=[Q('match_phrase', content=i) for i in document_filter_terms])
+            doc_filter=True
+
+        if doc_filter:
             ds = Search(index='fulldocument')
             ds = ds.query(dq)
             pdf_names = []
             for resp in ds.scan():
                 pdf_names.append(resp['name'])
             logging.info(f"{len(pdf_names)} pdfs found")
-            print(f"{len(pdf_names)} pdfs found", flush=True)
 
         q = Q()
-        if "," in query:
+        if query is None:
+            query_list = []
+        elif "," in query:
             query_list = query.split(",")
         else:
             query_list = [query]
@@ -113,8 +122,8 @@ class ElasticRetriever(Retriever):
         if postprocess_min is not None:
             s = s.filter('range', postprocess_score={'gte': postprocess_min})
 
-        if len(document_filter_terms) > 0:
-            s = s.filter('terms', pdf_name=pdf_names)
+        if doc_filter > 0:
+            s = s.filter('terms', pdf_name__raw=pdf_names)
 
         if get_count:
             return s.query(q).count()
@@ -269,6 +278,15 @@ class ElasticRetriever(Retriever):
         logger.info('Done building object index')
 
     def count(self, index):
+        if self.awsauth is not None:
+            connections.create_connection(hosts=self.hosts,
+                                          http_auth=self.awsauth,
+                                          use_ssl=True,
+                                          verify_certs=True,
+                                          connection_class=RequestsHttpConnection
+                                          )
+        else:
+            connections.create_connection(hosts=self.hosts)
         s = Search(index=index)
         return s.count()
 

@@ -29,7 +29,6 @@ def create_app():
 
     from . import retrieval
     app.register_blueprint(retrieval.bp)
-    app.register_blueprint(retrieval.bp, url_prefix='/sets/xdd-covid-19')
 
     # hack to get url prefixes registered as required/desired IAR - 30.Oct.2020
     if 'PREFIX' in os.environ:
@@ -42,8 +41,9 @@ def create_app():
         api_version=os.environ['API_VERSION']
     else:
         api_version='v2_beta'
-    if "API_VERSION" in os.environ:
-        app.register_blueprint(retrieval.bp, url_prefix=f"{prefix}/{api_version}")
+    app.register_blueprint(retrieval.bp, url_prefix=f"{prefix}/{api_version}")
+    app.register_blueprint(retrieval.bp, url_prefix='/sets/xdd-covid-19/api') # for backward compatibility
+    app.register_blueprint(retrieval.bp, url_prefix=f'/sets/xdd-covid-19/api/{api_version}') # for backward compatibility
 
     #from . import extraction
     #app.register_blueprint(extraction.bp)
