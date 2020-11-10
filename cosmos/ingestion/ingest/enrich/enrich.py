@@ -18,7 +18,8 @@ tqdm.pandas()
 
 class Enrich:
     """enhance semantic content associated with tables/entities in ingestion pipeline output parquets"""
-    def __init__(self, parquet_files_dir, dataset_id, scispacy_models=['en_core_sci_md'], use_dask=False):
+    def __init__(self, parquet_files_dir, dataset_id, scispacy_models=['en_core_sci_md'],
+                 scheduler_address, client=None, use_dask=False):
         """
         load all ingest pipeline output files into dask dataframes
         :param parquet_files_dir directory containing ingestion pipeline output .parquet files
