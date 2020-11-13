@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
+    app.config['JSON_SORT_KEYS'] = False
     app.config.from_mapping(
         SECRET_KEY='dev',
     )
