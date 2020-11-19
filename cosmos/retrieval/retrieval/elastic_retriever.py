@@ -69,7 +69,7 @@ class ElasticRetriever(Retriever):
         self.hosts = hosts
         self.awsauth = awsauth
 
-    def search(self, query, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[]):
+    def search(self, query, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None):
         if self.awsauth is not None:
             connections.create_connection(hosts=self.hosts,
                                           http_auth=self.awsauth,
@@ -125,10 +125,13 @@ class ElasticRetriever(Retriever):
         if doc_filter > 0:
             s = s.filter('terms', pdf_name__raw=pdf_names)
 
+        if obj_id is not None:
+            q = q & Q('ids', values=[obj_id])
+
         if get_count:
             return s.query(q).count()
-        s = s.query(q)[start:end]
 
+        s = s.query(q)[start:end]
 
         response = s.execute()
         final_results = [r.meta.id for r in response]
@@ -147,10 +150,6 @@ class ElasticRetriever(Retriever):
                         'content': obj.content,
                         'header_content': obj.header_content,
                     }],
-                    'context_keywords': '',
-                    'context_summary': '',
-                    'context_content': '',
-                    'context_id': obj.meta.id
                 } for obj in final_results
             ]
         logger.error(f'Found {len(contexts)} contexts')

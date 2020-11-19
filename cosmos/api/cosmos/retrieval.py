@@ -16,15 +16,27 @@ else:
     logging.info("No prefix stripped.")
     prefix=''
 bp = Blueprint('retrieval', __name__, url_prefix=f'{prefix}/')
+
 if "API_VERSION" in os.environ:
     VERSION=os.environ['API_VERSION']
 else:
     VERSION='v2_beta'
 
+if "N_RESULTS" in os.environ:
+    N_RESULTS=int(os.environ['N_RESULTS'])
+else:
+    N_RESULTS=30
+
+if "IMG_TYPE" in os.environ:
+    IMG_TYPE=os.environ['IMG_TYPE']
+else:
+    IMG_TYPE="PNG"
+
 parameter_defs = {
         'query': '(str, Required) - term or comma-separated list of terms to search for. Default search logic will utilize an OR of comma- or space-separated words.',
         'type': '[Table, Figure, Equation, Body Text, Combined] - the type of object to search for.',
         'page': '(int) - Page of results (starts at 0)',
+        'id' : 'Internal COSMOS ID of an object to retrieve.',
         'inclusive': '(bool) - Changes default query search to apply AND logic to comma- or space-separated words.',
         'base_confidence': '(float)- Output logit score from detection model. Measures confidence of the initial COSMOS classification. Only results with confidence higher than the specified value will be returned. Default is 1.0.',
         'postprocessing_confidence': '(0.0-1.0) - Confidence score of the COSMOS post-processing model. Only results with confidence higher than the specified value will be returned. Default is 0.7.',
@@ -38,10 +50,6 @@ fields_defs = {
         "total" : "The total number of objects matching the query",
         "v" : "API version",
         "pdf_name" : "Filename of documents",
-        "context_id" : "Internal COSMOS id of aggregated context.",
-        "context_content" : "Complete content of aggregated context.",
-        "context_summary" : "Summarized text of aggregated context.",
-        "context_keywords" : "Computed keywords of aggregated context.",
         "bibjson" : "Bibliographical JSON of document (looked up within xDD)",
         "[header/child/object].id" : "Internal COSMOS id of object",
         "[header/child/object].bytes" : "base64 ASCII-decoded image bytes of the object",
@@ -118,16 +126,16 @@ def route_help(endpoint):
         helptext = {
                 "success": {
                     "v" : VERSION,
-                    "description" : "Query the COSMOS extractions for objects and contexts mentioning a term passing filtration criteria. Utilizes the Elasticsearch retrieval engine. Objects matching the query are returned, along with their parent or children objects resulting from the COSMOS contextual aggregation process (e.g. figures will be return as a child object for a figure caption mentioning a phrase; all body text within a section will be returned as children to a section header mentioning a term). Result order is determined by search rank (results with high-density mentions of the term will appear first). 30 results are returned per page.",
+                    "description" : f"Query the COSMOS extractions for objects and contexts mentioning a term passing filtration criteria. Utilizes the Elasticsearch retrieval engine. Objects matching the query are returned, along with their parent or children objects resulting from the COSMOS contextual aggregation process (e.g. figures will be return as a child object for a figure caption mentioning a phrase; all body text within a section will be returned as children to a section header mentioning a term). Result order is determined by search rank (results with high-density mentions of the term will appear first). {N_RESULTS} results are returned per page.",
                     'options': {
-                        'parameters' : makedict(['query', 'type', 'page', 'inclusive', 'base_confidence', 'postprocessing_confidence', 'ignore_bytes'], parameter_defs),
+                        'parameters' : makedict(['query', 'type', 'page', 'inclusive', 'base_confidence', 'postprocessing_confidence', 'ignore_bytes', 'id'], parameter_defs),
                         'output_formats' : 'json',
                         'examples' : [
                             f'/api/{VERSION}/search?query=temperature&type=Figure&base_confidence=1.0&postprocessing_confidence=0.7',
                             f'/api/{VERSION}/search?query=remdesevir,chloroquine&inclusive=true&base_confidence=1.0&postprocessing_confidence=0.7',
                             f'/api/{VERSION}/search?query=ACE2&type=Table&base_confidence=1.0&postprocessing_confidence=0.7&document_filter_terms=covid-19'
                             ],
-                        'fields' : makedict(["page", "total", "v", "pdf_name","context_id","context_content","context_summary","context_keywords","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence"], fields_defs)
+                        'fields' : makedict(["page", "total", "v", "pdf_name","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence"], fields_defs)
                         }
                     }
                 }
@@ -162,6 +170,8 @@ def search():
     obj_type = request.args.get('type', type=str)
     inclusive = request.args.get('inclusive', default=False, type=bool)
 
+    obj_id = request.args.get('id', type=str)
+
     document_filter_terms = request.args.get('document_filter_terms', default='', type=str).split(',')
     if document_filter_terms == ['']: document_filter_terms=[]
     # TODO: implement this.
@@ -181,15 +191,15 @@ def search():
     postprocessing_confidence = request.args.get('postprocessing_confidence', default=0.7, type=float)
     current_app.logger.error('Received search query. Starting search.')
 
-    count = current_app.retriever.search(query, ndocs=30, page=page_num, cls=obj_type,
+    count = current_app.retriever.search(query, ndocs=N_RESULTS, page=page_num, cls=obj_type,
                                                detect_min=base_confidence, postprocess_min=postprocessing_confidence,
-                                               get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids)
+                                               get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id)
     if 'count' in request.endpoint:
         return jsonify({'total_results': count, 'v': VERSION})
     current_app.logger.info(f"page: {page_num}, cls: {obj_type}, detect_min: {base_confidence}, postprocess_min: {postprocessing_confidence}")
     current_app.logger.info(f"Passing in {document_filter_terms}")
-    results = current_app.retriever.search(query, ndocs=30, page=page_num, cls=obj_type,
-                                         detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids)
+    results = current_app.retriever.search(query, ndocs=N_RESULTS, page=page_num, cls=obj_type,
+                                         detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id)
     if len(results) == 0:
         return {'page': 0, 'objects': [], 'v': VERSION}
     image_dir = '/data/images'
@@ -200,6 +210,8 @@ def search():
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
                 img_pth = img_pth[:2] + "/" + os.path.basename(child['bytes']) # hack. Reorganized images into filename[:2]/filename because having half a million pngs in one dir suuuuuuucks
+                if IMG_TYPE == "JPG":
+                    img_pth = img_pth.replace("png", "jpg")
                 with open(os.path.join(image_dir, img_pth), 'rb') as imf:
                     child['bytes'] = base64.b64encode(imf.read()).decode('ascii')
             else:
@@ -226,10 +238,6 @@ def object(objid):
                 'content': obj.content,
                 'header_content': obj.header_content,
             }],
-            'context_keywords': '',
-            'context_summary': '',
-            'context_content': '',
-            'context_id': obj.meta.id
         } for obj in contexts
     ]
     if len(results) == 0:
@@ -242,6 +250,8 @@ def object(objid):
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
                 img_pth = img_pth[:2] + "/" + os.path.basename(child['bytes']) # hack. Reorganized images into filename[:2]/filename because having half a million pngs in one dir suuuuuuucks
+                if IMG_TYPE == "JPG":
+                    img_pth = img_pth.replace("png", "jpg")
                 with open(os.path.join(image_dir, img_pth), 'rb') as imf:
                     child['bytes'] = base64.b64encode(imf.read()).decode('ascii')
             else:
