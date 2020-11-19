@@ -245,10 +245,10 @@ class Ingest:
                         filename
                         ], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
         objs = []
-        names = glob.glob(f'{tmp_dir}/{pdf_name}_?')
+        names = glob.glob(f'{tmp_dir}/{pdf_name}_*[0-9]')
         for image in names:
             try:
-                page_num = int(image[-1])
+                page_num = int(image.split("_")[-1])
             except ValueError:
                 raise Exception(f'{image}')
             with open(image, 'rb') as bimage:
