@@ -63,3 +63,14 @@ API
 
     docker build -t API_NAME:API_TAG -f api.Dockerfile .
 
+
+train_postprocess
+----
+train_postprocess builds an image you can use to train the postprocess model used in the extraction pipeline
+
+inside the train_postprocess.Dockerfile, ensure that the FROM statement matches the BASE_NAME:BASE:TAG from the base image build you completed above.
+If not, it will pull from docker hub. Then, from the root Cosmos directory run:
+.. code-block:: bash
+
+    docker build -t TRAIN-POSTPROCESS_NAME:TRAIN-POSTPROCESS_TAG -f train_postprocess.Dockerfile .
+
