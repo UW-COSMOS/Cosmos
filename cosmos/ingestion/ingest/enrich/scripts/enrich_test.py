@@ -1,32 +1,14 @@
-from enrich import Enrich
+from enrich import run_enrich
 import logging
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-
-def enrich_ingest_output(file_path, dataset_id, scispacy_models, output_path, spans, threshold):
-    enrich = Enrich(file_path, dataset_id, scispacy_models)
-    enrich.semantic_enrichment(output_path,
-                               spans=spans,
-                               threshold=threshold)
-
-
 if __name__ == '__main__':
-    file_path = '/hdd/iain/covid_output/'
+    input_path = '/hdd/iain/covid_output'
+    output_path = '/hdd/iain/context_enriched_output'
     dataset_id = 'covid_docs_all'
-    scispacy_models = ['en_core_sci_md',
-                   'en_ner_craft_md',
-                   'en_ner_bc5cdr_md',
-                   'en_ner_bionlp13cg_md',
-                   'en_ner_jnlpba_md']
-    output_path = '/hdd/iain/semantic_context.parquet'
-    spans = 20
-    threshold = 0.9
-    enrich_ingest_output(file_path=file_path,
-                         dataset_id=dataset_id,
-                         scispacy_models=scispacy_models,
-                         output_path=output_path,
-                         spans=spans,
-                         threshold=threshold)
 
+    spans = 20
+    threshold = 0.8
+    run_enrich(input_path, output_path, dataset_id, spans, threshold)

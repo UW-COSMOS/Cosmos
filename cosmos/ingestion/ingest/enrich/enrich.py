@@ -2,12 +2,9 @@ from typing import List
 import pandas as pd
 import re
 import logging
-from dask import dataframe as dd
-from os import listdir
-from os.path import isfile, join
-import scispacy
-import spacy
+import os
 from tqdm import tqdm
+import glob
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -16,146 +13,104 @@ logger.setLevel(logging.INFO)
 tqdm.pandas()
 
 
+def run_enrich(input_path, output_path, dataset_id, spans, threshold):
+    """
+    Instantiate Enrich class and run context enrichment process over all parquets
+
+    :param input_path a directory full of parquets (ingest output) to process
+    :param output_path a directory to put the output context enriched parquets
+    :param dataset_id ingest process dataset_id
+    :param spans number of words each side of reference to table to capture for context
+    :param threshold postprocess cls threshold for table and caption identification
+    """
+    for pq in glob.glob(os.path.join(input_path, '*.parquet')):
+        logger.info(f'processing file: {pq}')
+        df = pd.read_parquet(pq)
+        enrich = Enrich(df, dataset_id)
+        enrich.semantic_enrichment(output_path,
+                                   spans=spans,
+                                   threshold=threshold)
+        basename = os.path.basename(pq)
+        enrich.df.to_parquet(os.path.join(output_path, basename))
+
+
 class Enrich:
     """enhance semantic content associated with tables/entities in ingestion pipeline output parquets"""
-    def __init__(self, parquet_files_dir, dataset_id, scispacy_models=['en_core_sci_md'],
-                 scheduler_address, client=None, use_dask=False):
+    def __init__(self, parquet_file, dataset_id, append=True):
+        # TODO: revise for being called as dask job: scheduler_address, client=None,
         """
         load all ingest pipeline output files into dask dataframes
-        :param parquet_files_dir directory containing ingestion pipeline output .parquet files
+        :param parquet_file input parquet file_path
         :param dataset_id the string used as the dataset id to generate the .parquet files - should be in filenames
-        :param use_dask for very large .parquet files load dataframes as dask dataframes
-        :param scispacy_models specify a model from spaCy to use for NER
+        :param append add results on to the input parquet
         """
-        # get all files names in a specified dir
-        list_of_files = [f for f in listdir(parquet_files_dir) if isfile(join(parquet_files_dir, f))]
+        self.df = parquet_file
+        self.original_cols = self.df.columns
 
-        # load specific files that are US-COSMOS ingest pipeline output
-        logger.info('files found:')
-        if use_dask:
-            logger.info('Loading files with Dask')
-            for f in list_of_files:
-                if f == dataset_id + '_pdfs.parquet':
-                    logger.info(f'loading {f}')
-                    self.df_pdfs = dd.read_parquet(join(parquet_files_dir, f))
-                elif f == dataset_id + '_sections.parquet':
-                    logger.info(f'loading {f}')
-                    self.df_sections = dd.read_parquet(join(parquet_files_dir, f))
-                elif f == dataset_id + '.parquet':
-                    logger.info(f'loading {f}')
-                    self.df = dd.read_parquet(join(parquet_files_dir, f))
-                    
-        else:
-            for f in list_of_files:
-                if f == dataset_id + '_pdfs.parquet':
-                    logger.info(f'loading {f}')
-                    self.df_pdfs = pd.read_parquet(join(parquet_files_dir, f))
-                elif f == dataset_id + '_sections.parquet':
-                    logger.info(f'loading {f}')
-                    self.df_sections = pd.read_parquet(join(parquet_files_dir, f))
-                elif f == dataset_id + '.parquet':
-                    logger.info(f'loading {f}')
-                    self.df = pd.read_parquet(join(parquet_files_dir, f))
-
-        logger.info(f'loading spaCy models:')
-        self.models = {}
-        for name in tqdm(scispacy_models):
-            self.models[name] = spacy.load(name)
+        if append:
+            # make a copy to append all rows to later.
+            self.original_df = self.df.copy()
 
     def get_file_structure(self):
         """
         show first five rows of all found parquet files
         """
+        # todo: delete this when done
         pd.options.display.max_columns = 999
         pd.options.display.max_colwidth = 250
         try:
-            logger.info('dd_pdfs:')
-            logger.info(self.df_pdfs.columns)
-            logger.info(self.df_pdfs.head())
-        except AttributeError:
-            logger.info('no _pdfs output')
-            pass
-        except NameError:
-            logger.info('no _pdfs output')
-            pass
-
-        try:
-            logger.info('dd_sections:')
-            logger.info(self.df_sections.columns)
-            logger.info(self.df_sections.head())
-        except AttributeError:
-            logger.info('no _sections output')
-            pass
-        except NameError:
-            logger.info('no _sections output')
-            pass
-
-        try:
-            logger.info('df:')
+            logger.info('parquet info:')
             logger.info(self.df.columns)
             logger.info(self.df.head())
         except AttributeError:
-            logger.info('no standard output')
+            logger.info('parquet attribute err')
             pass
         except NameError:
-            logger.info('no standard output')
+            logger.info('parquet name err - missing col?')
             pass
 
     def get_score_histogram(self, post_process_class: str, filepath: str):
-        """output a histogram of the the postprocess scores for a given class
-        :param post_process_class: class to examine e.g. Body Text, Table Caption, ...
+        """
+        output a histogram of the the postprocess scores for a given class
+        intended to help set threshold variable
+
+        :param post_process_class: class to examine e.g. Body Text, Table, Table Caption, ...
         :param filepath png file to output chart to"""
-        # post_process_class = 'Table Caption'
+
         ax = self.df[self.df['postprocess_cls'] == post_process_class].postprocess_score.plot.hist()
         ax.get_figure().savefig(filepath)
 
-    def show_table_rows(self):
-        """display info about loaded dfs"""
-        pd.options.display.max_columns = 999
-        pd.options.display.max_colwidth = 250
-
-        # LOOK AT TABLE CAPTION ROW SCORES IN DF
-        logger.info('df table captions')
-        logger.info('post_process_score')
-        max_vals = self.df[self.df['postprocess_cls'] == 'Table Caption'].postprocess_score.max(axis=0)
-        min_vals = self.df[self.df['postprocess_cls'] == 'Table Caption'].postprocess_score.min(axis=0)
-        mean_vals = self.df[self.df['postprocess_cls'] == 'Table Caption'].postprocess_score.mean(axis=0)
-        logger.info(f'max:{max_vals}')
-        logger.info(f'min:{min_vals}')
-        logger.info(f'mean:{mean_vals}')
-
-        # Show top 5 rows from parquet with table caption or table class
-        logger.info(self.df.columns)
-        logger.info(self.df[self.df['postprocess_cls'] == 'Table Caption'].head())
-        logger.info('df tables:')
-        logger.info(self.df[self.df['postprocess_cls'] == 'Table'].head())
-
     def semantic_enrichment(self, filename: str, threshold: float = 0.9, spans: int = 20):
         """
-        main method calls all other processing methods and outputs enriched parquet file
+        main method -calls all other processing methods and outputs enriched parquet file
         :param filename str parquet file to save results to
         :param threshold float cut off for postprocess table detection score to process as table caption
         :param spans number of words each side of label to pull in as context for each table label in content text
                 if None will use regex to pull out full stop to full stop span around the table label
         """
-        logger.info('setting table labels')
-        self.set_table_ids(threshold=threshold)
+        needed_column_names = [
+                                'content',
+                                'postprocess_cls',
+                                'postprocess_score'
+                              ]
 
-        logger.info('removing rows with no table label')
-        self.df = self.df[self.df['table_label'].notna()]
+        # only process every row if all needed column names are present in the parquet
+        if all(x in self.df.columns for x in needed_column_names):
+            logger.info('setting table labels')
+            self.set_table_ids(threshold=threshold)
 
-        logger.info('getting semantic context')
-        self.create_semantic_contexts(spans=spans)
+            logger.info('getting semantic context')
+            self.create_semantic_contexts(spans=spans)
 
-        logger.info('removing rows with no semantic context')
-        self.df = self.df[self.df['semantic_context'].notna()]
+            logger.info('removing rows with no semantic context')
+            self.df = self.df[self.df['semantic_context'].notna()]
 
-        logger.info('getting named entities')
-        self.create_entities_lists()
+            logger.info('replace content with context')
+            self.replace_content_with_context()
 
-        logger.info(self.df[self.df['semantic_context'].notna()].head(10))
-
-        self.export_data(filename)
+            self .append_context_df_to_original_df()
+        else:
+            pass
 
     def set_table_ids(self, threshold):
         """
@@ -173,11 +128,18 @@ class Enrich:
         """
         threshold = kwargs['threshold']
         output = None
-        # append table_id to every row in dataframe if its a table caption and score meets threshold
-        if (row['postprocess_cls'] == 'Table Caption') & (row['postprocess_score'] >= threshold):
-            table_label = ' '.join(row['content'].split()[:2])
-            if table_label:
-                output = table_label
+
+        # append table_id to every row in dataframe if its a table or table caption and score meets threshold
+        try:
+            if ((row['postprocess_cls'] == 'Table Caption')
+                    | (row['postprocess_cls'] == 'Table')) \
+                    & (row['postprocess_score'] >= threshold):
+                table_label = ' '.join(row['content'].split()[:2])
+                if table_label:
+                    output = table_label
+
+        except KeyError:
+            pass
 
         return output
 
@@ -213,6 +175,7 @@ class Enrich:
 
             if spans:
                 output = self.get_labels_and_spans_from_content(table_label, pdf_content, spans)
+
             else:
                 output = self.get_labels_and_sentences_with_regex(table_label, pdf_content)
 
@@ -233,7 +196,7 @@ class Enrich:
 
         # get number of words/parts in table label
         parts = len(table_label.split())
-        # get pdf   content as a list
+        # get pdf content as a list
         words = pdf_content.split()
 
         # get all indexes in pdf content for the table_label
@@ -244,7 +207,7 @@ class Enrich:
         logger.debug(f'label_indexes: {label_indexes}')
 
         # get words either side of the label index, concatenate and return.
-        output = []
+        result = []
         for i in label_indexes:
             try:
                 prefix = words[i-spans:i]
@@ -256,13 +219,14 @@ class Enrich:
                 suffix = words[i:i+spans]
             except IndexError:
                 # if end of pdf_content is < # of words in span from table label mention, just go to the end
-                suffix = words[i:i+len(words)]
+                # suffix = words[i:i + len(words)]
+                suffix = words[i:len(words)]
 
-            output.append(' '.join(prefix+suffix))
+            result.append(' '.join(prefix + suffix))
 
         # output = ' '.join(output)
-        logger.debug(output)
-        return output
+        logger.debug(result)
+        return result
 
     def get_labels_and_sentences_with_regex(self, table_label: str, pdf_content: str) -> List[str]:
         """
@@ -280,48 +244,24 @@ class Enrich:
 
         # use regex to find table label and return string between two fullstops either side of it
         re_search_string = r"([^.]*?"+table_label+r"[^.]*\.)"
-        output = re.findall(re_search_string, pdf_content)
+        result = re.findall(re_search_string, pdf_content)
         # re search returns list, make sure all are strings
-        output = [str(x) for x in output]
+        result = [str(x) for x in result]
         # concatenate list
         # output = ' '.join(output).strip()
-        logger.debug(f'output type: {type(output)} output: {output}')
-        return output
+        logger.debug(f'output type: {type(result)} output: {result}')
+        return result
 
-    def create_entities_lists(self):
+    def replace_content_with_context(self):
         """
-        detect named entities in semantic context
+        values of semantic_context column (each a list) are joined into a string and then replace the content column
         """
-        # run apply for each model instantiated in __init__
-        for model_name, model in self.models.items():
-            self.df['named_entities_'+model_name] = self.df.progress_apply(self.get_named_entities, model=model, axis=1)
+        self.df.loc[:, 'content'] = self.df.progress_apply(lambda x: ' '.join(x.loc['semantic_context']), axis=1)
 
-    def get_named_entities(self, row, **kwargs) -> List:
+    def append_context_df_to_original_df(self):
         """
-        return all named entities in a list per row passed
-        :param row - row from dataframe
-        :return list of named entities
+        semantic content enriched df is limited to the original cols of the original dataframe, then appended to the
+        original dataframe.
         """
-        ners = []
-        model = kwargs['model']
-        # get list of semantic contexts from row
-        # iterate over contexts, finding entities, appending to list. One list for all contexts.
-        for cont in row['semantic_context']:
-            doc = model(cont)
-            for ent in doc.ents:
-                # logger.debug(f'dir(ent): {dir(ent)}')
-                # logger.debug(f'{ent.text}, {ent.start_char}, {ent.end_char}, {ent.label}')
-                ners.append([ent.text, ent.label_])
-
-        # if empty list return None
-        if not ners:
-            ners = None
-
-        return ners
-
-    def export_data(self, filename):
-        """
-        output parquet file with only semantic enhancement for table captions rows
-        """
-        logger.info(f'outputting {filename}')
-        self.df[self.df['semantic_context'].notna()].to_parquet(filename)
+        # add context rows to original df
+        self.df = self.original_df.append(self.df[self.original_cols])
