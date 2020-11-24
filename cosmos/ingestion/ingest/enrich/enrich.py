@@ -17,18 +17,17 @@ def run_enrich(input_path, output_path, dataset_id, spans, threshold):
     """
     Instantiate Enrich class and run context enrichment process over all parquets
 
-    :param input_path a directory full of parquets (ingest output) to process
-    :param output_path a directory to put the output context enriched parquets
-    :param dataset_id ingest process dataset_id
-    :param spans number of words each side of reference to table to capture for context
-    :param threshold postprocess cls threshold for table and caption identification
+    :param input_path: a directory full of parquets (ingest output) to process
+    :param output_path: a directory to put the output context enriched parquets
+    :param dataset_id: ingest process dataset_id
+    :param spans: number of words each side of reference to table to capture for context
+    :param threshold: postprocess_cls threshold for table and caption identification
     """
     for pq in glob.glob(os.path.join(input_path, '*.parquet')):
         logger.info(f'processing file: {pq}')
         df = pd.read_parquet(pq)
         enrich = Enrich(df, dataset_id)
-        enrich.semantic_enrichment(output_path,
-                                   spans=spans,
+        enrich.semantic_enrichment(spans=spans,
                                    threshold=threshold)
         basename = os.path.basename(pq)
         enrich.df.to_parquet(os.path.join(output_path, basename))
@@ -44,6 +43,7 @@ class Enrich:
         :param dataset_id the string used as the dataset id to generate the .parquet files - should be in filenames
         :param append add results on to the input parquet
         """
+        self.dataset_id = dataset_id
         self.df = parquet_file
         self.original_cols = self.df.columns
 
@@ -80,22 +80,32 @@ class Enrich:
         ax = self.df[self.df['postprocess_cls'] == post_process_class].postprocess_score.plot.hist()
         ax.get_figure().savefig(filepath)
 
-    def semantic_enrichment(self, filename: str, threshold: float = 0.9, spans: int = 20):
+    def needed_columns_are_present(self, list_to_check: List, list_to_interrogate: List):
+        # True if all of list_to_check values are in list_to_interrogate
+        if all(x in list_to_interrogate for x in list_to_check):
+            return True
+        else:
+            return False
+
+    def semantic_enrichment(self, threshold: float = 0.9, spans: int = 20):
         """
         main method -calls all other processing methods and outputs enriched parquet file
-        :param filename str parquet file to save results to
-        :param threshold float cut off for postprocess table detection score to process as table caption
-        :param spans number of words each side of label to pull in as context for each table label in content text
+        :param threshold: float cut off for postprocess table detection score to process as table caption
+        :param spans: number of words each side of label to pull in as context for each table label in content text
                 if None will use regex to pull out full stop to full stop span around the table label
         """
-        needed_column_names = [
-                                'content',
-                                'postprocess_cls',
-                                'postprocess_score'
-                              ]
+        needed_columns = [
+                            'content',
+                            'postprocess_cls',
+                            'postprocess_score'
+                         ]
 
-        # only process every row if all needed column names are present in the parquet
-        if all(x in self.df.columns for x in needed_column_names):
+        if self.needed_columns_are_present(needed_columns, self.df.columns):
+
+            if self.dataset_id:
+                logger.info(f'limit enrichment to dataset id only: {self.dataset_id}')
+                self.df = self.df[self.df['dataset_id'] == self.dataset_id]
+
             logger.info('setting table labels')
             self.set_table_ids(threshold=threshold)
 
@@ -108,7 +118,8 @@ class Enrich:
             logger.info('replace content with context')
             self.replace_content_with_context()
 
-            self .append_context_df_to_original_df()
+            self.append_context_df_to_original_df()
+
         else:
             pass
 
@@ -122,6 +133,7 @@ class Enrich:
 
     def apply_table_labels(self, row, **kwargs):
         """
+        append table_id to every row in dataframe if its a table or table caption and score meets threshold
         Call this from df.apply()
         applied to a dataframe, return new column in data frame that == first two 'words' of content
         for each table caption
@@ -129,7 +141,6 @@ class Enrich:
         threshold = kwargs['threshold']
         output = None
 
-        # append table_id to every row in dataframe if its a table or table caption and score meets threshold
         try:
             if ((row['postprocess_cls'] == 'Table Caption')
                     | (row['postprocess_cls'] == 'Table')) \
@@ -152,10 +163,9 @@ class Enrich:
     def get_semantic_context(self, row, **kwargs):
         """
         call this from df.apply - get body text that mentions the relevant table label
-        :param row - passed to function when called from df.apply(), get row of dataframe to parse.
-        :param spans - number of words either side of the table label to extract from pdf_content
-            if spans == None, search is bases on regex comparison.
-        returns output - for each row: text that contains the table label - sentence or span.
+        :param row: - passed to function when called from df.apply(), get row of dataframe to parse.
+    :param spans (from kwargs): - number of words either side of the table label to extract from pdf_content. If spans == None, search is bases on regex comparison.
+        :return output: - for each row: text that contains the table label - sentence or span. if no label, returns None
         """
         output = None
         spans = kwargs['spans']
