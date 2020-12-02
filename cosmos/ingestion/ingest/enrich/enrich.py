@@ -1,24 +1,21 @@
 from typing import List
 import pandas as pd
-import re
 import logging
 import os
 from tqdm import tqdm
 import glob
 import functools
 
-import signal
-from dask.distributed import Client, progress, as_completed
+from dask.distributed import Client, progress
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-# use tqdm with df.progress_apply()
-tqdm.pandas()
+logger.setLevel(logging.ERROR)
 
 
-def needed_columns_are_in_df(to_check: List, to_interrogate: List):
-    # True if all of list_to_check values are in list_to_interrogate
+def needed_columns_are_in_df(to_check: List, to_interrogate: List) -> bool:
+    """
+    True if all of to_check values are in to_interrogate, else False
+    """
     if all(x in to_interrogate for x in to_check):
         return True
     else:
@@ -31,7 +28,6 @@ class Enrich:
     handles running semantic enrichment of tables in ingestion pipeline output parquets
     """
     def __init__(self, scheduler_address, client=None):
-        # TODO: revise for being called as dask job: scheduler_address, client=None,
         """
         :param scheduler_address: Address to existing Dask scheduler
         :param client: A Dask client. Can be passed in. If None, one will be created to connect to the scheduler
@@ -85,9 +81,14 @@ class Enrich:
                 for name in tqdm(pdf_names):
                     single_doc_dfs.append(df[df['pdf_name'] == name])
 
-                partial_get_context = functools.partial(Enrich.get_contexts, threshold, spans)
+                partial_get_context = functools.partial(Enrich.get_contexts,
+                                                        threshold,
+                                                        spans)
                 logger.info('start enrichment processing')
-                enriched = [self.client.submit(partial_get_context, doc_df, resources={'process': 1}) for doc_df in single_doc_dfs]
+                enriched = [self.client.submit(partial_get_context,
+                                               doc_df,
+                                               resources={'process': 1})
+                            for doc_df in single_doc_dfs]
                 progress(enriched)
                 logger.info('collecting all enriched docs')
                 enriched = [e.result() for e in tqdm(enriched)]
@@ -97,10 +98,17 @@ class Enrich:
             else:
                 pass
 
-        df.to_parquet(os.path.join(output_path, basename))
+            df.to_parquet(os.path.join(output_path, basename))
 
     @classmethod
     def get_contexts(cls, threshold, spans, doc_df):
+        """
+        perform context enrichment per doc in ingest output parquet - code to run on dask cluster worker
+        :param threshold: postprocess_score value needed to act on a given postprocess_cls Table or Table Caption
+        :param spans: number of words either side of a label to capture as context in doc content
+        :param doc_df: input dataframe - one doc of output from ingest pipeline
+        :return doc_df: input dataframe with any enriched rows added
+        """
         # disable SettingWithCopyWarning - safe since always over writing original
         pd.options.mode.chained_assignment = None
         original_df = doc_df.copy()
