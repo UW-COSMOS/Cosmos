@@ -22,7 +22,7 @@ services:
       - CLASSES_PTH=/configs/model_config.yaml
       - PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
     volumes:
-      - ${INPUT_DIR}:/input
+      - ${OUTPUT_DIR}:/input
       - ${TMP_DIR}:/mytmp
       - ${OUTPUT_DIR}:/output
     command: "dask-worker tcp://scheduler:8786 --nprocs ${WORKER_PROCS} --nthreads 1 --memory-limit 0 --resources 'linking=1' --preload ingest.preload_plugins.linking_setup"
@@ -32,14 +32,14 @@ services:
       - scheduler
 
   runner:
-    image: $WORKER_IMAGE
+    image: $LINKING_IMAGE
     environment:
       - OMP_NUM_THREADS=2
       - MODEL_CONFIG=/configs/model_config.yaml
       - CLASSES_PTH=/configs/model_config.yaml
       - PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
     volumes:
-      - ${INPUT_DIR}:/input
+      - ${OUTPUT_DIR}:/input
       - ${TMP_DIR}:/mytmp
       - ${OUTPUT_DIR}:/output
     networks:
