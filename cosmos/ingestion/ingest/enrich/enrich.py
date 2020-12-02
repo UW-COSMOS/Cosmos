@@ -5,6 +5,10 @@ import logging
 import os
 from tqdm import tqdm
 import glob
+import functools
+
+import signal
+from dask.distributed import Client, progress, as_completed
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -13,265 +17,165 @@ logger.setLevel(logging.INFO)
 tqdm.pandas()
 
 
-def run_enrich(input_path, output_path, dataset_id, spans, threshold):
-    """
-    Instantiate Enrich class and run context enrichment process over all parquets
-
-    :param input_path: a directory full of parquets (ingest output) to process
-    :param output_path: a directory to put the output context enriched parquets
-    :param dataset_id: ingest process dataset_id
-    :param spans: number of words each side of reference to table to capture for context
-    :param threshold: postprocess_cls threshold for table and caption identification
-    """
-    for pq in glob.glob(os.path.join(input_path, '*.parquet')):
-        logger.info(f'processing file: {pq}')
-        df = pd.read_parquet(pq)
-        enrich = Enrich(df, dataset_id)
-        enrich.semantic_enrichment(spans=spans,
-                                   threshold=threshold)
-        basename = os.path.basename(pq)
-        enrich.df.to_parquet(os.path.join(output_path, basename))
+def needed_columns_are_in_df(to_check: List, to_interrogate: List):
+    # True if all of list_to_check values are in list_to_interrogate
+    if all(x in to_interrogate for x in to_check):
+        return True
+    else:
+        return False
 
 
 class Enrich:
-    """enhance semantic content associated with tables/entities in ingestion pipeline output parquets"""
-    def __init__(self, parquet_file, dataset_id, append=True):
+    """
+    Enrich class
+    handles running semantic enrichment of tables in ingestion pipeline output parquets
+    """
+    def __init__(self, scheduler_address, client=None):
         # TODO: revise for being called as dask job: scheduler_address, client=None,
         """
-        load all ingest pipeline output files into dask dataframes
-        :param parquet_file input parquet file_path
-        :param dataset_id the string used as the dataset id to generate the .parquet files - should be in filenames
-        :param append add results on to the input parquet
+        :param scheduler_address: Address to existing Dask scheduler
+        :param client: A Dask client. Can be passed in. If None, one will be created to connect to the scheduler
         """
-        self.dataset_id = dataset_id
-        self.df = parquet_file
-        self.original_cols = self.df.columns
+        logger.info("Initializing Enrich object")
+        self.client = client
+        if self.client is None:
+            logger.info("Setting up client")
+            self.client = Client(scheduler_address, serializers=['msgpack', 'dask'], deserializers=['msgpack', 'dask', 'pickle'])
+            logger.info(self.client)
 
-        if append:
-            # make a copy to append all rows to later.
-            self.original_df = self.df.copy()
+    def __del__(self):
+        """Simple client clean up"""
+        if self.client is not None:
+            self.client.close()
 
-    def get_file_structure(self):
-        """
-        show first five rows of all found parquet files
-        """
-        # todo: delete this when done
-        pd.options.display.max_columns = 999
-        pd.options.display.max_colwidth = 250
-        try:
-            logger.info('parquet info:')
-            logger.info(self.df.columns)
-            logger.info(self.df.head())
-        except AttributeError:
-            logger.info('parquet attribute err')
-            pass
-        except NameError:
-            logger.info('parquet name err - missing col?')
-            pass
-
-    def get_score_histogram(self, post_process_class: str, filepath: str):
-        """
-        output a histogram of the the postprocess scores for a given class
-        intended to help set threshold variable
-
-        :param post_process_class: class to examine e.g. Body Text, Table, Table Caption, ...
-        :param filepath png file to output chart to"""
-
-        ax = self.df[self.df['postprocess_cls'] == post_process_class].postprocess_score.plot.hist()
-        ax.get_figure().savefig(filepath)
-
-    def needed_columns_are_present(self, list_to_check: List, list_to_interrogate: List):
-        # True if all of list_to_check values are in list_to_interrogate
-        if all(x in list_to_interrogate for x in list_to_check):
-            return True
-        else:
-            return False
-
-    def semantic_enrichment(self, threshold: float = 0.9, spans: int = 20):
+    def enrich(self, input_path: str, output_path: str, dataset_id: str,
+               threshold: float = 0.8, spans: int = 20):
         """
         main method -calls all other processing methods and outputs enriched parquet file
+        :param input_path: a directory full of parquets (ingest output) to process
+        :param output_path: a directory to put the output context enriched parquets
+        :param dataset_id: ingest process dataset_id
         :param threshold: float cut off for postprocess table detection score to process as table caption
         :param spans: number of words each side of label to pull in as context for each table label in content text
                 if None will use regex to pull out full stop to full stop span around the table label
         """
-        needed_columns = [
-                            'content',
-                            'postprocess_cls',
-                            'postprocess_score'
-                         ]
 
-        if self.needed_columns_are_present(needed_columns, self.df.columns):
+        for pq in glob.glob(os.path.join(input_path, '*.parquet')):
+            logger.info(f'processing file: {pq}')
+            df = pd.read_parquet(pq)
+            basename = os.path.basename(pq)
 
-            if self.dataset_id:
-                logger.info(f'limit enrichment to dataset id only: {self.dataset_id}')
-                self.df = self.df[self.df['dataset_id'] == self.dataset_id]
+            needed_columns = [
+                                'content',
+                                'postprocess_cls',
+                                'postprocess_score'
+                             ]
 
-            logger.info('setting table labels')
-            self.set_table_ids(threshold=threshold)
+            if needed_columns_are_in_df(needed_columns, list(df.columns)):
 
-            logger.info('getting semantic context')
-            self.create_semantic_contexts(spans=spans)
+                if dataset_id:
+                    logger.info(f'limit enrichment to dataset id: {dataset_id}')
+                    df = df[df['dataset_id'] == dataset_id]
 
-            logger.info('removing rows with no semantic context')
-            self.df = self.df[self.df['semantic_context'].notna()]
+                # GET ALL DOCUMENTS, LIST OF DFs
+                pdf_names = list(df.pdf_name.unique())
+                single_doc_dfs = []
 
-            logger.info('replace content with context')
-            self.replace_content_with_context()
+                logger.info('split ingest output into docs')
+                for name in tqdm(pdf_names):
+                    single_doc_dfs.append(df[df['pdf_name'] == name])
 
-            self.append_context_df_to_original_df()
-
-        else:
-            pass
-
-    def set_table_ids(self, threshold):
-        """
-        identify and collect references for all tables in output parquets, per document
-        column 'table_id' = <pdf_name><table_label>
-        """
-        # get all tables table ID is pdf, and table reference
-        self.df['table_label'] = self.df.progress_apply(self.apply_table_labels, threshold=threshold, axis=1)
-
-    def apply_table_labels(self, row, **kwargs):
-        """
-        append table_id to every row in dataframe if its a table or table caption and score meets threshold
-        Call this from df.apply()
-        applied to a dataframe, return new column in data frame that == first two 'words' of content
-        for each table caption
-        """
-        threshold = kwargs['threshold']
-        output = None
-
-        try:
-            if ((row['postprocess_cls'] == 'Table Caption')
-                    | (row['postprocess_cls'] == 'Table')) \
-                    & (row['postprocess_score'] >= threshold):
-                table_label = ' '.join(row['content'].split()[:2])
-                if table_label:
-                    output = table_label
-
-        except KeyError:
-            pass
-
-        return output
-
-    def create_semantic_contexts(self, spans=None):
-        """
-        get the sentence with the reference, and the preceding sentence
-        """
-        self.df['semantic_context'] = self.df.progress_apply(self.get_semantic_context, spans=spans, axis=1)
-
-    def get_semantic_context(self, row, **kwargs):
-        """
-        call this from df.apply - get body text that mentions the relevant table label
-        :param row: - passed to function when called from df.apply(), get row of dataframe to parse.
-    :param spans (from kwargs): - number of words either side of the table label to extract from pdf_content. If spans == None, search is bases on regex comparison.
-        :return output: - for each row: text that contains the table label - sentence or span. if no label, returns None
-        """
-        output = None
-        spans = kwargs['spans']
-
-        # for each row with a table label
-        if row['table_label'] is not None:
-            # get pdf for that table label
-            table_pdf_name = row['pdf_name']
-            table_label = row['table_label']
-            logger.debug(f'table_pdf_name: {table_pdf_name}')
-            logger.debug(f'table_label: {table_label}')
-
-            # get all content in that pdf
-            pdf_content = self.df[self.df['pdf_name'] == table_pdf_name].content.tolist()
-            pdf_content = ' '.join(pdf_content)
-            logger.debug(f'pdf_content: {pdf_content}')
-
-            if spans:
-                output = self.get_labels_and_spans_from_content(table_label, pdf_content, spans)
+                partial_get_context = functools.partial(Enrich.get_contexts, threshold, spans)
+                logger.info('start enrichment processing')
+                enriched = [self.client.submit(partial_get_context, doc_df, resources={'process': 1}) for doc_df in single_doc_dfs]
+                progress(enriched)
+                logger.info('collecting all enriched docs')
+                enriched = [e.result() for e in tqdm(enriched)]
+                df = pd.concat(enriched)
+                df = df.reset_index(drop=True)
 
             else:
-                output = self.get_labels_and_sentences_with_regex(table_label, pdf_content)
+                pass
 
-        # catch empty lists and convert to None
-        if not output:
-            output = None
+        df.to_parquet(os.path.join(output_path, basename))
 
-        return output
+    @classmethod
+    def get_contexts(cls, threshold, spans, doc_df):
+        # disable SettingWithCopyWarning - safe since always over writing original
+        pd.options.mode.chained_assignment = None
+        original_df = doc_df.copy()
 
-    def get_labels_and_spans_from_content(self, table_label, pdf_content, spans):
-        """
-        :param table_label the label of the table to retrieve context for
-        :param pdf_content current pdf content field
-        :param spans the count of words to fetch as context on each side of the table_label
-        return list of strings, table label in middle of each with span count of words from pdf content each side
-        """
-        # find label in content, and return spans # of words from either side
+        label_length = 2
+        classes = ['Table', 'Table Caption']
 
-        # get number of words/parts in table label
-        parts = len(table_label.split())
-        # get pdf content as a list
-        words = pdf_content.split()
+        # get first label_length words of every content cell in df if it's classified correctly and scored highly enough
+        logger.info('setting table labels')
+        doc_df['table_label'] = [
+                                 ' '.join(content.split()[:label_length])
+                                 if (pp_cls in classes) and (pp_score >= threshold)
+                                 else None
+                                 for content, pp_cls, pp_score in zip(doc_df['content'],
+                                                                      doc_df['postprocess_cls'],
+                                                                      doc_df['postprocess_score'])
+                                ]
 
-        # get all indexes in pdf content for the table_label
-        label_indexes = []
-        for i in range(len(words)-parts):
-            if table_label == ' '.join(words[i:i+parts]):
-                label_indexes.append(i)
-        logger.debug(f'label_indexes: {label_indexes}')
+        # if table_label series has no values, just return original df
+        if len(doc_df[doc_df["table_label"].astype(bool)]) == 0:
+            return original_df
 
-        # get words either side of the label index, concatenate and return.
-        result = []
-        for i in label_indexes:
-            try:
-                prefix = words[i-spans:i]
-            except IndexError:
-                # if start of pdf_content is < # of words in span from table label mention, just go from start
-                prefix = words[0:i]
+        # aggregate all doc words into one list of words
+        words = ' '.join(doc_df.content.tolist()).split()
 
-            try:
-                suffix = words[i:i+spans]
-            except IndexError:
-                # if end of pdf_content is < # of words in span from table label mention, just go to the end
-                # suffix = words[i:i + len(words)]
-                suffix = words[i:len(words)]
+        # mark where each label occurs in list of all doc words
+        doc_df['indices'] = [
+                                [
+                                    j
+                                    for j in range(len(words))
+                                    if table_label == ' '.join(words[j:j + label_length])
+                                ]
+                                for table_label in doc_df['table_label']
+                            ]
 
-            result.append(' '.join(prefix + suffix))
+        # iterate over list in indices column to extract words before labels in content
+        logger.info('getting semantic context')
+        doc_df['prefix'] = [
+                                [
+                                    ' '.join(words[i - spans:i])
+                                    if i - spans >= 0
+                                    else ' '.join(words[0:i])
+                                    for i in index
+                                ]
+                                for index in doc_df['indices']
+                           ]
 
-        # output = ' '.join(output)
-        logger.debug(result)
-        return result
+        # iterate over list in indices column to extract words after labels in content
+        doc_df['suffix'] = [
+                                [
+                                    ' '.join(words[i+label_length:i+label_length + spans])
+                                    if i+label_length + spans <= len(words)
+                                    else ' '.join(words[i+label_length:len(words)])
+                                    for i in index
+                                ]
+                                for index in doc_df['indices']
+                           ]
 
-    def get_labels_and_sentences_with_regex(self, table_label: str, pdf_content: str) -> List[str]:
-        """
-        :param table_label
-        :param pdf_content
-        returns list of string each the slice between two full stops containing the table label
-        """
-        # for each content find table label and return sentence containing it (from start . to end .)
+        # join prefixes and suffixes together
+        doc_df['context'] = [
+                                [
+                                    prefix[i] + ' ' + suffix[i]
+                                    for i in range(len(prefix))
+                                ]
+                                for prefix, suffix in zip(doc_df['prefix'], doc_df['suffix'])
+                            ]
 
-        # strip non alpha numerics from table label
-        # prevent special characters being interpreted as additional regex components
-        # keeps spaces and full stops though
-        pattern = re.compile("[^0-9a-zA-Z. ]+")
-        table_label = pattern.sub('', table_label)
+        # remove rows without context (empty lists)
+        logger.info('removing rows with no semantic context')
+        doc_df = doc_df[doc_df['context'].apply(lambda x: len(x) > 0)]
 
-        # use regex to find table label and return string between two fullstops either side of it
-        re_search_string = r"([^.]*?"+table_label+r"[^.]*\.)"
-        result = re.findall(re_search_string, pdf_content)
-        # re search returns list, make sure all are strings
-        result = [str(x) for x in result]
-        # concatenate list
-        # output = ' '.join(output).strip()
-        logger.debug(f'output type: {type(result)} output: {result}')
-        return result
+        # replace content with context as text only
+        logger.info('replace content with context')
+        doc_df['content'] = [' '.join(x) for x in doc_df['context']]
 
-    def replace_content_with_context(self):
-        """
-        values of semantic_context column (each a list) are joined into a string and then replace the content column
-        """
-        self.df.loc[:, 'content'] = self.df.progress_apply(lambda x: ' '.join(x.loc['semantic_context']), axis=1)
-
-    def append_context_df_to_original_df(self):
-        """
-        semantic content enriched df is limited to the original cols of the original dataframe, then appended to the
-        original dataframe.
-        """
-        # add context rows to original df
-        self.df = self.original_df.append(self.df[self.original_cols])
+        # append context only df to original df using only original columns
+        logger.info('append context to original and return')
+        return original_df.append(doc_df.loc[:, list(original_df.columns)])
