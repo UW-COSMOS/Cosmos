@@ -11,6 +11,7 @@ import os
 from PIL import Image
 import io
 import subprocess
+import subprocess
 import glob
 from ingest.process_page import propose_and_pad, xgboost_postprocess, rules_postprocess
 from ingest.detect import detect
