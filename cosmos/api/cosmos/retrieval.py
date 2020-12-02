@@ -76,6 +76,6 @@ def statistics():
     return jsonify({'n_objects': 1, 'n_pages': 1, 'n_pdfs': 1})
 
 
-@bp.route('/entity', endpoints='entity', methods=['GET'])
+@bp.route('/entity', endpoint='entity', methods=['GET'])
 def entity():
     raise NotImplementedError
