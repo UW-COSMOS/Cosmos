@@ -3,7 +3,9 @@ from elasticsearch_dsl import Search, Q
 from elasticsearch_dsl.connections import connections
 from elasticsearch import RequestsHttpConnection
 from elasticsearch_dsl import Document, Text, connections, Integer, Float, Keyword, Join
+from elasticsearch.helpers import bulk
 import pandas as pd
+import hashlib
 import logging
 
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
@@ -29,7 +31,6 @@ class EntityObjectIndex(Document):
             'number_of_replicas': 0
         }
 
-
 class Entity(EntityObjectIndex):
     canonical_id = Text(fields={'raw': Keyword()})
     name = Text(fields={'raw': Keyword()})
@@ -46,6 +47,13 @@ class Entity(EntityObjectIndex):
     @classmethod
     def search(cls, **kwargs):
         return cls._index.search(**kwargs).filter("term", entity_object="entity")
+
+    def get_id(self):
+        '''
+        Elasticsearch ingest process would be greatly improved by having a unique ID per object.
+        TODO: is this actually unique and deterministic?
+        '''
+        return hashlib.sha1(f"{self.canonical_id}{self.name}{self.description}{self.types}{self.aliases}{self.dataset_id}".encode('utf-8')).hexdigest()
 
     def add_object(self, cls, dataset_id, content, header_content, area, detect_score, postprocess_score, pdf_name, img_path=None, commit=True):
         obj = Object(
@@ -104,6 +112,13 @@ class Object(EntityObjectIndex):
     pdf_name = Text(fields={'raw': Keyword()})
     img_pth = Text(fields={'raw': Keyword()})
 
+    def get_id(self):
+        '''
+        Elasticsearch ingest process would be greatly improved by having a unique ID per object.
+        TODO: is this actually unique and deterministic?
+        '''
+        return hashlib.sha1(f"{self.cls}{self.detect_score}{self.postprocess_score}{self.dataset_id}{self.header_content}{self.content}{self.pdf_name}".encode('utf-8')).hexdigest()
+
     @classmethod
     def _matches(cls, hit):
         """ Use Object class for child documents with child name 'object' """
@@ -149,7 +164,7 @@ class ElasticRetriever(Retriever):
                                           connection_class=RequestsHttpConnection
                                           )
         else:
-            connections.create_connection(hosts=self.hosts)
+            connections.create_connection(hosts=self.hosts, timeout=20)
         if entity_search:
             es = Entity.search()
             q = Q('match', name=query)
@@ -246,31 +261,40 @@ class ElasticRetriever(Retriever):
         df = pd.read_parquet(section_parquet)
         for ind, row in df.iterrows():
             entities = row['ents_linked']
+            to_add = []
             for entity in entities:
                 es = Entity.search()
-                es.filter('term', name__raw=entity)
+                es = es.filter('term', canonical_id__raw=entity)
                 response = es.execute()
                 for hit in response:
-                    hit.add_object('Section',
+                    to_add.append(hit.add_object('Section',
                                    row['dataset_id'],
                                    row['content'],
                                    row['section_header'],
                                    50,
                                    row['detect_score'],
                                    row['postprocess_score'],
-                                   row['pdf_name'])
+                                   row['pdf_name'],
+                                   commit=False))
+                    if len(to_add) == 100:
+                        bulk(connections.get_connection(), (o.to_dict(True) for o in to_add), request_timeout=20, max_retries=1)
+                        to_add = []
+            if to_add == []: continue
+            bulk(connections.get_connection(), (o.to_dict(True) for o in to_add), request_timeout=20, max_retries=1)
+            to_add = []
         logger.info('Done building section index')
 
         if tables_parquet != '':
             df = pd.read_parquet(tables_parquet)
+            to_add = []
             for ind, row in df.iterrows():
                 entities = row['ents_linked']
                 for entity in entities:
                     es = Entity.search()
-                    es.filter('term', name__raw=entity)
+                    es = es.filter('term', canonical_id__raw=entity)
                     response = es.execute()
                     for hit in response:
-                        hit.add_object('Table',
+                        to_add.append(hit.add_object('Table',
                                        row['dataset_id'],
                                        row['content'],
                                        row['caption_content'],
@@ -278,18 +302,26 @@ class ElasticRetriever(Retriever):
                                        row['detect_score'],
                                        row['postprocess_score'],
                                        row['pdf_name'],
-                                       row['img_pth'])
+                                       row['img_pth'],
+                                       commit=False))
+                        if len(to_add) == 100:
+                            bulk(connections.get_connection(), (o.to_dict(True) for o in to_add), request_timeout=20, max_retries=1)
+                            to_add = []
+                if to_add == []: continue
+                bulk(connections.get_connection(), (o.to_dict(True) for o in to_add), request_timeout=20, max_retries=1)
+                to_add = []
             logger.info('Done building tables index')
         if figures_parquet != '':
             df = pd.read_parquet(figures_parquet)
+            to_add = []
             for ind, row in df.iterrows():
                 entities = row['ents_linked']
                 for entity in entities:
                     es = Entity.search()
-                    es.filter('term', name__raw=entity)
+                    es = es.filter('term', canonical_id__raw=entity)
                     response = es.execute()
                     for hit in response:
-                        hit.add_object('Figure',
+                        to_add.append(hit.add_object('Figure',
                                        row['dataset_id'],
                                        row['content'],
                                        row['caption_content'],
@@ -297,19 +329,26 @@ class ElasticRetriever(Retriever):
                                        row['detect_score'],
                                        row['postprocess_score'],
                                        row['pdf_name'],
-                                       row['img_pth'])
+                                       row['img_pth'],
+                                       commit=False))
+                        if len(to_add) == 100:
+                            bulk(connections.get_connection(), (o.to_dict(True) for o in to_add), request_timeout=20, max_retries=1)
+                            to_add = []
+                if to_add == []: continue
+                bulk(connections.get_connection(), (o.to_dict(True) for o in to_add), request_timeout=20, max_retries=1)
+            to_add = []
             logger.info('Done building figures index')
 
         if equations_parquet != '':
             df = pd.read_parquet(equations_parquet)
-            for ind, row in df.iterrows():
+            to_add = []
                 entities = row['ents_linked']
                 for entity in entities:
                     es = Entity.search()
-                    es.filter('term', name__raw=entity)
+                    es = es.filter('term', canonical_id__raw=entity)
                     response = es.execute()
                     for hit in response:
-                        hit.add_object('Equation',
+                        to_add.append(hit.add_object('Equation',
                                        row['dataset_id'],
                                        row['content'],
                                        None,
@@ -317,7 +356,14 @@ class ElasticRetriever(Retriever):
                                        row['detect_score'],
                                        row['postprocess_score'],
                                        row['pdf_name'],
-                                       row['img_pth'])
+                                       row['img_pth'],
+                                       commit=False))
+                        if len(to_add) == 100:
+                            bulk(connections.get_connection(), (o.to_dict(True) for o in to_add), request_timeout=20, max_retries=1)
+                            to_add = []
+                if to_add == []: continue
+                bulk(connections.get_connection(), (o.to_dict(True) for o in to_add), request_timeout=20, max_retries=1)
+            to_add = []
             logger.info('Done building equations index')
 
         logger.info('Done building object index')
