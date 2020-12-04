@@ -86,6 +86,9 @@ def run_link(input_path, output_path, cluster, dataset_id):
     # Assumption: The input parquet fits into memory. Will need to switch to dask distributed otherwise
     for pq in glob.glob(os.path.join(input_path, '*.parquet')):
         df = pd.read_parquet(pq)
+        if len(df) == 0:
+            logger.warning(f"{pq} is empty -- skipping.")
+            continue
         contents = df['content'].tolist()
         results = [client.submit(link, c, resources={'linking': 1}) for c in contents]
         progress(results)

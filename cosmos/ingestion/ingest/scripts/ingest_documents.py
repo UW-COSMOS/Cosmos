@@ -18,6 +18,9 @@ import os
               help='Use OCR over documents with no metadata. Requires Tesseract v4 installed on system.')
 @click.option('--compute-word-vecs/--no-compute-word-vecs', type=bool, default='False', help='Compute word vectors')
 @click.option('--ngram', type=int, default=3, help='ngram for computing word vecs')
+@click.option('--enrich/--no-enrich', type=bool, default='False', help='Compute word vectors')
+@click.option('--threshold', type=float, default=0.8, help='postprocess_score threshold for identifying an object for context enrichment')
+@click.option('--spans', type=int, default=20, help='number of words either side of an object coreference to capture for context')
 def ingest_documents(cluster,
                      tmp_dir,
                      use_semantic_detection,
@@ -30,7 +33,11 @@ def ingest_documents(cluster,
                      visualize_proposals,
                      skip_ocr,
                      compute_word_vecs,
-                     ngram):
+                     ngram,
+                     enrich,
+                     threshold,
+                     spans
+                     ):
     ingest = Ingest(cluster,
                     tmp_dir=tmp_dir,
                     use_semantic_detection=use_semantic_detection,
@@ -44,7 +51,10 @@ def ingest_documents(cluster,
                   visualize_proposals=visualize_proposals,
                   aggregations=aggregation,
                   compute_word_vecs=compute_word_vecs,
-                  ngram=ngram)
+                  ngram=ngram,
+                  enrich=enrich,
+                  threshold=threshold,
+                  spans=spans)
 
 
 if __name__ == '__main__':
