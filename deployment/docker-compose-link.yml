@@ -1,0 +1,48 @@
+version: '3.4'
+
+networks:
+  swarm_network:
+    driver: overlay
+    attachable: true
+
+services:
+  scheduler:
+    image: $BASE_IMAGE
+    command: "dask-scheduler"
+    ports:
+      - 8787:8787
+    networks:
+      swarm_network:
+
+  worker:
+    image: $LINKING_IMAGE
+    environment:
+      - OMP_NUM_THREADS=2
+      - MODEL_CONFIG=/configs/model_config.yaml
+      - CLASSES_PTH=/configs/model_config.yaml
+      - PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
+    volumes:
+      - ${OUTPUT_DIR}:/input
+      - ${TMP_DIR}:/mytmp
+      - ${OUTPUT_DIR}:/output
+    command: "dask-worker tcp://scheduler:8786 --nprocs ${WORKER_PROCS} --nthreads 1 --memory-limit 0 --resources 'linking=1' --preload ingest.preload_plugins.linking_setup"
+    networks:
+      swarm_network:
+    depends_on:
+      - scheduler
+
+  runner:
+    image: $LINKING_IMAGE
+    environment:
+      - OMP_NUM_THREADS=2
+      - MODEL_CONFIG=/configs/model_config.yaml
+      - CLASSES_PTH=/configs/model_config.yaml
+      - PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
+    volumes:
+      - ${OUTPUT_DIR}:/input
+      - ${TMP_DIR}:/mytmp
+      - ${OUTPUT_DIR}:/output
+    networks:
+      swarm_network:
+    depends_on:
+      - scheduler

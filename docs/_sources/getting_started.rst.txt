@@ -30,7 +30,7 @@ Open a file named .env in the directory, and populate it with the following:
 
 The first seven lines in the file define which images to use. The default cosmos images assumes access to a CUDA
 enabled GPU. To utilize a CPU, append to each image "-cpu". For example, change uwcosmos/cosmos-base:latest to
-uwcosmos/cosmos-base-cpu:latest. If you use the CPU version, make sure to change all *_DEVICE from 'cuda' to 'cpu'.
+uwcosmos/cosmos-base-cpu:latest. If you use the CPU version, make sure to change all \*_DEVICE from 'cuda' to 'cpu'.
 
 Depending on your machine, you can scale the process by setting DETECT_PROCS and WORKER_PROCS to the desired number of
 processes.
@@ -44,8 +44,19 @@ To process the images, run the following line:
 
     docker-compose -f deployment/docker-compose-ingest.yml -p cosmos up
 
-The output directory you defined will now be populated with a set of _Parquet files, as well as an images directory
+The output directory you defined will now be populated with a set of Parquet_ files, as well as an images directory
 containing object specific images, and saved word embeddings over the input corpus.
+
+Entity linking
+--------------
+Once the documents have been ingested, a separate process can be run to recognize named entities
+within the extracted objects, linking them to the Unified Medical Language System (UMLS). Named
+entity recognition and UMLS linking are accomplished via SciSpacy_. The parquet files will be
+modified to include linked and unlinked entities, and an additional parquet file will be created
+containing canonical information for the linked entities. To run the entity linking pipeline:
+
+.. code-block:: console
+    docker-compose -f deployment/docker-compose-link.yml -p cosmos up
 
 Deploying the COSMOS search interface
 -----------------------------------
@@ -78,3 +89,4 @@ You should now be able to navigate to localhost:8082 in your browser to access t
 .. _Docker: https://www.docker.com/
 .. _Parquet: https://parquet.apache.org/
 .. _ElasticSearch: https://www.elastic.co/home
+.. _SciSpacy: https://allenai.github.io/scispacy/

@@ -85,6 +85,7 @@
               <p class="caption"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#entity-linking">Entity linking</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#deploying-the-cosmos-search-interface">Deploying the COSMOS search interface</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#reading-ingested-data-into-elasticsearch">Reading ingested data into ElasticSearch</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#viewing-output">Viewing output</a></li>
@@ -188,7 +189,7 @@ Open a file named .env in the directory, and populate it with the following:</p>
 </div>
 <p>The first seven lines in the file define which images to use. The default cosmos images assumes access to a CUDA
 enabled GPU. To utilize a CPU, append to each image “-cpu”. For example, change uwcosmos/cosmos-base:latest to
-uwcosmos/cosmos-base-cpu:latest. If you use the CPU version, make sure to change all <a href="#id1"><span class="problematic" id="id2">*</span></a>_DEVICE from ‘cuda’ to ‘cpu’.</p>
+uwcosmos/cosmos-base-cpu:latest. If you use the CPU version, make sure to change all *_DEVICE from ‘cuda’ to ‘cpu’.</p>
 <p>Depending on your machine, you can scale the process by setting DETECT_PROCS and WORKER_PROCS to the desired number of
 processes.</p>
 <p>Finally, make sure to set the final three directories, denoting the input directory pointing to your PDFs, a temporary
@@ -197,8 +198,16 @@ directory with sufficient hard drive space to write images and such, and an outp
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">docker-compose -f deployment/docker-compose-ingest.yml -p cosmos up</span>
 </pre></div>
 </div>
-<p>The output directory you defined will now be populated with a set of _Parquet files, as well as an images directory
+<p>The output directory you defined will now be populated with a set of <a class="reference external" href="https://parquet.apache.org/">Parquet</a> files, as well as an images directory
 containing object specific images, and saved word embeddings over the input corpus.</p>
+<div class="section" id="entity-linking">
+<h2>Entity linking<a class="headerlink" href="#entity-linking" title="Permalink to this headline">¶</a></h2>
+<p>Once the documents have been ingested, a separate process can be run to recognize named entities
+within the extracted objects, linking them to the Unified Medical Language System (UMLS). Named
+entity recognition and UMLS linking are accomplished via <a class="reference external" href="https://allenai.github.io/scispacy/">SciSpacy</a>. The parquet files will be
+modified to include linked and unlinked entities, and an additional parquet file will be created
+containing canonical information for the linked entities. To run the entity linking pipeline:</p>
+</div>
 <div class="section" id="deploying-the-cosmos-search-interface">
 <h2>Deploying the COSMOS search interface<a class="headerlink" href="#deploying-the-cosmos-search-interface" title="Permalink to this headline">¶</a></h2>
 <p>To deploy the search interface over this processed dataset, run the following command:</p>

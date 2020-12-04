@@ -12,10 +12,4 @@ services:
     networks:
       cosmos_swarm_network:
     volumes:
-      - ${OUTPUT_DIR}:/upload
-    command: "python -m retrieval.scripts.build_elastic_index
-             --host es01 --sections-parquet /upload/documents_sections.parquet
-             --documents-parquet /upload/documents_pdfs.parquet
-             --tables-parquet /upload/documents_tables.parquet
-             --figures-parquet /upload/documents_figures.parquet
-             --equations-parquet /upload/documents_equations.parquet"
+      - ${OUTPUT_DIR}:/output
