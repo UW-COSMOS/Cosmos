@@ -19,7 +19,7 @@ import os
 @click.option('--compute-word-vecs/--no-compute-word-vecs', type=bool, default='False', help='Compute word vectors')
 @click.option('--ngram', type=int, default=3, help='ngram for computing word vecs')
 @click.option('--enrich/--no-enrich', type=bool, default='False', help='Compute word vectors')
-@click.option('--threshold', type=double, default=0.8, help='postprocess_score threshold for identifying an object for context enrichment')
+@click.option('--threshold', type=float, default=0.8, help='postprocess_score threshold for identifying an object for context enrichment')
 @click.option('--spans', type=int, default=20, help='number of words either side of an object coreference to capture for context')
 def ingest_documents(cluster,
                      tmp_dir,
