@@ -20,7 +20,7 @@ from ingest.utils.pdf_helpers import get_pdf_names
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
 from ingest.process.aggregation.aggregate import aggregate_router
-# from ingest.process.representation_learning.compute_word_vecs import make_vecs
+from ingest.process.representation_learning.compute_word_vecs import make_vecs
 import pandas as pd
 import signal
 import logging
