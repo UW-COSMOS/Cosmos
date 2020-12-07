@@ -61,6 +61,15 @@ Word Embeddings
 We provide the option to train word embeddings on top of the extracted corpuses. We use _FastText to train over the extracted
 corpus at ingestion time. The resulting embeddings are saved to disk.
 
+Context Enrichment
+------------------
+
+If the enrich option is enabled at ingest time, all output parquet files from the Ingest process are enhanced with
+semantic context. For every table or table caption row in those output parquets every mention of the table label for
+that row is detected within all the content (text) from that document. That context is then appended to the output
+parquets as a duplicate of the original table or table caption row with the original content replaced by all the available
+context text. Searches on context-enriched data that include relevant context should return the tables themselves.
+
 
 .. _preprint: https://arxiv.org/abs/1910.12462
 .. _PDFMiner.six: https://github.com/pdfminer/pdfminer.six
