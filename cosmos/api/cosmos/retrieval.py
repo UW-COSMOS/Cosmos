@@ -173,13 +173,24 @@ def document():
 
     # TODO: go doi->xddid
     # TODO: pass docid into current_app.retriever.search ?
-    count = current_app.retriever.search(None, get_count=True, docids=[docid])
-    results = current_app.retriever.search(None, docids=[docid])
+    count = current_app.retriever.search(None, get_count=True, final=False, docids=[docid])
+    results = current_app.retriever.search(None, docids=[docid], final=True)
     # TODO: filter response to just be contents, ...
     if len(results) == 0:
         return {'page': 0, 'objects': [], 'v': VERSION}
     bibjsons = get_bibjsons([i['pdf_name'].replace(".pdf", "")  for i in results])
-    return jsonify({'v' : VERSION, 'total': count, 'page': 0, 'objects': results})
+
+    results = [
+            {"id" : i["children"][0]["id"],
+                "cls" : i["children"][0]["cls"],
+                "postprocessing_confidence": i["children"][0]["postprocessing_confidence"],
+                "base_confidence" : i["children"][0]["base_confidence"],
+                "content" : i["children"][0]["content"],
+                "header_content" : i["children"][0]["header_content"]
+                } for i in results
+            ]
+
+    return jsonify({'v' : VERSION, 'total': count, 'page': 0, 'bibjson' : bibjsons[docid], 'objects': results})
 
 
 @bp.route(f'/count', endpoint='count')
