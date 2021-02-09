@@ -13,6 +13,25 @@ logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+def get_size(bbs):
+    area = 0
+    try:
+        if not isinstance(bbs[0], float):
+            for subbb in bbs:
+                area+=get_size(subbb)
+        else:
+            area += (bbs[3] - bbs[1]) * (bbs[2] - bbs[0])
+        return area
+    except IndexError:
+        return 0
+    except:
+        print(f"Issue getting area. {sys.exc_info()}")
+        return -1
+
+def combine_contents(fields):
+    combined_contents = ' '.join([i for i in fields if i is not None])
+    return combined_contents
+
 def upsert(doc):
     d = doc.to_dict(True)
     d['_op_type'] = 'update'
@@ -78,6 +97,7 @@ class Entity(EntityObjectIndex):
             dataset_id=dataset_id,
             content=content,
             header_content=header_content,
+            full_content=combine_content([content, header_content]),
             area=area,
             detect_score=detect_score,
             postprocess_score=postprocess_score,
@@ -118,6 +138,7 @@ class Object(EntityObjectIndex):
     dataset_id = Text(fields={'raw': Keyword()})
     header_content = Text()
     content = Text()
+    full_content = Text()
     area = Integer()
     pdf_name = Text(fields={'raw': Keyword()})
     img_pth = Text(fields={'raw': Keyword()})
@@ -199,18 +220,16 @@ class ElasticRetriever(Retriever):
                 final_results = [r.meta.id for r in os_response]
                 final_results = [self.get_object(i) for i in final_results]
         else:
-            logging.info(f"document_filter_terms: {document_filter_terms}")
             # TODO: pull this out and do it above the entity level
             # Run a  query against 'fulldocument' index.
             doc_filter = False
             dq = Q()
-            logging.info(f"docids: {docids}")
 
             if len(docids) > 0:
                 dq = dq & Q('bool', should=[Q('match_phrase', name=f"{i}.pdf") for i in docids])
                 doc_filter=True
             if len(document_filter_terms) > 0:
-                dq = dq & Q('bool', must=[Q('match_phrase', content=i) for i in document_filter_terms])
+                dq = dq & Q('bool', must=[Q('match_phrase', full_content=i) for i in document_filter_terms])
                 doc_filter=True
 
             if doc_filter:
@@ -229,14 +248,20 @@ class ElasticRetriever(Retriever):
             else:
                 query_list = [query]
             if inclusive:
-                q = q & Q('bool', must=[Q('match_phrase', content=i) for i in query_list])
+                q = q & Q('bool', must=[Q('match_phrase', full_content=i) for i in query_list])
             else:
-                q = q & Q('bool', should=[Q('match_phrase', content=i) for i in query_list])
+                q = q & Q('bool', should=[Q('match_phrase', full_content=i) for i in query_list])
+
             start = page * ndocs
             end = start + ndocs
-            s = Search(index='object')
+            s = Search(index='eo-site')
             if cls is not None:
                 s = s.filter('term', cls__raw=cls)
+
+            # Filter figures/tables, enforcing size not approaching full-page. TODO: Overkill and will cut legitimate full-page tables
+            q = q & Q('bool', must_not=[Q('bool', must=[Q('match_phrase', cls__raw='Figure'), Q('range', area={'gte': 2000000})])])
+            q = q & Q('bool', must_not=[Q('bool', must=[Q('match_phrase', cls__raw='Table'), Q('range', area={'gte': 2000000})])])
+
             if detect_min is not None:
                 s = s.filter('range', detect_score={'gte': detect_min})
             if postprocess_min is not None:
@@ -342,7 +367,7 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['section_header'],
-                                           50,
+                                           get_size(row['obj_bbs']),
                                            row['detect_score'],
                                            row['postprocess_score'],
                                            row['pdf_name'],
@@ -362,7 +387,8 @@ class ElasticRetriever(Retriever):
                                 dataset_id=row['dataset_id'],
                                 content=row['content'],
                                 header_content=row['section_header'],
-                                area=50,
+                                full_content=combine_contents([row['content'], row['section_header']]),
+                                area=get_size(row['obj_bbs']),
                                 detect_score=row['detect_score'],
                                 postprocess_score=row['postprocess_score'],
                                 pdf_name=row['pdf_name'],
@@ -389,7 +415,7 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['caption_content'],
-                                           50,
+                                           get_size(row['obj_bbs']),
                                            row['detect_score'],
                                            row['postprocess_score'],
                                            row['pdf_name'],
@@ -407,7 +433,8 @@ class ElasticRetriever(Retriever):
                         dataset_id=row['dataset_id'],
                         content=row['content'],
                         header_content=row['caption_content'],
-                        area=50,
+                        full_content=combine_contents([row['content'], row['caption_content']]),
+                        area=get_size(row['obj_bbs']),
                         detect_score=row['detect_score'],
                         postprocess_score=row['postprocess_score'],
                         pdf_name=row['pdf_name'],
@@ -435,7 +462,7 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['caption_content'],
-                                           50,
+                                           get_size(row['obj_bbs']),
                                            row['detect_score'],
                                            row['postprocess_score'],
                                            row['pdf_name'],
@@ -453,7 +480,8 @@ class ElasticRetriever(Retriever):
                            dataset_id=row['dataset_id'],
                            content=row['content'],
                            header_content=row['caption_content'],
-                           area=50,
+                           full_content=combine_contents([row['content'], row['caption_content']]),
+                           area=get_size(row['obj_bbs']),
                            detect_score=row['detect_score'],
                            postprocess_score=row['postprocess_score'],
                            pdf_name=row['pdf_name'],
@@ -481,7 +509,7 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            None,
-                                           50,
+                                           get_size(row['equation_bb']),
                                            row['detect_score'],
                                            row['postprocess_score'],
                                            row['pdf_name'],
@@ -499,7 +527,8 @@ class ElasticRetriever(Retriever):
                            dataset_id=row['dataset_id'],
                            content=row['content'],
                            header_content='',
-                           area=50,
+                           full_content=combine_contents([row['content']]),
+                           area=get_size(row['equation_bb']),
                            detect_score=row['detect_score'],
                            postprocess_score=row['postprocess_score'],
                            pdf_name=row['pdf_name'],
