@@ -42,7 +42,7 @@ else:
 # NOTE: docid/doi parameters undocumented intentionally for obscurity IAR - 28.Jan.2021
 parameter_defs = {
         'api_key': '(str, Required) - String token that grants access to the COSMOS extractions.',
-        'query': '(str, Required) - term or comma-separated list of terms to search for. Default search logic will utilize an OR of comma- or space-separated words.',
+        'query': '(str, Required) - term or comma-separated list of terms to search for. Default search logic will utilize an OR of comma-separated words.',
         'type': '[Table, Figure, Equation, Body Text, Combined] - the type of object to search for.',
         'page': '(int) - Page of results (starts at 0)',
         'id' : 'Internal COSMOS ID of an object to retrieve.',
