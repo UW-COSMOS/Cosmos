@@ -1,6 +1,7 @@
 from flask import (
-    Blueprint, request, jsonify, current_app
+    Blueprint, request, jsonify, current_app, Response, abort
 )
+from functools import wraps
 import logging
 import os
 import requests
@@ -21,6 +22,12 @@ if "API_VERSION" in os.environ:
     VERSION=os.environ['API_VERSION']
 else:
     VERSION='v2_beta'
+LICENSE = 'https://creativecommons.org/licenses/by-nd/2.0/'
+
+if "API_KEYS" in os.environ:
+    API_KEYS = os.environ["API_KEYS"].split(",")
+else:
+    API_KEYS = []
 
 if "N_RESULTS" in os.environ:
     N_RESULTS=int(os.environ['N_RESULTS'])
@@ -32,7 +39,9 @@ if "IMG_TYPE" in os.environ:
 else:
     IMG_TYPE="PNG"
 
+# NOTE: docid/doi parameters undocumented intentionally for obscurity IAR - 28.Jan.2021
 parameter_defs = {
+        'api_key': '(str, Required) - String token that grants access to the COSMOS extractions.',
         'query': '(str, Required) - term or comma-separated list of terms to search for. Default search logic will utilize an OR of comma- or space-separated words.',
         'type': '[Table, Figure, Equation, Body Text, Combined] - the type of object to search for.',
         'page': '(int) - Page of results (starts at 0)',
@@ -60,7 +69,25 @@ fields_defs = {
         "[header/child/object].postprocessing_confidence" : "Confidence score of the COSMOS post-processing model."
         }
 
+def require_apikey(fcn):
+    @wraps(fcn)
+    def decorated_function(*args, **kwargs):
+        if request.args.get('api_key') and request.args.get('api_key') in API_KEYS:
+            return fcn(*args, **kwargs)
+        elif len(request.args) == 0: # if bare request, show the helptext even without an API key
+            return fcn(*args, **kwargs)
+        else:
+            abort(401)
+    return decorated_function
 
+def get_docid(doi):
+    resp = requests.get(f"https://xdd.wisc.edu/api/articles?doi={doi}")
+    if resp.status_code == 200:
+        data = resp.json()
+        if 'success' in data:
+            for i in data['success']['data']:
+                return i['_gddid']
+    return ''
 
 def get_bibjsons(pdf_names):
     docids=','.join(pdf_names)
@@ -81,7 +108,7 @@ def get_bibjsons(pdf_names):
 def get_bibjson(pdf_name):
     xdd_docid = pdf_name.replace(".pdf", "")
     if 'full' in xdd_docid:
-        xdd_docid = xdd_docid.replace("v1.full", "")
+
         resp = requests.get(f"https://xdd.wisc.edu/api/articles?doi={xdd_docid}")
     else:
         resp = requests.get(f"https://xdd.wisc.edu/api/articles?docid={xdd_docid}")
@@ -128,7 +155,7 @@ def route_help(endpoint):
                     "v" : VERSION,
                     "description" : f"Query the COSMOS extractions for objects and contexts mentioning a term passing filtration criteria. Utilizes the Elasticsearch retrieval engine. Objects matching the query are returned, along with their parent or children objects resulting from the COSMOS contextual aggregation process (e.g. figures will be return as a child object for a figure caption mentioning a phrase; all body text within a section will be returned as children to a section header mentioning a term). Result order is determined by search rank (results with high-density mentions of the term will appear first). {N_RESULTS} results are returned per page.",
                     'options': {
-                        'parameters' : makedict(['query', 'type', 'page', 'inclusive', 'base_confidence', 'postprocessing_confidence', 'ignore_bytes', 'id'], parameter_defs),
+                        'parameters' : makedict(['api_key', 'query', 'type', 'page', 'inclusive', 'base_confidence', 'postprocessing_confidence', 'ignore_bytes', 'id'], parameter_defs),
                         'output_formats' : 'json',
                         'examples' : [
                             f'/api/{VERSION}/search?query=temperature&type=Figure&base_confidence=1.0&postprocessing_confidence=0.7',
@@ -145,6 +172,7 @@ def route_help(endpoint):
 
 @bp.route(f'/search/image/<page_id>')
 @bp.route(f'/page/<page_id>')
+@require_apikey
 def page(page_id):
     current_app.logger.info("Calling page_retriever.search()")
     resp = current_app.page_retriever.search(page_id)
@@ -152,6 +180,7 @@ def page(page_id):
     return jsonify({'results' : resp})
 
 @bp.route('/search/tags/all')
+@require_apikey
 def tags():
     '''
     hardcode the tags for the time being
@@ -161,6 +190,7 @@ def tags():
 
 
 @bp.route(f'/document', endpoint='document')
+@require_apikey
 def document():
     """
     Bring back document-level summary.
@@ -170,14 +200,16 @@ def document():
     """
 
     docid = request.args.get('docid', default='', type=str)
+    doi = request.args.get('doi', default='', type=str)
+    if docid == '' and doi != '':
+        docid = get_docid(doi)
+        if docid == '':
+            return jsonify({'error' : 'DOI not in xDD system!', 'v' : VERSION})
 
-    # TODO: go doi->xddid
-    # TODO: pass docid into current_app.retriever.search ?
     count = current_app.retriever.search(None, get_count=True, final=False, docids=[docid])
     results = current_app.retriever.search(None, docids=[docid], final=True)
-    # TODO: filter response to just be contents, ...
     if len(results) == 0:
-        return {'page': 0, 'objects': [], 'v': VERSION}
+        return {'page': 0, 'objects': [], 'v': VERSION, 'license': LICENSE}
     bibjsons = get_bibjsons([i['pdf_name'].replace(".pdf", "")  for i in results])
 
     results = [
@@ -190,11 +222,12 @@ def document():
                 } for i in results
             ]
 
-    return jsonify({'v' : VERSION, 'total': count, 'page': 0, 'bibjson' : bibjsons[docid], 'objects': results})
+    return jsonify({'v' : VERSION, 'total': count, 'page': 0, 'bibjson' : bibjsons[docid], 'objects': results, 'license' : LICENSE})
 
 
 @bp.route(f'/count', endpoint='count')
 @bp.route(f'/search', endpoint='search')
+@require_apikey
 def search():
     if len(request.args) == 0:
         return jsonify(route_help(request.endpoint))
@@ -213,6 +246,11 @@ def search():
     if context_filter_terms == ['']: context_filter_terms=[]
 
     docids = request.args.get('docids', default='', type=str).split(',')
+    doi = request.args.get('doi', default='', type=str)
+    if docids == [''] and doi != '':
+        docids = [get_docid(doi)]
+        if docids == ['']:
+            return jsonify({'error' : 'DOI not in xDD system!', 'v' : VERSION})
     if docids == ['']: docids=[]
 
     if obj_type == 'Body Text':
@@ -225,19 +263,19 @@ def search():
     postprocessing_confidence = request.args.get('postprocessing_confidence', default=0.7, type=float)
     current_app.logger.error('Received search query. Starting search.')
 
-    # TODO: toggle for entity searching
+    # TODO: parameter toggle for entity searching
 
     count = current_app.retriever.search(query, entity_search=False, ndocs=N_RESULTS, page=page_num, cls=obj_type,
                                                detect_min=base_confidence, postprocess_min=postprocessing_confidence,
                                                get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id)
     if 'count' in request.endpoint:
-        return jsonify({'total_results': count, 'v': VERSION})
+        return jsonify({'total_results': count, 'v': VERSION, 'license': LICENSE})
     current_app.logger.info(f"page: {page_num}, cls: {obj_type}, detect_min: {base_confidence}, postprocess_min: {postprocessing_confidence}")
     current_app.logger.info(f"Passing in {document_filter_terms}")
     results = current_app.retriever.search(query, entity_search=False, ndocs=N_RESULTS, page=page_num, cls=obj_type,
                                          detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id)
     if len(results) == 0:
-        return {'page': 0, 'objects': [], 'v': VERSION}
+        return {'page': 0, 'objects': [], 'v': VERSION, 'license' : LICENSE}
     image_dir = '/data/images'
     bibjsons = get_bibjsons([i['pdf_name'].replace(".pdf", "")  for i in results])
     for result in results:
@@ -253,9 +291,10 @@ def search():
             else:
                 child['bytes'] = None
 
-    return jsonify({'v' : VERSION, 'total': count, 'page': page_num, 'objects': results})
+    return jsonify({'v' : VERSION, 'total': count, 'page': page_num, 'objects': results, 'license' : LICENSE})
 
 @bp.route('object/<objid>')
+@require_apikey
 def object(objid):
     ignore_bytes = request.args.get('ignore_bytes', type=bool)
     contexts = [current_app.retriever.get_object(objid)]
@@ -277,7 +316,7 @@ def object(objid):
         } for obj in contexts
     ]
     if len(results) == 0:
-        return {'page': 0, 'objects': [], 'v': VERSION}
+        return {'page': 0, 'objects': [], 'v': VERSION, 'license' : LICENSE}
     image_dir = '/data/images'
     bibjsons = get_bibjsons([i['pdf_name'].replace(".pdf", "")  for i in results])
     for result in results:
@@ -292,14 +331,20 @@ def object(objid):
                     child['bytes'] = base64.b64encode(imf.read()).decode('ascii')
             else:
                 child['bytes'] = None
-    return jsonify({'v' : VERSION, 'total': count, 'page': page_num, 'objects': results})
+    return jsonify({'v' : VERSION, 'total': count, 'page': page_num, 'objects': results, 'license' : LICENSE})
 
 
 @bp.route(f'/statistics', endpoint='statistics', methods=['GET'])
+@require_apikey
 def statistics():
     return jsonify({'n_pages': current_app.retriever.count("page"), 'n_objects': current_app.retriever.count("object"), 'n_pdfs': current_app.retriever.count("fulldocument")})
 
 
 @bp.route('/entity', endpoint='entity', methods=['GET'])
+@require_apikey
 def entity():
     raise NotImplementedError
+
+@bp.errorhandler(401)
+def error_401(error):
+    return jsonify({'error': "Unauthorized to access this route.", 'v' : VERSION})
