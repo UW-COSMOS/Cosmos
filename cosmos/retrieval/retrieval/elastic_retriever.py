@@ -188,7 +188,7 @@ class ElasticRetriever(Retriever):
         self.hosts = hosts
         self.awsauth = awsauth
 
-    def search(self, query, entity_search=False, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None):
+    def search(self, query, entity_search=False, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None, dataset_id=None):
         if self.awsauth is not None:
             connections.create_connection(hosts=self.hosts,
                                           http_auth=self.awsauth,
@@ -257,6 +257,9 @@ class ElasticRetriever(Retriever):
             s = Search(index='eo-site')
             if cls is not None:
                 s = s.filter('term', cls__raw=cls)
+
+            if dataset_id is not None:
+                s = s.filter('term', dataset_id__raw=dataset_id)
 
             # Filter figures/tables, enforcing size not approaching full-page. TODO: Overkill and will cut legitimate full-page tables
             q = q & Q('bool', must_not=[Q('bool', must=[Q('match_phrase', cls__raw='Figure'), Q('range', area={'gte': 2000000})])])

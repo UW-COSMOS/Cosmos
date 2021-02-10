@@ -34,6 +34,11 @@ if "N_RESULTS" in os.environ:
 else:
     N_RESULTS=30
 
+if "DATASET_ID" in os.environ:
+    DATASET_ID=os.environ['DATASET_ID']
+else:
+    DATASET_ID=None
+
 if "IMG_TYPE" in os.environ:
     IMG_TYPE=os.environ['IMG_TYPE']
 else:
@@ -206,8 +211,8 @@ def document():
         if docid == '':
             return jsonify({'error' : 'DOI not in xDD system!', 'v' : VERSION})
 
-    count = current_app.retriever.search(None, get_count=True, final=False, docids=[docid])
-    results = current_app.retriever.search(None, docids=[docid], final=True)
+    count = current_app.retriever.search(None, get_count=True, final=False, docids=[docid], dataset_id=DATASET_ID)
+    results = current_app.retriever.search(None, docids=[docid], final=True, dataset_id=DATASET_ID)
     if len(results) == 0:
         return {'page': 0, 'objects': [], 'v': VERSION, 'license': LICENSE}
     bibjsons = get_bibjsons([i['pdf_name'].replace(".pdf", "")  for i in results])
@@ -265,14 +270,14 @@ def search():
 
     # TODO: parameter toggle for entity searching
 
-    count = current_app.retriever.search(query, entity_search=False, ndocs=N_RESULTS, page=page_num, cls=obj_type,
+    count = current_app.retriever.search(query, entity_search=False, ndocs=N_RESULTS, page=page_num, cls=obj_type, dataset_id=DATASET_ID,
                                                detect_min=base_confidence, postprocess_min=postprocessing_confidence,
                                                get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id)
     if 'count' in request.endpoint:
         return jsonify({'total_results': count, 'v': VERSION, 'license': LICENSE})
     current_app.logger.info(f"page: {page_num}, cls: {obj_type}, detect_min: {base_confidence}, postprocess_min: {postprocessing_confidence}")
     current_app.logger.info(f"Passing in {document_filter_terms}")
-    results = current_app.retriever.search(query, entity_search=False, ndocs=N_RESULTS, page=page_num, cls=obj_type,
+    results = current_app.retriever.search(query, entity_search=False, ndocs=N_RESULTS, page=page_num, cls=obj_type, dataset_id=DATASET_ID,
                                          detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id)
     if len(results) == 0:
         return {'page': 0, 'objects': [], 'v': VERSION, 'license' : LICENSE}
