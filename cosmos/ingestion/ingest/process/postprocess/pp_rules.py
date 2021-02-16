@@ -11,7 +11,7 @@ def rule_caption(text, cls):
 
     new_cls = cls
     first_line = text.split("\n")[0]
-    matches = re.findall('^(figure|fig)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', first_line, flags=re.IGNORECASE|re.MULTILINE)
+    matches = re.findall('^(figure|fig|scheme|plate)(?:\.)? (?:(\d+\w+(?:\.)?)|(\d+))', first_line, flags=re.IGNORECASE|re.MULTILINE)
     if len(matches) >0:
         new_cls = "Figure Caption"
         logging.info(f"Figure caption detected. Used to be {cls}")
@@ -28,5 +28,8 @@ def apply_rules(page_objs):
     for obj in page_objs:
         bb, cls, text, score = obj
         new_cls = rule_caption(text, cls)
-        new_objs.append((bb, cls, text, score, new_cls))
+        if new_cls == cls:
+            new_objs.append((bb, new_cls, text, score))
+        else:
+            new_objs.append((bb, new_cls, text, 1.0))
     return new_objs
