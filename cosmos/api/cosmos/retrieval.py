@@ -77,7 +77,8 @@ fields_defs = {
 def require_apikey(fcn):
     @wraps(fcn)
     def decorated_function(*args, **kwargs):
-        if request.args.get('api_key') and request.args.get('api_key') in API_KEYS:
+#        if request.args.get('api_key') and request.args.get('api_key') in API_KEYS:
+        if True:
             return fcn(*args, **kwargs)
         elif len(request.args) == 0: # if bare request, show the helptext even without an API key
             return fcn(*args, **kwargs)
@@ -342,7 +343,7 @@ def object(objid):
 @bp.route(f'/statistics', endpoint='statistics', methods=['GET'])
 @require_apikey
 def statistics():
-    return jsonify({'n_pages': current_app.retriever.count("page"), 'n_objects': current_app.retriever.count("object"), 'n_pdfs': current_app.retriever.count("fulldocument")})
+    return jsonify({'n_pages': current_app.retriever.count("page", dataset_id=DATASET_ID), 'n_objects': current_app.retriever.count("object", dataset_id=DATASET_ID), 'n_pdfs': current_app.retriever.count("fulldocument", dataset_id=DATASET_ID)})
 
 
 @bp.route('/entity', endpoint='entity', methods=['GET'])

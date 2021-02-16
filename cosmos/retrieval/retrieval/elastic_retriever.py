@@ -544,7 +544,7 @@ class ElasticRetriever(Retriever):
             logger.info('Done building equations index')
         logger.info('Done building object index')
 
-    def count(self, index):
+    def count(self, index, dataset_id=None):
         if self.awsauth is not None:
             connections.create_connection(hosts=self.hosts,
                                           http_auth=self.awsauth,
@@ -555,6 +555,9 @@ class ElasticRetriever(Retriever):
         else:
             connections.create_connection(hosts=self.hosts)
         s = Search(index=index)
+        if dataset_id is not None:
+            s = s.filter('term', dataset_id__raw=dataset_id)
+
         return s.count()
 
     def delete(self, dataset_id):
