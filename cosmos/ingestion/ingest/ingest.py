@@ -154,6 +154,7 @@ class Ingest:
                     chunk = [i for i in chunk if i.result() != '']
                     if self.use_rules_postprocess:
                         chunk = self.client.map(rules_postprocess, chunk, resources={'process': 1})
+                        chunk = [i for i in chunk if i.result() != '']
             progress(chunk)
             images.extend([i.result() for i in chunk])
         results = []
@@ -168,6 +169,8 @@ class Ingest:
                     postprocess_cls = postprocess_score = None
                     if 'xgboost_content' in obj:
                         _, postprocess_cls, _, postprocess_score = obj['xgboost_content'][ind]
+                        if 'rules_content' in obj:
+                            _, postprocess_cls, _, postprocess_score = obj['rules_content'][ind]
                     final_obj = {'pdf_name': obj['pdf_name'],
                                  'dataset_id': obj['dataset_id'],
                                  'page_num': obj['page_num'],

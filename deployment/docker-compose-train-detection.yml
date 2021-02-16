@@ -1,0 +1,41 @@
+version: '3.4'
+
+networks:
+  cosmos_swarm_network:
+    external: true
+
+services:
+  train:
+    image: ${DETECT_IMAGE}
+    networks:
+      cosmos_swarm_network:
+    environment:
+      - NUM_PROCESSES=10
+    volumes:
+      - ${TRAINING_DIR}:/training
+      - ${VALIDATION_DIR}:/validation
+      - ${WEIGHTS_DIR}:/weights
+      - ${CONFIG_DIR}:/config
+#    command: "tail -f /dev/null"
+#    command : "python3.8 -m ingest.scripts.train_detection \
+#               --hyperopt-config /config/hyperopt_config.yaml \
+#               --max-evals 1 --train-dir /training/ \
+#               --val-dir /validation/ --weights-dir /weights/ \
+#               --pretrain-weights /weights/model_weights.pth \
+#               --model-config /config/model_config.yaml \
+#               --train-config /config/train_config.yaml"
+#    command : "python3.8 -m ingest.scripts.preprocess_for_training \
+#               --train-path /training/ \
+#               --val-path /validation/"
+    command: "python3.8 -m ingest.scripts.train_postprocess \
+             --logdir logs/ --modelcfg /config/model_config.yaml \
+             --detect-weights /weights/model_weights.pth \
+             --device cuda  \
+             --train-img-dir       /training/images \
+             --train-proposals-dir /training/proposals \
+             --train-xml-dir       /training/annotations \
+             --val-img-dir       /validation/images \
+             --val-proposals-dir /validation/proposals \
+             --val-xml-dir       /validation/annotations \
+             --num-processes 40 --classcfg /config/model_config.yaml \
+             --output-path /weights/new_pp_weights.pth"

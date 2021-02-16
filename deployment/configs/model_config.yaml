@@ -6,6 +6,18 @@ EMBEDDING_INTERMEDIATE: 1024
 PROPOSAL_METHOD: "CONNECTED_COMPONENTS"
 WARPED_SIZE: 250
 EXPANSION_DELTA: 50
-CLASSES: ["Section Header", "Body Text", "Figure", "Figure Caption", "Table", "Equation",
-          "Page Footer", "Page Header", "Table Caption", "Other", "Reference text"]
+CLASSES: ["Abstract",
+    "Body Text",
+    "Equation label",
+    "Equation",
+    "Figure Caption",
+    "Figure",
+    "Other",
+    "Page Footer",
+    "Page Header",
+    "Reference text",
+    "Section Header",
+    "Table Caption",
+    "Table Note",
+    "Table"]
 TRAINING: True
