@@ -1,0 +1,16 @@
+Situation,Error,Solution
+When trying to docker-compose up:,"Creating cosmos_scheduler_1 ... error
+
+ERROR: for cosmos_scheduler_1  Cannot start service scheduler: failed to get network during CreateEndpoint: network uzio31or6rp2lz9v7px9nn9zi not found
+
+ERROR: for scheduler  Cannot start service scheduler: failed to get network during CreateEndpoint: network uzio31or6rp2lz9v7px9nn9zi not found
+ERROR: Encountered errors while bringing up the project.","Try to docker-compose up with a different name space e.g. docker-compose -f 'deployment/docker-compose-api.yml' -p orange up
+Note that you'll need to use this namespace across all the docker-compose applications"
+When trying to docker-compose up:,"es01                | Exception in thread ""main"" java.nio.file.FileSystemException: /tmp/elasticsearch-12223023449335744691: No space left on device","Docker is out of space, try a docker system prune or remove images you're not using"
+When trying to docker-compose up:,"es01                | uncaught exception in thread [main]
+es01                | {""type"": ""server"", ""timestamp"": ""2021-02-23T05:09:14,120Z"", ""level"": ""ERROR"", ""component"": ""o.e.b.ElasticsearchUncaughtExceptionHandler"", ""cluster.name"": ""es-docker-cluster"", ""node.name"": ""es01"", ""mes
+sage"": ""uncaught exception in thread [main]"",
+es01                | ""stacktrace"": [""org.elasticsearch.bootstrap.StartupException: ElasticsearchException[failed to bind service]; nested: AccessDeniedException[/usr/share/elasticsearch/data/nodes];"",
+...
+es01                | ElasticsearchException[failed to bind service]; nested: AccessDeniedException[/usr/share/elasticsearch/data/nodes];
+es01                | Likely root cause: java.nio.file.AccessDeniedException: /usr/share/elasticsearch/data/nodes",sudo chmod 777 on the ELASTIC_DATA_PATH folder defined in the .env file in the Cosmos/ folder
