@@ -40,7 +40,7 @@ Depending on your machine, you can scale the process by setting DETECT_PROCS and
 processes.
 
 Finally, make sure to set the final four directories, denoting:
-1. an input directory pointing to your PDFs (all pdfs will need to be renamed to valid docids)
+1. an input directory pointing to your PDFs (all pdfs will need to  be renamed to valid docids)
 2. a temporary directory with sufficient hard drive space to write images and such
 3. an output directory to write information. 
 4. Note that the directory serving as ELASTIC_DATA_PATH will need its permissions set to allow read/write by any user, in order to accommodate ElasticSearch's permissions model (e.g. sudo chmod 777 /path/to/es/directory).
@@ -54,12 +54,12 @@ To process the images, run the following line:
 
     docker-compose -f deployment/docker-compose-ingest.yml -p cosmos up
 
-The docker-compose application will finish and just wait. You can ctrl-c out of it when it is done.
+The docker-compose ingest application will process all the documents and then just idle when it is finished. You can ctrl-c out of it at that stage.
 
 The output directory you defined will now be populated with a set of Parquet_ files, as well as an images directory
 containing object specific images, and saved word embeddings over the input corpus. 
 
-cd into the images directory: /path/to/output/dir/images then run the following to move all files into folders beginning with the first two chars of their file names:
+In the output images directory (/path/to/output/dir/images) run the following to move all files into folders beginning with the first two chars of their file names:
 
 .. code-block:: console
 
@@ -74,10 +74,11 @@ modified to include linked and unlinked entities, and an additional parquet file
 containing canonical information for the linked entities. To run the entity linking pipeline:
 
 .. code-block:: console
+
     docker-compose -f deployment/docker-compose-link.yml -p cosmos up
 
 Deploying the COSMOS search interface
------------------------------------
+-------------------------------------
 
 To deploy the search interface over this processed dataset, run the following command:
 
@@ -86,18 +87,19 @@ To deploy the search interface over this processed dataset, run the following co
     docker-compose -f deployment/docker-compose-api.yml cosmos up
 
 This will create an elasticsearch service for you. If you already have a ElasticSearch cluster online, see
-:ref:`Existing ElasticSearch Cluster`. Its datapath is will be set to the environment variable set in the .env file.
+:ref:`Existing ElasticSearch Cluster <existing-es-cluster>`. Its datapath is will be set to the environment variable set in the .env file.
 
 You can expect to see five images up while this is running with docker ps. They are named:
+
 1. cosmos_rerank_model_1
 2. cosmos_front_end_1
 3. cosmos_scheduler_1
 4. cosmos_birdnest_backend
-4. es01
+5. es01
 
-Often if you see an es01 failure in the logging at this stage it is due to the permissions not being set appropriately on the ELASTIC_DATA_PATH as mentioned above. See the :doc:`troubleshooting` guide for details.
+If you see an es01 failure in the logging at this stage it is likely due to the permissions not being set appropriately on the ELASTIC_DATA_PATH as mentioned above. See the :doc:`troubleshooting` guide for details.
 
-Keep the docker-compose application running in it's own pane/terminal. Start a new pane/terminal for the next step.
+Keep the docker-compose API application running in it's own pane/terminal. Start a new pane/terminal for the next step.
 
 Reading ingested data into ElasticSearch
 ----------------------------------------
