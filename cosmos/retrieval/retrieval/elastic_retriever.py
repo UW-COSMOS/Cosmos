@@ -2,7 +2,7 @@ from retrieval.retriever import Retriever
 from elasticsearch_dsl import Search, Q
 from elasticsearch_dsl.connections import connections
 from elasticsearch import RequestsHttpConnection
-from elasticsearch_dsl import Document, Text, connections, Integer, Float, Keyword, Join
+from elasticsearch_dsl import Document, Text, connections, Integer, Float, Keyword, Join, Object as ESObject
 from elasticsearch.helpers import bulk
 import hashlib
 import pandas as pd
@@ -12,6 +12,35 @@ import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+def get_section_page(pages):
+    if pages==[] or pages.size == 0:
+        return -1
+    elif isinstance(pages, float):
+        return pages
+    else:
+        return pages[0]
+
+def get_poly(bb):
+    poly = []
+    try:
+        if not isinstance(bb[0], float):
+            poly = get_bbox(bb[0])
+            for subbb in bb:
+                poly.append(get_bbox(subbb))
+        else:
+            poly =  get_bbox(bb)
+    except IndexError:
+        poly=[]
+    return poly
+
+def get_bbox(bb):
+    # TODO: would be nice to make these proper geojson-style shapes, but ES makes it hard
+    try:
+        poly=bb.tolist() # hack - don't bother trying to shape-ify; just flatten it so we can write it to ES
+    except IndexError:
+        poly = []
+    return poly
 
 def get_size(bbs):
     area = 0
@@ -84,7 +113,7 @@ class Entity(EntityObjectIndex):
         '''
         return hashlib.sha1(f"{self.canonical_id}{self.name}{self.description}{self.types}{self.aliases}{self.dataset_id}".encode('utf-8')).hexdigest()
 
-    def add_object(self, cls, dataset_id, content, header_content, area, detect_score, postprocess_score, pdf_name, img_path=None, commit=True):
+    def add_object(self, cls, dataset_id, content, header_content, bbox, area, detect_score, postprocess_score, pdf_name, page_num, img_path=None, commit=True):
         obj = Object(
             # required make sure the answer is stored in the same shard
             _routing=self.meta.id,
@@ -98,10 +127,12 @@ class Entity(EntityObjectIndex):
             content=content,
             header_content=header_content,
             full_content=combine_content([content, header_content]),
+            bbox=bbox,
             area=area,
             detect_score=detect_score,
             postprocess_score=postprocess_score,
             pdf_name=pdf_name,
+            page_num=page_num,
             img_path=img_path
         )
         if commit:
@@ -140,6 +171,8 @@ class Object(EntityObjectIndex):
     content = Text()
     full_content = Text()
     area = Integer()
+    bbox = ESObject()
+    page_num = Integer()
     pdf_name = Text(fields={'raw': Keyword()})
     img_pth = Text(fields={'raw': Keyword()})
 
@@ -228,8 +261,10 @@ class ElasticRetriever(Retriever):
             if len(docids) > 0:
                 dq = dq & Q('bool', should=[Q('match_phrase', name=f"{i}.pdf") for i in docids])
                 doc_filter=True
+            logger.info(f"adding document_filter_terms: {document_filter_terms}")
             if len(document_filter_terms) > 0:
-                dq = dq & Q('bool', must=[Q('match_phrase', full_content=i) for i in document_filter_terms])
+                logger.info(f"adding document_filter_terms")
+                dq = dq & Q('bool', must=[Q('match_phrase', content=i) for i in document_filter_terms])
                 doc_filter=True
 
             if doc_filter:
@@ -238,7 +273,7 @@ class ElasticRetriever(Retriever):
                 pdf_names = []
                 for resp in ds.scan():
                     pdf_names.append(resp['name'])
-                logging.info(f"{len(pdf_names)} pdfs found")
+                logger.info(f"{len(pdf_names)} pdfs found")
 
             q = Q()
             if query is None:
@@ -370,9 +405,11 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['section_header'],
+                                           get_poly(row['obj_bbs']),
                                            get_size(row['obj_bbs']),
                                            row['detect_score'],
                                            row['postprocess_score'],
+                                           row['obj_pages'][0], # hack: only grab the first bbox's page IAR - 24.Feb.2021
                                            row['pdf_name'],
                                            commit=False))
                             if len(to_add) == 100:
@@ -391,9 +428,11 @@ class ElasticRetriever(Retriever):
                                 content=row['content'],
                                 header_content=row['section_header'],
                                 full_content=combine_contents([row['content'], row['section_header']]),
+                                bbox=get_poly(row['obj_bbs']),
                                 area=get_size(row['obj_bbs']),
                                 detect_score=row['detect_score'],
                                 postprocess_score=row['postprocess_score'],
+                                page_num= get_section_page(row['obj_pages']), # hack: only grab the first bbox's page IAR - 24.Feb.2021
                                 pdf_name=row['pdf_name'],
                            ))
                     if len(to_add) == 1000:
@@ -418,9 +457,11 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['caption_content'],
+                                           get_poly(row['obj_bbs']),
                                            get_size(row['obj_bbs']),
                                            row['detect_score'],
                                            row['postprocess_score'],
+                                           row['obj_page'],
                                            row['pdf_name'],
                                            row['img_pth'],
                                            commit=False))
@@ -437,9 +478,11 @@ class ElasticRetriever(Retriever):
                         content=row['content'],
                         header_content=row['caption_content'],
                         full_content=combine_contents([row['content'], row['caption_content']]),
+                        bbox=get_poly(row['obj_bbs']),
                         area=get_size(row['obj_bbs']),
                         detect_score=row['detect_score'],
                         postprocess_score=row['postprocess_score'],
+                        page_num=row['obj_page'],
                         pdf_name=row['pdf_name'],
                         img_pth=row['img_pth'],
                         ))
@@ -465,9 +508,11 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['caption_content'],
+                                           get_poly(row['obj_bbs']),
                                            get_size(row['obj_bbs']),
                                            row['detect_score'],
                                            row['postprocess_score'],
+                                           row['obj_page'],
                                            row['pdf_name'],
                                            row['img_pth'],
                                            commit=False))
@@ -484,9 +529,11 @@ class ElasticRetriever(Retriever):
                            content=row['content'],
                            header_content=row['caption_content'],
                            full_content=combine_contents([row['content'], row['caption_content']]),
+                           bbox=get_poly(row['obj_bbs']),
                            area=get_size(row['obj_bbs']),
                            detect_score=row['detect_score'],
                            postprocess_score=row['postprocess_score'],
+                           page_num=row['obj_page'],
                            pdf_name=row['pdf_name'],
                            img_pth=row['img_pth'],
                            ))
@@ -512,9 +559,11 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            None,
+                                           get_poly(row['equation_bb']),
                                            get_size(row['equation_bb']),
                                            row['detect_score'],
                                            row['postprocess_score'],
+                                           row['equation_page'],
                                            row['pdf_name'],
                                            row['img_pth'],
                                            commit=False))
@@ -531,13 +580,15 @@ class ElasticRetriever(Retriever):
                            content=row['content'],
                            header_content='',
                            full_content=combine_contents([row['content']]),
+                           bbox=get_poly(row['equation_bb']),
                            area=get_size(row['equation_bb']),
                            detect_score=row['detect_score'],
                            postprocess_score=row['postprocess_score'],
+                           page_num=row['equation_page'],
                            pdf_name=row['pdf_name'],
                            img_pth=row['img_pth'],
                            ))
-                    if len(to_add) == 500:
+                    if len(to_add) == 200:
                         bulk(connections.get_connection(), (upsert(d) for d in to_add))
                         to_add = []
                 bulk(connections.get_connection(), (upsert(d) for d in to_add))
