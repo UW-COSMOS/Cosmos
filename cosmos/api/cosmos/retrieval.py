@@ -78,8 +78,7 @@ fields_defs = {
 def require_apikey(fcn):
     @wraps(fcn)
     def decorated_function(*args, **kwargs):
-#        if request.args.get('api_key') and request.args.get('api_key') in API_KEYS:
-        if True:
+        if request.args.get('api_key') and request.args.get('api_key') in API_KEYS:
             return fcn(*args, **kwargs)
         elif len(request.args) == 0: # if bare request, show the helptext even without an API key
             return fcn(*args, **kwargs)
@@ -236,8 +235,12 @@ def document():
         else:
             ignore_bytes = False
 
-    count = current_app.retriever.search(None, get_count=True, final=False, docids=[docid], dataset_id=DATASET_ID)
-    results = current_app.retriever.search(None, docids=[docid], final=True, dataset_id=DATASET_ID)
+    obj_type = request.args.get('type', type=str)
+    if obj_type == 'Body Text':
+        obj_type = 'Section'
+
+    count = current_app.retriever.search(None, get_count=True, final=False, docids=[docid], dataset_id=DATASET_ID, cls=obj_type)
+    results = current_app.retriever.search(None, docids=[docid], final=True, dataset_id=DATASET_ID, cls=obj_type)
     if len(results) == 0:
         return {'page': 0, 'objects': [], 'v': VERSION, 'license': LICENSE}
     bibjsons = get_bibjsons([i['pdf_name'].replace(".pdf", "")  for i in results])
