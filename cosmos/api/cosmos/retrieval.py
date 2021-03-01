@@ -175,6 +175,21 @@ def route_help(endpoint):
                 }
         if endpoint=="count":
             helptext['success']['fields'] = {"total_results" : "Total number of objects matching the search criteria"}
+    elif endpoint == "document":
+        helptext = {
+                "success": {
+                    "v" : VERSION,
+                    "description" : f"TODO",
+                    'options': {
+                        'parameters' : makedict([], parameter_defs),
+                        'output_formats' : 'json',
+                        'examples' : [
+                            f'/api/{VERSION}/search?query=temperature&type=Figure&base_confidence=1.0&postprocessing_confidence=0.7',
+                            ],
+                        'fields' : makedict([], fields_defs)
+                        }
+                    }
+                }
     return helptext
 
 @bp.route(f'/search/image/<page_id>')
@@ -196,15 +211,14 @@ def tags():
     return jsonify(resp)
 
 
-@bp.route(f'/document', endpoint='document')
+@bp.route('/document', endpoint='document')
 @require_apikey
 def document():
     """
     Bring back document-level summary.
-    TODO: bring back bibjson
-    TODO: summarize objects (with objectids) for the document
-    TODO: better document filtering here?
     """
+    if len(request.args) == 0:
+        return jsonify(route_help(request.endpoint))
 
     docid = request.args.get('docid', default='', type=str)
     doi = request.args.get('doi', default='', type=str)
@@ -213,21 +227,33 @@ def document():
         if docid == '':
             return jsonify({'error' : 'DOI not in xDD system!', 'v' : VERSION})
 
+    ignore_bytes = request.args.get('ignore_bytes', default='False', type=str)
+    try:
+        ignore_bytes = bool(util.strtobool(ignore_bytes)) # use the value provided
+    except ValueError:
+        if ignore_bytes == "":
+            ignore_bytes=True # if it was passed in bare, assume toggle from default
+        else:
+            ignore_bytes = False
+
     count = current_app.retriever.search(None, get_count=True, final=False, docids=[docid], dataset_id=DATASET_ID)
     results = current_app.retriever.search(None, docids=[docid], final=True, dataset_id=DATASET_ID)
     if len(results) == 0:
         return {'page': 0, 'objects': [], 'v': VERSION, 'license': LICENSE}
     bibjsons = get_bibjsons([i['pdf_name'].replace(".pdf", "")  for i in results])
 
-    results = [
-            {"id" : i["children"][0]["id"],
-                "cls" : i["children"][0]["cls"],
-                "postprocessing_confidence": i["children"][0]["postprocessing_confidence"],
-                "base_confidence" : i["children"][0]["base_confidence"],
-                "content" : i["children"][0]["content"],
-                "header_content" : i["children"][0]["header_content"]
-                } for i in results
-            ]
+    image_dir = '/data/images'
+    for result in results:
+        for child in result['children']:
+            if child['bytes'] is not None and not ignore_bytes:
+                img_pth = os.path.basename(child['bytes'])
+                img_pth = img_pth[:2] + "/" + os.path.basename(child['bytes']) # hack. Reorganized images into filename[:2]/filename because having half a million pngs in one dir suuuuuuucks
+                if IMG_TYPE == "JPG":
+                    img_pth = img_pth.replace("png", "jpg")
+                with open(os.path.join(image_dir, img_pth), 'rb') as imf:
+                    child['bytes'] = base64.b64encode(imf.read()).decode('ascii')
+            else:
+                child['bytes'] = None
 
     return jsonify({'v' : VERSION, 'total': count, 'page': 0, 'bibjson' : bibjsons[docid], 'objects': results, 'license' : LICENSE})
 
