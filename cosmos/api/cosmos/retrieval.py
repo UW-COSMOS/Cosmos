@@ -7,6 +7,7 @@ import os
 import requests
 import base64
 import json
+from distutils import util
 logger = logging.getLogger(__name__)
 
 
@@ -241,7 +242,11 @@ def search():
     current_app.logger.info(request.args)
     query = request.args.get('query', type=str)
     obj_type = request.args.get('type', type=str)
-    inclusive = request.args.get('inclusive', default=False, type=bool)
+    inclusive = request.args.get('inclusive', default='False', type=str)
+    try:
+        inclusive = bool(util.strtobool(inclusive))
+    except ValueError:
+        inclusive = False
 
     obj_id = request.args.get('id', type=str)
 
@@ -262,7 +267,15 @@ def search():
     if obj_type == 'Body Text':
         obj_type = 'Section'
     page_num = request.args.get('page', type=int)
-    ignore_bytes = request.args.get('ignore_bytes', type=bool)
+    ignore_bytes = request.args.get('ignore_bytes', default='False', type=str)
+    try:
+        ignore_bytes = bool(util.strtobool(ignore_bytes)) # use the value provided
+    except ValueError:
+        if ignore_bytes == "":
+            ignore_bytes=True # if it was passed in bare, assume toggle from default
+        else:
+            ignore_bytes = False
+
     if page_num is None:
         page_num = 0
     base_confidence = request.args.get('base_confidence', default=1.0, type=float)
