@@ -314,7 +314,11 @@ class ElasticRetriever(Retriever):
                                           )
         else:
             connections.create_connection(hosts=self.hosts)
-        return Object.get(id=id)
+        try:
+            obj = Object.get(id=id)
+        except:
+            obj = None
+        return obj
 
     def build_index(self, document_parquet, entities_parquet, section_parquet, tables_parquet, figures_parquet, equations_parquet):
         if self.awsauth is not None:
