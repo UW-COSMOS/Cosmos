@@ -25,6 +25,11 @@ else:
     VERSION='v2_beta'
 LICENSE = 'https://creativecommons.org/licenses/by-nd/2.0/'
 
+if "ENFORCE_API_KEY" in os.environ:
+    ENFORCE_API_KEY = bool(util.strtobool(os.environ["ENFORCE_API_KEY"])) # use the value provided
+else:
+    ENFORCE_API_KEY = False
+
 if "API_KEYS" in os.environ:
     API_KEYS = os.environ["API_KEYS"].split(",")
 else:
@@ -79,6 +84,8 @@ fields_defs = {
 def require_apikey(fcn):
     @wraps(fcn)
     def decorated_function(*args, **kwargs):
+        if not ENFORCE_API_KEY:
+            return fcn(*args, **kwargs)
         if request.args.get('api_key') and request.args.get('api_key') in API_KEYS:
             return fcn(*args, **kwargs)
         elif len(request.args) == 0 and len(args) == 0 and len(kwargs) == 0: # if bare request, show the helptext even without an API key
