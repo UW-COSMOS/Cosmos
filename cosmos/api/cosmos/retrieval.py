@@ -49,6 +49,8 @@ else:
 parameter_defs = {
         'api_key': '(str, Required) - String token that grants access to the COSMOS extractions.',
         'query': '(str, Required) - term or comma-separated list of terms to search for. Default search logic will utilize an OR of comma-separated words.',
+        'doi': '(str) - DOI of an article. Case-insensitive.',
+        'docid' : '(str) - xDD ID of an article to search',
         'type': '[Table, Figure, Equation, Body Text, Combined] - the type of object to search for.',
         'page': '(int) - Page of results (starts at 0)',
         'id' : 'Internal COSMOS ID of an object to retrieve.',
@@ -56,7 +58,6 @@ parameter_defs = {
         'base_confidence': '(float)- Output logit score from detection model. Measures confidence of the initial COSMOS classification. Only results with confidence higher than the specified value will be returned. Default is 1.0.',
         'postprocessing_confidence': '(0.0-1.0) - Confidence score of the COSMOS post-processing model. Only results with confidence higher than the specified value will be returned. Default is 0.7.',
         'document_filter_terms': '(str) - Comma- or space-separated list of additional terms to require at the document level. Applies AND logic to comma- or space-separated words.',
-        'context_filter_terms': '(str) - Comma- or space-separated list of additional terms to require at the object level. Applies AND logic to comma- or space-separated words.',
         'ignore_bytes': '(bool) If true, do not return the bytes of the extracted image (e.g. only return text content of objects)'
         }
 
@@ -80,10 +81,13 @@ def require_apikey(fcn):
     def decorated_function(*args, **kwargs):
         if request.args.get('api_key') and request.args.get('api_key') in API_KEYS:
             return fcn(*args, **kwargs)
-        elif len(request.args) == 0: # if bare request, show the helptext even without an API key
+        elif len(request.args) == 0 and len(args) == 0 and len(kwargs) == 0: # if bare request, show the helptext even without an API key
             return fcn(*args, **kwargs)
         else:
-            abort(401)
+            if 'objid' in kwargs.keys() and kwargs['objid'] == None:
+                return fcn(*args, **kwargs)
+            else:
+                abort(401)
     return decorated_function
 
 def get_docid(doi):
@@ -178,14 +182,29 @@ def route_help(endpoint):
         helptext = {
                 "success": {
                     "v" : VERSION,
-                    "description" : f"TODO",
+                    "description" : f"Retrieve objects extracted by COSMOS for a particular document, searching via DOI or xDD document id.",
                     'options': {
-                        'parameters' : makedict([], parameter_defs),
+                        'parameters' : makedict(['api_key', 'doi', 'docid', 'ignore_bytes', 'type'], parameter_defs),
                         'output_formats' : 'json',
                         'examples' : [
-                            f'/api/{VERSION}/search?query=temperature&type=Figure&base_confidence=1.0&postprocessing_confidence=0.7',
+                            f'/api/{VERSION}/document?docid=593024fdcf58f137a8785652',
                             ],
-                        'fields' : makedict([], fields_defs)
+                        'fields' : makedict(["page", "total", "v", "pdf_name","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence"], fields_defs)
+                        }
+                    }
+                }
+    elif endpoint == "object":
+        helptext = {
+                "success": {
+                    "v" : VERSION,
+                    "description" : f"Retrieve an object from the COSMOS backend via positional object id argument.",
+                    'options': {
+                        'parameters' : makedict(['api_key'], parameter_defs),
+                        'output_formats' : 'json',
+                        'examples' : [
+                            f'/api/{VERSION}/object/47cdeb83ead454b4ad6e282dc9e2415ff253d25d',
+                            ],
+                        'fields' : makedict(["page", "total", "v", "pdf_name","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence"], fields_defs)
                         }
                     }
                 }
@@ -341,9 +360,14 @@ def search():
 
     return jsonify({'v' : VERSION, 'total': count, 'page': page_num, 'objects': results, 'license' : LICENSE})
 
-@bp.route('object/<objid>')
+@bp.route('/object/', defaults={'objid' : None}, endpoint='object')
+@bp.route('/object', defaults={'objid' : None}, endpoint='object')
+@bp.route('/object/<objid>', endpoint='object')
 @require_apikey
 def object(objid):
+    if objid is None:
+        return jsonify(route_help(request.endpoint))
+
     ignore_bytes = request.args.get('ignore_bytes', type=bool)
     contexts = [current_app.retriever.get_object(objid)]
     count = len(contexts)
