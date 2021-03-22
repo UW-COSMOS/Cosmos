@@ -276,16 +276,24 @@ def document():
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                img_pth = img_pth[:2] + "/" + os.path.basename(child['bytes']) # hack. Reorganized images into filename[:2]/filename because having half a million pngs in one dir suuuuuuucks
-                if IMG_TYPE == "JPG":
-                    img_pth = img_pth.replace("png", "jpg")
-                with open(os.path.join(image_dir, img_pth), 'rb') as imf:
-                    child['bytes'] = base64.b64encode(imf.read()).decode('ascii')
+                child['bytes'] = get_image_bytes(img_pth)
             else:
                 child['bytes'] = None
-
     return jsonify({'v' : VERSION, 'total': count, 'page': 0, 'bibjson' : bibjsons[docid], 'objects': results, 'license' : LICENSE})
 
+def get_image_bytes(img_pth):
+    cbytes = None
+    image_dir = '/data/images'
+    if not os.path.exists(os.path.join(image_dir, img_pth)):
+        img_pth = img_pth[:2] + "/" + img_pth # hack. Reorganized images into filename[:2]/filename because having half a million pngs in one dir suuuuuuucks
+    # TODO: handle thumbs. Here? Or at the route definition?
+    if IMG_TYPE == "JPG":
+        img_pth = img_pth.replace("png", "jpg")
+    if not os.path.exists(os.path.join(image_dir, img_pth)):
+        return None
+    with open(os.path.join(image_dir, img_pth), 'rb') as imf:
+        cbytes = base64.b64encode(imf.read()).decode('ascii')
+    return cbytes
 
 @bp.route(f'/count', endpoint='count')
 @bp.route(f'/search', endpoint='search')
@@ -357,11 +365,7 @@ def search():
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                img_pth = img_pth[:2] + "/" + os.path.basename(child['bytes']) # hack. Reorganized images into filename[:2]/filename because having half a million pngs in one dir suuuuuuucks
-                if IMG_TYPE == "JPG":
-                    img_pth = img_pth.replace("png", "jpg")
-                with open(os.path.join(image_dir, img_pth), 'rb') as imf:
-                    child['bytes'] = base64.b64encode(imf.read()).decode('ascii')
+                child['bytes'] = get_image_bytes(img_pth)
             else:
                 child['bytes'] = None
 
@@ -403,11 +407,7 @@ def object(objid):
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                img_pth = img_pth[:2] + "/" + os.path.basename(child['bytes']) # hack. Reorganized images into filename[:2]/filename because having half a million pngs in one dir suuuuuuucks
-                if IMG_TYPE == "JPG":
-                    img_pth = img_pth.replace("png", "jpg")
-                with open(os.path.join(image_dir, img_pth), 'rb') as imf:
-                    child['bytes'] = base64.b64encode(imf.read()).decode('ascii')
+                child['bytes'] = get_image_bytes(img_pth)
             else:
                 child['bytes'] = None
     return jsonify({'v' : VERSION, 'total': count, 'page': page_num, 'objects': results, 'license' : LICENSE})
@@ -416,7 +416,7 @@ def object(objid):
 @bp.route(f'/statistics', endpoint='statistics', methods=['GET'])
 @require_apikey
 def statistics():
-    return jsonify({'n_pages': current_app.retriever.count("page", dataset_id=DATASET_ID), 'n_objects': current_app.retriever.count("object", dataset_id=DATASET_ID), 'n_pdfs': current_app.retriever.count("fulldocument", dataset_id=DATASET_ID)})
+    return jsonify({'n_pages': current_app.retriever.count("page", dataset_id=DATASET_ID), 'n_objects': current_app.retriever.count("eo-site", dataset_id=DATASET_ID), 'n_pdfs': current_app.retriever.count("fulldocument", dataset_id=DATASET_ID)})
 
 
 @bp.route('/entity', endpoint='entity', methods=['GET'])
