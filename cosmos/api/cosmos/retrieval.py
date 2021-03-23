@@ -63,6 +63,7 @@ parameter_defs = {
         'base_confidence': '(float)- Output logit score from detection model. Measures confidence of the initial COSMOS classification. Only results with confidence higher than the specified value will be returned. Default is 1.0.',
         'postprocessing_confidence': '(0.0-1.0) - Confidence score of the COSMOS post-processing model. Only results with confidence higher than the specified value will be returned. Default is 0.7.',
         'document_filter_terms': '(str) - Comma- or space-separated list of additional terms to require at the document level. Applies AND logic to comma- or space-separated words.',
+        "image_type": "[jpg, thumbnail, original] - Which type of image to bring back. Original (uncompressed PNG), compressed JPG, or thumbnail (max dim. 200px).",
         'ignore_bytes': '(bool) If true, do not return the bytes of the extracted image (e.g. only return text content of objects)'
         }
 
@@ -172,7 +173,7 @@ def route_help(endpoint):
                     "v" : VERSION,
                     "description" : f"Query the COSMOS extractions for objects and contexts mentioning a term passing filtration criteria. Utilizes the Elasticsearch retrieval engine. Objects matching the query are returned, along with their parent or children objects resulting from the COSMOS contextual aggregation process (e.g. figures will be return as a child object for a figure caption mentioning a phrase; all body text within a section will be returned as children to a section header mentioning a term). Result order is determined by search rank (results with high-density mentions of the term will appear first). {N_RESULTS} results are returned per page.",
                     'options': {
-                        'parameters' : makedict(['api_key', 'query', 'type', 'page', 'inclusive', 'base_confidence', 'postprocessing_confidence', 'ignore_bytes', 'id'], parameter_defs),
+                        "parameters" : makedict(["api_key", "query", "type", "page", "inclusive", "base_confidence", "postprocessing_confidence", "image_type", "ignore_bytes", "id"], parameter_defs),
                         'output_formats' : 'json',
                         'examples' : [
                             f'/api/{VERSION}/search?query=temperature&type=Figure&base_confidence=1.0&postprocessing_confidence=0.7',
@@ -191,12 +192,12 @@ def route_help(endpoint):
                     "v" : VERSION,
                     "description" : f"Retrieve objects extracted by COSMOS for a particular document, searching via DOI or xDD document id.",
                     'options': {
-                        'parameters' : makedict(['api_key', 'doi', 'docid', 'ignore_bytes', 'type'], parameter_defs),
+                        'parameters' : makedict(['api_key', 'doi', 'docid', 'image_type', 'ignore_bytes', 'type'], parameter_defs),
                         'output_formats' : 'json',
                         'examples' : [
                             f'/api/{VERSION}/document?docid=593024fdcf58f137a8785652',
                             ],
-                        'fields' : makedict(["page", "total", "v", "pdf_name","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence"], fields_defs)
+                        "fields" : makedict(["page", "total", "v", "pdf_name","bibjson", "[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence"], fields_defs)
                         }
                     }
                 }
@@ -206,7 +207,7 @@ def route_help(endpoint):
                     "v" : VERSION,
                     "description" : f"Retrieve an object from the COSMOS backend via positional object id argument.",
                     'options': {
-                        'parameters' : makedict(['api_key'], parameter_defs),
+                        'parameters' : makedict(['api_key', 'image_type'], parameter_defs),
                         'output_formats' : 'json',
                         'examples' : [
                             f'/api/{VERSION}/object/47cdeb83ead454b4ad6e282dc9e2415ff253d25d',
@@ -252,6 +253,7 @@ def document():
         if docid == '':
             return jsonify({'error' : 'DOI not in xDD system!', 'v' : VERSION})
 
+    image_type = request.args.get('image_type', default=IMG_TYPE, type=str)
     ignore_bytes = request.args.get('ignore_bytes', default='False', type=str)
     try:
         ignore_bytes = bool(util.strtobool(ignore_bytes)) # use the value provided
@@ -276,19 +278,23 @@ def document():
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                child['bytes'] = get_image_bytes(img_pth)
+                child['bytes'] = get_image_bytes(img_pth, image_type)
             else:
                 child['bytes'] = None
     return jsonify({'v' : VERSION, 'total': count, 'page': 0, 'bibjson' : bibjsons[docid], 'objects': results, 'license' : LICENSE})
 
-def get_image_bytes(img_pth):
+def get_image_bytes(img_pth, image_type):
     cbytes = None
     image_dir = '/data/images'
     if not os.path.exists(os.path.join(image_dir, img_pth)):
         img_pth = img_pth[:2] + "/" + img_pth # hack. Reorganized images into filename[:2]/filename because having half a million pngs in one dir suuuuuuucks
-    # TODO: handle thumbs. Here? Or at the route definition?
-    if IMG_TYPE == "JPG":
+    if image_type.upper() == "JPG":
         img_pth = img_pth.replace("png", "jpg")
+    elif image_type.upper() == "THUMBNAIL":
+        img_pth = img_pth.replace(".png", "_thumb.jpg")
+    elif image_type.upper() == "ORIGINAL": # placeholder
+        pass
+    current_app.logger.info(f"getting {img_pth}")
     if not os.path.exists(os.path.join(image_dir, img_pth)):
         return None
     with open(os.path.join(image_dir, img_pth), 'rb') as imf:
@@ -306,6 +312,7 @@ def search():
     query = request.args.get('query', type=str)
     obj_type = request.args.get('type', type=str)
     inclusive = request.args.get('inclusive', default='False', type=str)
+    image_type = request.args.get('image_type', default=IMG_TYPE, type=str)
     try:
         inclusive = bool(util.strtobool(inclusive))
     except ValueError:
@@ -365,7 +372,7 @@ def search():
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                child['bytes'] = get_image_bytes(img_pth)
+                child['bytes'] = get_image_bytes(img_pth, image_type)
             else:
                 child['bytes'] = None
 
@@ -380,6 +387,7 @@ def object(objid):
         return jsonify(route_help(request.endpoint))
 
     ignore_bytes = request.args.get('ignore_bytes', type=bool)
+    image_type = request.args.get('image_type', default=IMG_TYPE, type=str)
     contexts = [current_app.retriever.get_object(objid)]
     count = len(contexts)
     page_num = 0
@@ -407,7 +415,7 @@ def object(objid):
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                child['bytes'] = get_image_bytes(img_pth)
+                child['bytes'] = get_image_bytes(img_pth, image_type)
             else:
                 child['bytes'] = None
     return jsonify({'v' : VERSION, 'total': count, 'page': page_num, 'objects': results, 'license' : LICENSE})
