@@ -278,12 +278,12 @@ def document():
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                child['bytes'] = get_image_bytes(img_pth, image_type)
+                child['bytes'] = get_image_bytes(img_pth, image_type, " ".join([child[i] if i in child and child[i] is not None else "" for i in ["content", "header_content"]]) , child["cls"])
             else:
                 child['bytes'] = None
     return jsonify({'v' : VERSION, 'total': count, 'page': 0, 'bibjson' : bibjsons[docid], 'objects': results, 'license' : LICENSE})
 
-def get_image_bytes(img_pth, image_type):
+def get_image_bytes(img_pth, image_type, content, cls):
     cbytes = None
     image_dir = '/data/images'
     if not os.path.exists(os.path.join(image_dir, img_pth)):
@@ -294,9 +294,12 @@ def get_image_bytes(img_pth, image_type):
         img_pth = img_pth.replace(".png", "_thumb.jpg")
     elif image_type.upper() == "ORIGINAL": # placeholder
         pass
-    current_app.logger.info(f"getting {img_pth}")
     if not os.path.exists(os.path.join(image_dir, img_pth)):
         return None
+    # Filter out copyrighted, reproduced from type figures
+    if cls=="Figure" and ("permission" in content.lower() or "copyright" in content.lower() or "reproduced from" in content.lower() or "reproduced with" in content.lower()):
+        image_dir = "./cosmos/"
+        img_pth = "Copyright.png"
     with open(os.path.join(image_dir, img_pth), 'rb') as imf:
         cbytes = base64.b64encode(imf.read()).decode('ascii')
     return cbytes
@@ -372,7 +375,7 @@ def search():
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                child['bytes'] = get_image_bytes(img_pth, image_type)
+                child['bytes'] = get_image_bytes(img_pth, image_type, " ".join([child[i] if i in child and child[i] is not None else "" for i in ["content", "header_content"]]) , child["cls"])
             else:
                 child['bytes'] = None
 
@@ -415,7 +418,7 @@ def object(objid):
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                child['bytes'] = get_image_bytes(img_pth, image_type)
+                child['bytes'] = get_image_bytes(img_pth, image_type, " ".join([child[i] if i in child and child[i] is not None else "" for i in ["content", "header_content"]]) , child["cls"])
             else:
                 child['bytes'] = None
     return jsonify({'v' : VERSION, 'total': count, 'page': page_num, 'objects': results, 'license' : LICENSE})
