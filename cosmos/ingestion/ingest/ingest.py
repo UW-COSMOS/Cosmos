@@ -279,7 +279,7 @@ class Ingest:
             if row['postprocess_cls'] not in pp_classes_to_ignore:
                 all_doc_words.append(row['content'].split())
 
-        context_column = 'content_enriched'
+        context_column = 'context_from_text'
 
         tables_df = doc_and_tables_dfs[1]
         tables_df[context_column] = None  # create enriched content column
@@ -383,7 +383,7 @@ class Ingest:
                         logger.info(f'table row:\n {row}')
 
                 # add all context and content to output column
-                tables_df.at[index, context_column] = row['content'] + ' ' + ' '.join(contexts).strip()
+                tables_df.at[index, context_column] = ' '.join(contexts).strip()
 
         return tables_df.loc[:, tables_df_columns]
 
