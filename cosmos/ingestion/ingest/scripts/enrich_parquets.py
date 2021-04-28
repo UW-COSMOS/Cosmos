@@ -9,7 +9,8 @@ use_rules_postprocess = False
 
 dataset_id = 'documents_5Feb'
 path_to_parquet_dirs = '/hdd/iain/enrichment_testing/cosmos_covid_5Feb2021_enriched'
-threshold = 0.72
+pp_threshold = 0.72
+d_threshold = -10
 spans = 20
 
 if __name__ == '__main__':
@@ -22,5 +23,6 @@ if __name__ == '__main__':
     for enrichment_path in Path(path_to_parquet_dirs).glob('*'):
         ingest.enrich(file_path=enrichment_path,
                       dataset_id=dataset_id,
-                      threshold=threshold,
+                      pp_threshold=pp_threshold,
+                      d_threshold=d_threshold,
                       spans=spans)

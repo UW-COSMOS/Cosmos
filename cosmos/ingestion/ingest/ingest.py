@@ -89,7 +89,8 @@ class Ingest:
                compute_word_vecs=False,
                ngram=1,
                enrich=False,
-               threshold=0.8,
+               pp_threshold=0.8,
+               d_threshold=-10,
                spans=20):
         """
         Handler for ingestion pipeline.
@@ -113,7 +114,8 @@ class Ingest:
         :param compute_word_vecs: Whether to compute word vectors over the corpus
         :param ngram: n in ngram for word vecs
         :param enrich: If true run semantic enrichment on ingest output parquets
-        :param threshold: postprocess_score threshold for identifying an object for context enrichment
+        :param pp_threshold: postprocess_score threshold for identifying an object for context enrichment
+        :param d_threshold: detect_score threshold
         :param spans: number of words either side of an object coreference to capture for context
         """
         os.makedirs(images_pth, exist_ok=True)
@@ -202,19 +204,21 @@ class Ingest:
             logger.info('BEGIN ENRICH PROCESS')
             self.enrich(file_path=result_path,
                         dataset_id=dataset_id,
-                        threshold=threshold,
+                        pp_threshold=pp_threshold,
+                        d_threshold=d_threshold,
                         spans=spans)
 
-    def enrich(self, file_path: str, dataset_id: str, threshold: float, spans: int):
+    def enrich(self, file_path: str, dataset_id: str, pp_threshold: float, d_threshold: float, spans: int):
         """
         add rows to dataset_id_tables.parquet
         :param file_path: a directory full of parquets (ingest output) to process
         :param dataset_id: ingest process dataset_id
-        :param threshold: float cut off for postprocess table detection score to process as table caption
+        :param pp_threshold: float cut off for postprocess_score to process as table caption
+        :param d_threshold: float cut off for detect_score to process as table caption
         :param spans: number of words each side of label to pull in as context for each table label in content text
                 if None will use regex to pull out full stop to full stop span around the table label
         """
-        files = []
+
         dataset_id_df_path = ''
         tables_df_path = ''
         for pq in glob.glob(os.path.join(file_path, '*.parquet')):
@@ -240,7 +244,8 @@ class Ingest:
             table_rows_per_doc_dfs.append(tables_df[tables_df['pdf_name'] == name])
 
         partial_get_context = functools.partial(Ingest.get_contexts,
-                                                threshold,
+                                                pp_threshold,
+                                                d_threshold,
                                                 spans)
         logger.info(f'start enrichment processing with doc count {len(single_doc_dfs)}')
         enriched = [self.client.submit(partial_get_context,
@@ -254,20 +259,22 @@ class Ingest:
         logger.info(f'size of df returned from enrichment: {len(df)}')
         df = df.reset_index(drop=True)
 
-        output_path = os.path.join(file_path, basename)
+        output_path = os.path.join(file_path, basename+'_enriched_fixed')
         logger.info(f'outputting data: {output_path}')
         df.to_parquet(output_path)
 
     @classmethod
-    def get_contexts(cls, threshold, spans, doc_and_tables_dfs):
+    def get_contexts(cls, pp_threshold, d_threshold, spans, doc_and_tables_dfs):
         """
         perform context enrichment per doc in ingest output parquet - code to run on dask cluster worker
-        :param threshold: postprocess_score value needed to act on a given postprocess_cls Table or Table Caption
+        :param pp_threshold: postprocess_score value needed to act on a given Table or Table Caption
+        :param d_threshold: detect_score value needed to act on a given Table or Table Caption
         :param spans: number of words either side of a label to capture as context in doc content
         :param doc_and_tables_dfs: input dataframes - representing one doc of output from ingest pipeline, and
         associated tables
         :return doc_df: input dataframe with any enriched rows added
         """
+
         # disable SettingWithCopyWarning - safe since always over writing original
         pd.options.mode.chained_assignment = None
 
@@ -294,14 +301,16 @@ class Ingest:
             original_tables_df['caption_content'] = [
                 re.sub(r"[^0-9a-zA-Z ]+", '', ' '.join(content.split()[:label_length]))
                 if (caption_content is None) and
-                   (pp_score >= threshold) and
+                   (pp_score >= pp_threshold) and
+                   (d_score >= d_threshold) and
                    (len(content.split()) >= label_length) and
                    (content.split()[:label_length][0].lower() == 'table') and
                    (re.sub(r"[^0-9a-zA-Z ]+", '', content).split()[:label_length][1].isdigit())
                 else caption_content
-                for caption_content, pp_score, content in zip(original_tables_df['caption_content'],
-                                                              original_tables_df['postprocess_score'],
-                                                              original_tables_df['content'])
+                for caption_content, pp_score, d_score, content in zip(original_tables_df['caption_content'],
+                                                                       original_tables_df['postprocess_score'],
+                                                                       original_tables_df['detect_score'],
+                                                                       original_tables_df['content'])
             ]
         except Exception as e:
             logger.info(f"{pdf_name} failed updating caption_contents:\n {e}")
@@ -312,10 +321,13 @@ class Ingest:
         # can't have a trailing non-alphanumeric e.g end in '.'
         original_tables_df['table_label'] = [
             re.sub(r"[^0-9a-zA-Z., ]+", '', ' '.join(caption_content.split()[:label_length]))
-            if caption_content and (pp_score >= threshold)
+            if caption_content and
+               (pp_score >= pp_threshold) and
+               (d_score >= d_threshold)
             else None
-            for caption_content, pp_score in zip(original_tables_df['caption_content'],
-                                                 original_tables_df['postprocess_score'])
+            for caption_content, pp_score, d_score in zip(original_tables_df['caption_content'],
+                                                          original_tables_df['postprocess_score'],
+                                                          original_tables_df['detect_score'])
         ]
         # remove last char of label if non-alphanumeric (if not None)
         try:
@@ -382,7 +394,7 @@ class Ingest:
                         logger.info(f"{pdf_name} failed fetching context indices for '{table_label}':\n {e}")
                         logger.info(f'table row:\n {row}')
 
-                # add all context and content to output column
+                # add all context to context column
                 tables_df.at[index, context_column] = ' '.join(contexts).strip()
 
         return tables_df.loc[:, tables_df_columns]
