@@ -189,6 +189,89 @@ will come from the next 25 documents, and thus will have no overlap with the fir
 </div>
 <div class="section" id="elasticsearch-index-fields">
 <h1>Elasticsearch Index - Fields<a class="headerlink" href="#elasticsearch-index-fields" title="Permalink to this headline">¶</a></h1>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 8%" />
+<col style="width: 76%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td colspan="3"><p>Object fields</p></td>
+</tr>
+<tr class="row-odd"><td><p>area</p></td>
+<td><p>integer</p></td>
+<td><p>size (in sq. pixels) of identified area</p></td>
+</tr>
+<tr class="row-even"><td><p>cls</p></td>
+<td><p>text</p></td>
+<td><p>detected object class (figure, table, body text, section header, etc)</p></td>
+</tr>
+<tr class="row-odd"><td><p>content</p></td>
+<td><p>text</p></td>
+<td><p>Text content within the detected object</p></td>
+</tr>
+<tr class="row-even"><td><p>context_from_text</p></td>
+<td><p>text</p></td>
+<td><p>Context surrounding mentions of identified object within the body text. (Experimental)</p></td>
+</tr>
+<tr class="row-odd"><td><p>dataset_id</p></td>
+<td><p>text</p></td>
+<td><p>(COSMOS internal) - Identifier for dataset.</p></td>
+</tr>
+<tr class="row-even"><td><p>detect_score</p></td>
+<td><p>float</p></td>
+<td><p>Score (strength) of detected classification prediciton</p></td>
+</tr>
+<tr class="row-odd"><td><p>full_content</p></td>
+<td><p>text</p></td>
+<td><p>Combined content of the object and its associated parent/header</p></td>
+</tr>
+<tr class="row-even"><td><p>header_content</p></td>
+<td><p>text</p></td>
+<td><p>Text content of the associated parent/header object (caption, section header)</p></td>
+</tr>
+<tr class="row-odd"><td><p>img_pth</p></td>
+<td><p>text</p></td>
+<td><p>Path to image file on disk</p></td>
+</tr>
+<tr class="row-even"><td><p>pdf_name</p></td>
+<td><p>text</p></td>
+<td><p>Name of source PDF</p></td>
+</tr>
+<tr class="row-odd"><td><p>postprocess_score</p></td>
+<td><p>float</p></td>
+<td><p>Confidence of postprocess detection correction process</p></td>
+</tr>
+<tr class="row-even"><td colspan="3"><p>Entity fields</p></td>
+</tr>
+<tr class="row-odd"><td><p>aliases</p></td>
+<td><p>text</p></td>
+<td><p>Aliases for known entities</p></td>
+</tr>
+<tr class="row-even"><td><p>canonical_id</p></td>
+<td><p>text</p></td>
+<td><p>Canonical ID for known entities (e.g. UMLS id)</p></td>
+</tr>
+<tr class="row-odd"><td><p>description</p></td>
+<td><p>text</p></td>
+<td><p>Description of known entities</p></td>
+</tr>
+<tr class="row-even"><td><p>name</p></td>
+<td><p>text</p></td>
+<td><p>Name of known entity</p></td>
+</tr>
+<tr class="row-odd"><td><p>types</p></td>
+<td><p>keyword</p></td>
+<td><p>Type of entity</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 
 
