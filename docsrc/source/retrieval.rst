@@ -42,35 +42,35 @@ Elasticsearch Index - Fields
 +=====================+===========+=================================================================================+
 |  Object fields                                                                                                    |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "area"              | "integer" | "size (in sq. pixels) of identified area"                                       |
+|  area               |  integer  |  size (in sq. pixels) of identified area                                        |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "cls"               | "text"    | "detected object class (figure, table, body text, section header, etc)"         |
+|  cls                |  text     |  detected object class (figure, table, body text, section header, etc)          |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "content"           | "text"    | "Text content within the detected object"                                       |
+|  content            |  text     |  Text content within the detected object                                        |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "dataset_id"        | "text"    | "(COSMOS internal) - Identifier for dataset."                                   |
+|  dataset_id         |  text     |  (COSMOS internal) - Identifier for dataset.                                    |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "detect_score"      | "float"   | "Score (strength) of detected classification prediciton"                        |
+|  detect_score       |  float    |  Score (strength) of detected classification prediciton                         |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "full_content"      | "text"    | "Combined content of the object and its associated parent/header"               |
+|  full_content       |  text     |  Combined content of the object and its associated parent/header                |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "header_content"    | "text"    | "Text content of the associated parent/header object (caption, section header)" |
+|  header_content     |  text     |  Text content of the associated parent/header object (caption, section header)  |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "img_pth"           | "text"    | "Path to image file on disk"                                                    |
+|  img_pth            |  text     |  Path to image file on disk                                                     |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "pdf_name"          | "text"    | "Name of source PDF"                                                            |
+|  pdf_name           |  text     |  Name of source PDF                                                             |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "postprocess_score" | "float"   | "Confidence of postprocess detection correction process"                        |
+|  postprocess_score  |  float    |  Confidence of postprocess detection correction process                         |
 +---------------------+-----------+---------------------------------------------------------------------------------+
 |  Entity fields                                                                                                    |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "aliases"           | "text"    | "Aliases for known entities"                                                    |
+|  aliases            |  text     |  Aliases for known entities                                                     |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "canonical_id"      | "text"    | "Canonical ID for known entities (e.g. UMLS id)"                                |
+|  canonical_id       |  text     |  Canonical ID for known entities (e.g. UMLS id)                                 |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "description"       | "text"    | "Description of known entities"                                                 |
+|  description        |  text     |  Description of known entities                                                  |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "name"              | "text"    | "Name of known entity"                                                          |
+|  name               |  text     |  Name of known entity                                                           |
 +---------------------+-----------+---------------------------------------------------------------------------------+
-| "types"             | "keyword" | "Type of entity"                                                                |
+|  types              |  keyword  |  Type of entity                                                                 |
 +---------------------+-----------+---------------------------------------------------------------------------------+
