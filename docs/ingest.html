@@ -3,9 +3,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <title>Ingestion &mdash; Cosmos 0.0.1 documentation</title>
   
@@ -13,10 +13,15 @@
   
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
 
   
   
+
   
+  
+
   
 
   
@@ -26,10 +31,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -51,7 +56,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> Cosmos
+            <a href="index.html" class="icon icon-home"> Cosmos
           
 
           
@@ -91,6 +96,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#object-classification">Object Classification</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#aggregations">Aggregations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#word-embeddings">Word Embeddings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#context-enrichment">Context Enrichment</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="retrieval.html">Retrieval</a></li>
@@ -137,6 +143,8 @@
 
 
 
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
@@ -148,7 +156,7 @@
     
       <li class="wy-breadcrumbs-aside">
         
-            
+          
             <a href="_sources/ingest.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -211,6 +219,14 @@ we look for labelled section headers, then append all proceeding body text secti
 <p>We provide the option to train word embeddings on top of the extracted corpuses. We use _FastText to train over the extracted
 corpus at ingestion time. The resulting embeddings are saved to disk.</p>
 </div>
+<div class="section" id="context-enrichment">
+<h2>Context Enrichment<a class="headerlink" href="#context-enrichment" title="Permalink to this headline">¶</a></h2>
+<p>If the enrich option is enabled at ingest time, all output parquet files from the Ingest process are enhanced with
+semantic context. For every table or table caption row in those output parquets every mention of the table label for
+that row is detected within all the content (text) from that document. That context is then appended to the output
+parquets as a duplicate of the original table or table caption row with the original content replaced by all the available
+context text. Searches on context-enriched data that include relevant context should return the tables themselves.</p>
+</div>
 </div>
 
 
@@ -218,37 +234,29 @@ corpus at ingestion time. The resulting embeddings are saved to disk.</p>
            
           </div>
           <footer>
-  
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="retrieval.html" class="btn btn-neutral float-right" title="Retrieval" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+        <a href="retrieval.html" class="btn btn-neutral float-right" title="Retrieval" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, UW-Cosmos
+        &#169; Copyright 2020, UW-Cosmos.
 
     </p>
   </div>
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 
