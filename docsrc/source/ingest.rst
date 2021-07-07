@@ -53,7 +53,7 @@ text. We associate captions with tables and figures, which explain the visual di
 we aggregate intuitive groups of initial predictions into superclasses. For example, in the sections aggregation,
 we look for labelled section headers, then append all proceeding body text sections to produce a full section.
 
-For more information on the aggregations, see the :ref:`Aggregations` section.
+For more information on the aggregations, see the :ref:`Aggregations <aggregations>` section.
 
 Word Embeddings
 ---------------
