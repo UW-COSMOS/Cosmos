@@ -14,13 +14,14 @@ import os
 @click.option('--dataset-id', type=str, default='cosmos', help='dataset id')
 @click.option('--output-path', type=click.Path(), default='./', help='define a path for output')
 @click.option('--visualize-proposals/--no-visualize-proposals', type=bool, default='False', help='enable or disable proposal viz')
-@click.option('--skip-ocr/--no-skip-ocr', type=bool, default='True',
-              help='Use OCR over documents with no metadata. Requires Tesseract v4 installed on system.')
+@click.option('--skip-ocr/--no-skip-ocr', type=bool, default='True', help='Use OCR over documents with no metadata. Requires Tesseract v4 installed on system.')
 @click.option('--compute-word-vecs/--no-compute-word-vecs', type=bool, default='False', help='Compute word vectors')
 @click.option('--ngram', type=int, default=3, help='ngram for computing word vecs')
 @click.option('--enrich/--no-enrich', type=bool, default='False', help='Compute word vectors')
-@click.option('--threshold', type=float, default=0.8, help='postprocess_score threshold for identifying an object for context enrichment')
+@click.option('--pp_threshold', type=float, default=0.8, help='postprocess_score threshold for identifying an object for context enrichment')
+@click.option('--d_threshold', type=float, default=-10, help='detect_score threshold for identifying an object for context enrichment')
 @click.option('--spans', type=int, default=20, help='number of words either side of an object coreference to capture for context')
+@click.option('--qa/--no-qa', type=bool, default='False')
 def ingest_documents(cluster,
                      tmp_dir,
                      use_semantic_detection,
@@ -35,8 +36,10 @@ def ingest_documents(cluster,
                      compute_word_vecs,
                      ngram,
                      enrich,
-                     threshold,
-                     spans
+                     pp_threshold,
+                     d_threshold,
+                     spans,
+                     qa
                      ):
     ingest = Ingest(cluster,
                     tmp_dir=tmp_dir,
@@ -53,8 +56,10 @@ def ingest_documents(cluster,
                   compute_word_vecs=compute_word_vecs,
                   ngram=ngram,
                   enrich=enrich,
-                  threshold=threshold,
-                  spans=spans)
+                  pp_threshold=pp_threshold,
+                  d_threshold=d_threshold,
+                  spans=spans,
+                  qa=qa)
 
 
 if __name__ == '__main__':
