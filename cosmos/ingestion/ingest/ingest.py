@@ -119,7 +119,8 @@ class Ingest:
         :param pp_threshold: postprocess_score threshold for identifying an object for context enrichment
         :param d_threshold: detect_score threshold
         :param spans: number of words either side of an object coreference to capture for context
-        :param qa: switch for enrich process to report text references to tables not present in tables aggregation
+        :param qa: switch for enrich process to report text references to tables not present in tables aggregation, and
+        also report out table identification statistics, precision, recall and f1.
         """
         os.makedirs(images_pth, exist_ok=True)
         pdfnames = get_pdf_names(pdf_directory)
@@ -277,7 +278,7 @@ class Ingest:
         logger.info(f'size of df returned from enrichment: {len(df)}')
         df = df.reset_index(drop=True)
 
-        output_path = os.path.join(file_path, table_file_name+'_enriched_test.parquet')
+        output_path = os.path.join(file_path, table_file_name+'.parquet')
         logger.info(f'outputting data: {output_path}')
         df.to_parquet(output_path)
 
@@ -304,7 +305,9 @@ class Ingest:
 
     @classmethod
     def get_contexts(cls, pp_threshold: float, d_threshold: float, spans: int, qa: bool,
-                     doc_and_tables_dfs: Tuple[pd.DataFrame, pd.DataFrame]):
+                     doc_and_tables_dfs: Tuple[pd.DataFrame, pd.DataFrame]) -> Tuple[pd.DataFrame,
+                                                                                     pd.DataFrame,
+                                                                                     pd.DataFrame]:
         """
         perform context enrichment per doc in ingest output parquet - code to run on dask cluster worker
         :param pp_threshold: postprocess_score value needed to act on a given Table or Table Caption
@@ -313,6 +316,8 @@ class Ingest:
         :param doc_and_tables_dfs: input dataframes - representing one doc of output from ingest pipeline, and
         associated tables
         :param qa: if QA process should run in context enrichment, return missing table information and statistics
+        :param docs_and_tables_dfs: a tuple of a single pdf's COSMOS output consisting of all the rows for that pdf from
+        the non-aggregated parquet and the tables parquet, each as a pd.DataFrame
         :return tables_df, missing_refs, statistics_df: input table dataframe with any enriched rows added,
         df of pdf_name with any tables missed, df with pdf name and table detect recall, precision, and f1
         :return type: Tuple(pd.DataFrame, pd.DataFrame, pd.DataFrame)
@@ -406,7 +411,6 @@ class Ingest:
             logger.info(f"{pdf_name} failed updating caption_contents:\n {e}")
             logger.info(f'table dump:\n {original_tables_df}')
 
-        # updated with try/except
         # set label on each table column row:
         # assume first two tokens are valid labels if strip all non alphanumeric from left.
         try:
@@ -435,9 +439,8 @@ class Ingest:
             table_reference_indices_from_text = [
                 j
                 for j in range(len(all_doc_words))
-                # if re.match('table ' + r'[0-9.ivxlcdm-]+[^\w]+', ' '.join(all_doc_words[j:j + label_length]).lower())
                 if re.match(r'^([^\w]?){0,}' + 'table ' + r'[0-9.ivxlcdm-]+([^\w]?){0,}$',
-                            ' '.join(all_doc_words[j:j + label_length]).lower())  # UPDATED
+                            ' '.join(all_doc_words[j:j + label_length]).lower())
             ]
 
             # get text at those locations
@@ -454,9 +457,8 @@ class Ingest:
             logger.info(f'clean unique references from text {pdf_name}:{table_references_from_text}')
 
             # list of table reference from cosmos
-            # unique_doc_table_list = list(set(all_labels))
             table_labels_from_COSMOS = [table_ref.lower()
-                                        if table_ref  # is not None
+                                        if table_ref
                                         else None
                                         for table_ref in table_labels_from_COSMOS]
             logger.info(f'table_labels_from_COSMOS: {table_labels_from_COSMOS}')
@@ -497,22 +499,20 @@ class Ingest:
                                                    orient='index',
                                                    columns=['precision', 'recall', 'f1_score'])
 
-            # get DataFrame of any actual tables missed - eval pdfs later, what's the RCNN missing?
+            # get DataFrame of any actual tables not detected by COSMOS
             logger.info(f'missing_refs: {missing_refs}')
             if len(missing_refs) > 0:
                 missing_refs = pd.DataFrame.from_dict({pdf_name: missing_refs}, orient='index')
             if len(missing_refs) == 0:
                 missing_refs = None
 
-        # collect the contexts here
-        # for each row in the original_tables_df that has a table_label
+        # collect the contexts here - for each row in the original_tables_df that has a table_label
         for index, row in original_tables_df.iterrows():
             table_label = row['table_label']
             if table_label:
                 # collect contexts from doc_df
                 contexts = []
-                # for words in all_doc_words: UPDATED!
-
+                # for words in all_doc_words
                 try:
                     # mark where each label occurs in list of all doc words
                     # allow for any non alphanum characters beside the table label e.g. Table 2. or Table 2,
@@ -520,7 +520,7 @@ class Ingest:
                         j
                         for j in range(len(all_doc_words))
                         if re.match(r'^([^\w]?){0,}(' + table_label + r')([^\w]?){0,}$',
-                                    ' '.join(all_doc_words[j:j + label_length]).lower())  # UPDATED!
+                                    ' '.join(all_doc_words[j:j + label_length]).lower())
                     ]
 
                     logger.debug(f'indices: {indices}')
@@ -559,6 +559,7 @@ class Ingest:
 
                 # add all context to context column
                 tables_df.at[index, context_column] = ' '.join(contexts).strip()
+
         return tables_df.loc[:, tables_df_columns], missing_refs, statistics_df
 
     def write_images_for_annotation(self, pdf_dir, img_dir):
