@@ -189,7 +189,8 @@ class ElasticRetriever(Retriever):
         self.hosts = hosts
         self.awsauth = awsauth
 
-    def search(self, query, entity_search=False, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None, dataset_id=None):
+    # TODO: oof, I don't really want to pass in more crap here.
+    def search(self, query, entity_search=False, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None, dataset_id=None, content_field="full_content"):
         if self.awsauth is not None:
             connections.create_connection(hosts=self.hosts,
                                           http_auth=self.awsauth,
@@ -230,7 +231,7 @@ class ElasticRetriever(Retriever):
                 dq = dq & Q('bool', should=[Q('match_phrase', name=f"{i}.pdf") for i in docids])
                 doc_filter=True
             if len(document_filter_terms) > 0:
-                dq = dq & Q('bool', must=[Q('match_phrase', full_content=i) for i in document_filter_terms])
+                dq = dq & Q('bool', must=[Q('match_phrase', **{content_field:i}) for i in document_filter_terms])
                 doc_filter=True
 
             if doc_filter:
@@ -239,7 +240,6 @@ class ElasticRetriever(Retriever):
                 pdf_names = []
                 for resp in ds.scan():
                     pdf_names.append(resp['name'])
-                logging.info(f"{len(pdf_names)} pdfs found")
 
             q = Q()
             if query is None:
@@ -248,10 +248,11 @@ class ElasticRetriever(Retriever):
                 query_list = query.split(",")
             else:
                 query_list = [query]
+            logger.info(f"{[{**{content_field:i}} for i in query_list]}")
             if inclusive:
-                q = q & Q('bool', must=[Q('match_phrase', full_content=i) for i in query_list])
+                q = q & Q('bool', must=[Q('match_phrase', **{content_field:i}) for i in query_list])
             else:
-                q = q & Q('bool', should=[Q('match_phrase', full_content=i) for i in query_list])
+                q = q & Q('bool', should=[Q('match_phrase', **{content_field:i}) for i in query_list])
 
             start = page * ndocs
             end = start + ndocs
@@ -299,7 +300,7 @@ class ElasticRetriever(Retriever):
                         'base_confidence': obj.detect_score,
                         'content': obj.content,
                         'header_content': obj.header_content,
-                        'context_from_text' : obj.context_from_text if context_from_text in obj else None
+                        'context_from_text' : obj.context_from_text if 'context_from_text' in obj else None
                     }],
                 } for obj in final_results
             ]

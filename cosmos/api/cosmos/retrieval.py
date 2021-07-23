@@ -73,6 +73,7 @@ fields_defs = {
         "v" : "API version",
         "pdf_name" : "Filename of documents",
         "bibjson" : "Bibliographical JSON of document (looked up within xDD)",
+        "content_field" : "Content field to search [content, header_content, context_from_text, or full_content]",
         "[header/child/object].id" : "Internal COSMOS id of object",
         "[header/child/object].bytes" : "base64 ASCII-decoded image bytes of the object",
         "[header/child/object].content" : "Text content within the object",
@@ -180,7 +181,7 @@ def route_help(endpoint):
                             f'/api/{VERSION}/search?query=remdesevir,chloroquine&inclusive=true&base_confidence=1.0&postprocessing_confidence=0.7',
                             f'/api/{VERSION}/search?query=ACE2&type=Table&base_confidence=1.0&postprocessing_confidence=0.7&document_filter_terms=covid-19'
                             ],
-                        'fields' : makedict(["page", "total", "v", "pdf_name","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence"], fields_defs)
+                        'fields' : makedict(["page", "total", "v", "pdf_name","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence", "content_field"], fields_defs)
                         }
                     }
                 }
@@ -310,12 +311,11 @@ def get_image_bytes(img_pth, image_type, content, cls):
 def search():
     if len(request.args) == 0:
         return jsonify(route_help(request.endpoint))
-    current_app.logger.info("args:")
-    current_app.logger.info(request.args)
     query = request.args.get('query', type=str)
     obj_type = request.args.get('type', type=str)
     inclusive = request.args.get('inclusive', default='False', type=str)
     image_type = request.args.get('image_type', default=IMG_TYPE, type=str)
+    content_field = request.args.get('content_field', default='full_content', type=str)
     try:
         inclusive = bool(util.strtobool(inclusive))
     except ValueError:
@@ -359,13 +359,13 @@ def search():
 
     count = current_app.retriever.search(query, entity_search=False, ndocs=N_RESULTS, page=page_num, cls=obj_type, dataset_id=DATASET_ID,
                                                detect_min=base_confidence, postprocess_min=postprocessing_confidence,
-                                               get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id)
+                                               get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id, content_field=content_field)
     if 'count' in request.endpoint:
         return jsonify({'total_results': count, 'v': VERSION, 'license': LICENSE})
     current_app.logger.info(f"page: {page_num}, cls: {obj_type}, detect_min: {base_confidence}, postprocess_min: {postprocessing_confidence}")
     current_app.logger.info(f"Passing in {document_filter_terms}")
     results = current_app.retriever.search(query, entity_search=False, ndocs=N_RESULTS, page=page_num, cls=obj_type, dataset_id=DATASET_ID,
-                                         detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id)
+                                         detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id, content_field=content_field)
     if len(results) == 0:
         return {'page': 0, 'objects': [], 'v': VERSION, 'license' : LICENSE}
     image_dir = '/data/images'
