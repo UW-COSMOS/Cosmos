@@ -84,7 +84,7 @@ class Entity(EntityObjectIndex):
         '''
         return hashlib.sha1(f"{self.canonical_id}{self.name}{self.description}{self.types}{self.aliases}{self.dataset_id}".encode('utf-8')).hexdigest()
 
-    def add_object(self, cls, dataset_id, content, header_content, area, detect_score, postprocess_score, pdf_name, img_path=None, commit=True):
+    def add_object(self, cls, dataset_id, content, header_content, context_from_text, area, detect_score, postprocess_score, pdf_name, img_path=None, commit=True):
         obj = Object(
             # required make sure the answer is stored in the same shard
             _routing=self.meta.id,
@@ -97,7 +97,7 @@ class Entity(EntityObjectIndex):
             dataset_id=dataset_id,
             content=content,
             header_content=header_content,
-            full_content=combine_content([content, header_content]),
+            full_content=combine_content([content, header_content, context_from_text]),
             area=area,
             detect_score=detect_score,
             postprocess_score=postprocess_score,
@@ -138,6 +138,7 @@ class Object(EntityObjectIndex):
     dataset_id = Text(fields={'raw': Keyword()})
     header_content = Text()
     content = Text()
+    context_from_text = Text()
     full_content = Text()
     area = Integer()
     pdf_name = Text(fields={'raw': Keyword()})
@@ -298,6 +299,7 @@ class ElasticRetriever(Retriever):
                         'base_confidence': obj.detect_score,
                         'content': obj.content,
                         'header_content': obj.header_content,
+                        'context_from_text' : obj.context_from_text if context_from_text in obj else None
                     }],
                 } for obj in final_results
             ]
@@ -394,6 +396,7 @@ class ElasticRetriever(Retriever):
                                 dataset_id=row['dataset_id'],
                                 content=row['content'],
                                 header_content=row['section_header'],
+                                context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                                 full_content=combine_contents([row['content'], row['section_header']]),
                                 area=get_size(row['obj_bbs']),
                                 detect_score=row['detect_score'],
@@ -440,7 +443,8 @@ class ElasticRetriever(Retriever):
                         dataset_id=row['dataset_id'],
                         content=row['content'],
                         header_content=row['caption_content'],
-                        full_content=combine_contents([row['content'], row['caption_content']]),
+                        context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
+                        full_content=combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
                         area=get_size(row['obj_bbs']),
                         detect_score=row['detect_score'],
                         postprocess_score=row['postprocess_score'],
@@ -487,7 +491,8 @@ class ElasticRetriever(Retriever):
                            dataset_id=row['dataset_id'],
                            content=row['content'],
                            header_content=row['caption_content'],
-                           full_content=combine_contents([row['content'], row['caption_content']]),
+                           context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
+                           full_content=combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
                            area=get_size(row['obj_bbs']),
                            detect_score=row['detect_score'],
                            postprocess_score=row['postprocess_score'],
@@ -534,6 +539,7 @@ class ElasticRetriever(Retriever):
                            dataset_id=row['dataset_id'],
                            content=row['content'],
                            header_content='',
+                           context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                            full_content=combine_contents([row['content']]),
                            area=get_size(row['equation_bb']),
                            detect_score=row['detect_score'],
