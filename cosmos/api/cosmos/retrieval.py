@@ -99,7 +99,8 @@ def require_apikey(fcn):
                 abort(401)
     return decorated_function
 
-def get_docid(doi):
+
+def get_docid_from_doi(doi):
     resp = requests.get(f"https://xdd.wisc.edu/api/articles?doi={doi}")
     if resp.status_code == 200:
         data = resp.json()
@@ -250,7 +251,7 @@ def document():
     docid = request.args.get('docid', default='', type=str)
     doi = request.args.get('doi', default='', type=str)
     if docid == '' and doi != '':
-        docid = get_docid(doi)
+        docid = get_docid_from_doi(doi)
         if docid == '':
             return jsonify({'error' : 'DOI not in xDD system!', 'v' : VERSION})
 
@@ -332,7 +333,7 @@ def search():
     docids = request.args.get('docids', default='', type=str).split(',')
     doi = request.args.get('doi', default='', type=str)
     if docids == [''] and doi != '':
-        docids = [get_docid(doi)]
+        docids = [get_docid_from_doi(doi)]
         if docids == ['']:
             return jsonify({'error' : 'DOI not in xDD system!', 'v' : VERSION})
     if docids == ['']: docids=[]
