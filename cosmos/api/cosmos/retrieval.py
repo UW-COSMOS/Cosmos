@@ -100,6 +100,15 @@ def require_apikey(fcn):
     return decorated_function
 
 
+def get_docid_from_aske-id(aske-id):
+    resp = requests.get(f"https://xdd.wisc.edu/api/articles?aske-id={aske-id}")
+    if resp.status_code == 200:
+        data = resp.json()
+        if 'success' in data:
+            for i in data['success']['data']:
+                return i['_gddid']
+    return ''
+
 def get_docid_from_doi(doi):
     resp = requests.get(f"https://xdd.wisc.edu/api/articles?doi={doi}")
     if resp.status_code == 200:
