@@ -20,7 +20,7 @@ logger.setLevel(logging.ERROR)
 
 
 def context_enrichment(file_path: str, dataset_id: str, pp_threshold: float, d_threshold: float,
-                       spans: int, client: dask.distributed.Client, qa: bool = False):
+                       spans: int, client: dask.distributed.Client, use_qa_table_enrichment: bool = False):
     """
     add rows to dataset_id_tables.parquet
     :param file_path: a directory full of parquets (ingest output) to process
@@ -30,7 +30,7 @@ def context_enrichment(file_path: str, dataset_id: str, pp_threshold: float, d_t
     :param spans: number of words each side of label to pull in as context for each table label in content text
             if None will use regex to pull out full stop to full stop span around the table label
     :param client: dask distributed client to pass jobs to
-    :param qa: if qa process should run in contexts
+    :param use_qa_table_enrichment: if qa process should run in contexts
     """
 
     dataset_id_df_path = ''
@@ -61,7 +61,7 @@ def context_enrichment(file_path: str, dataset_id: str, pp_threshold: float, d_t
                                              pp_threshold,
                                              d_threshold,
                                              spans,
-                                             qa)
+                                             use_qa_table_enrichment)
     logger.info(f'start enrichment processing with doc count {len(single_doc_dfs)}')
     enriched = [client.submit(partial_get_contexts,
                               doc_and_tables_dfs,
@@ -89,7 +89,7 @@ def context_enrichment(file_path: str, dataset_id: str, pp_threshold: float, d_t
     logger.info(f'outputting data: {output_path}')
     df.to_parquet(output_path)
 
-    if qa:
+    if use_qa_table_enrichment:
         if not all(v is None for v in missed_references):
             missed_references = pd.concat(missed_references)
             # parquet column names must be strings
@@ -111,7 +111,7 @@ def context_enrichment(file_path: str, dataset_id: str, pp_threshold: float, d_t
             statistics.to_parquet(output_path)
 
 
-def get_contexts(pp_threshold: float, d_threshold: float, spans: int, qa: bool,
+def get_contexts(pp_threshold: float, d_threshold: float, spans: int, use_qa_table_enrichment: bool,
                  doc_and_tables_dfs: Tuple[pd.DataFrame, pd.DataFrame]) -> Tuple[pd.DataFrame,
                                                                                  pd.DataFrame,
                                                                                  pd.DataFrame]:
@@ -122,7 +122,8 @@ def get_contexts(pp_threshold: float, d_threshold: float, spans: int, qa: bool,
     :param spans: number of words either side of a label to capture as context in doc content
     :param doc_and_tables_dfs: input dataframes - representing one doc of output from ingest pipeline, and
     associated tables
-    :param qa: if QA process should run in context enrichment, return missing table information and statistics
+    :param use_qa_table_enrichment: if QA process should run in context enrichment, return missing table information and
+    statistics
     :param doc_and_tables_dfs: a tuple of a single pdf's COSMOS output consisting of all the rows for that pdf from
     the non-aggregated parquet and the tables parquet, each as a pd.DataFrame
     :return tables_df, missing_refs, statistics_df: input table dataframe with any enriched rows added,
@@ -238,7 +239,7 @@ def get_contexts(pp_threshold: float, d_threshold: float, spans: int, qa: bool,
     table_labels_from_COSMOS = original_tables_df['table_label'].tolist()
     logger.info(f"table references from COSMOS {pdf_name}: {table_labels_from_COSMOS}")
 
-    if qa:
+    if use_qa_table_enrichment:
         # get all unique table references in text and compare to all table mentions in table df
         # return df with index='pdfname': columns=[co-references in text not mentioned in table df]
 

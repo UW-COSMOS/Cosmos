@@ -46,8 +46,9 @@ class Ingest:
     Ingest class
     Handles running the ingestion pipeline
     """
-    def __init__(self, scheduler_address, use_semantic_detection=False, client=None,
-                       tmp_dir=None, use_xgboost_postprocess=False, use_rules_postprocess=False):
+    def __init__(self, scheduler_address, use_semantic_detection=False, client=None, tmp_dir=None,
+                 use_xgboost_postprocess=False, use_rules_postprocess=False, use_table_context_enrichment=False,
+                 use_qa_table_enrichment=False):
         """
         :param scheduler_address: Address to existing Dask scheduler
         :param use_semantic_detection: Whether or not to run semantic detection
@@ -55,6 +56,8 @@ class Ingest:
         :param tmp_dir: Path to temporary directory which intermediate files and images will be written
         :param use_xgboost_postprocess: Whether to use the XGBoost postprocessing model
         :param use_rules_postprocess: Whether to utilize the rules postprocessing, which is specific to scientific docs
+        :param use_table_context_enrichment: If true run semantic enrichment on ingest output parquets
+        :param use_qa_table_enrichment: If true and use_table_context_enrichment is True report tables detection stats
         """
         logger.info("Initializing Ingest object")
         self.client = client
@@ -66,6 +69,8 @@ class Ingest:
         self.use_rules_postprocess = use_rules_postprocess
         self.use_semantic_detection = use_semantic_detection
         self.tmp_dir = tmp_dir
+        self.use_table_context_enrichment = use_table_context_enrichment
+        self.use_qa_table_enrichment = use_qa_table_enrichment
         if tmp_dir is None:
             raise ValueError("tmp_dir must be passed in")
         # Create a subdirectory for tmp files
@@ -88,11 +93,9 @@ class Ingest:
                batch_size=2000,
                compute_word_vecs=False,
                ngram=1,
-               enrich=False,
                pp_threshold=0.8,
                d_threshold=-10,
-               spans=20,
-               qa=False):
+               spans=20):
         """
         Handler for ingestion pipeline.
 
@@ -112,14 +115,14 @@ class Ingest:
         :param skip_ocr: If True, PDFs with no metadata associated will be skipped. If False, OCR will be performed
         :param visualize_proposals: Debugging option, will write images with bounding boxes from proposals to tmp
         :param aggregations: List of aggregations to run over resulting objects
+        :param batch_size: 2000 is a good number
         :param compute_word_vecs: Whether to compute word vectors over the corpus
         :param ngram: n in ngram for word vecs
-        :param enrich: If true run semantic enrichment on ingest output parquets
         :param pp_threshold: postprocess_score threshold for identifying an object for context enrichment
         :param d_threshold: detect_score threshold
         :param spans: number of words either side of an object coreference to capture for context
-        :param qa: switch for enrich process to report text references to tables not present in tables aggregation, and
-        also report out table identification statistics, precision, recall and f1.
+        also report out table identification statistics, precision, recall and f1. Does nothing if
+        use_table_context_enrichment not also True.
         """
         os.makedirs(images_pth, exist_ok=True)
         pdfnames = get_pdf_names(pdf_directory)
@@ -203,7 +206,7 @@ class Ingest:
             make_vecs(result_df, ngram)
         result_df.to_parquet(os.path.join(result_path, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
 
-        if enrich:
+        if self.use_table_context_enrichment:
             logger.info('BEGIN ENRICH PROCESS')
             context_enrichment(file_path=result_path,
                                dataset_id=dataset_id,
@@ -211,7 +214,7 @@ class Ingest:
                                d_threshold=d_threshold,
                                spans=spans,
                                client=self.client,
-                               qa=qa)
+                               use_qa_table_enrichment=self.use_qa_table_enrichment)
 
     def write_images_for_annotation(self, pdf_dir, img_dir):
         """
