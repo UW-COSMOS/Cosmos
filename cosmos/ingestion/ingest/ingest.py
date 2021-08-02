@@ -21,12 +21,12 @@ from ingest.utils.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
 from ingest.process.aggregation.aggregate import aggregate_router
 from ingest.process.representation_learning.compute_word_vecs import make_vecs
+from ingest.process.enrich.context_enrichment import context_enrichment
 import pandas as pd
-import re
 import signal
 import logging
 from itertools import islice
-from tqdm import tqdm
+
 
 logging.basicConfig(format='%(levelname)s :: %(filename) :: %(funcName)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.ERROR)
@@ -46,8 +46,9 @@ class Ingest:
     Ingest class
     Handles running the ingestion pipeline
     """
-    def __init__(self, scheduler_address, use_semantic_detection=False, client=None,
-                       tmp_dir=None, use_xgboost_postprocess=False, use_rules_postprocess=False):
+    def __init__(self, scheduler_address, use_semantic_detection=False, client=None, tmp_dir=None,
+                 use_xgboost_postprocess=False, use_rules_postprocess=False, use_table_context_enrichment=False,
+                 use_qa_table_enrichment=False):
         """
         :param scheduler_address: Address to existing Dask scheduler
         :param use_semantic_detection: Whether or not to run semantic detection
@@ -55,6 +56,8 @@ class Ingest:
         :param tmp_dir: Path to temporary directory which intermediate files and images will be written
         :param use_xgboost_postprocess: Whether to use the XGBoost postprocessing model
         :param use_rules_postprocess: Whether to utilize the rules postprocessing, which is specific to scientific docs
+        :param use_table_context_enrichment: If true run semantic enrichment on ingest output parquets
+        :param use_qa_table_enrichment: If true and use_table_context_enrichment is True report tables detection stats
         """
         logger.info("Initializing Ingest object")
         self.client = client
@@ -66,6 +69,8 @@ class Ingest:
         self.use_rules_postprocess = use_rules_postprocess
         self.use_semantic_detection = use_semantic_detection
         self.tmp_dir = tmp_dir
+        self.use_table_context_enrichment = use_table_context_enrichment
+        self.use_qa_table_enrichment = use_qa_table_enrichment
         if tmp_dir is None:
             raise ValueError("tmp_dir must be passed in")
         # Create a subdirectory for tmp files
@@ -88,7 +93,6 @@ class Ingest:
                batch_size=2000,
                compute_word_vecs=False,
                ngram=1,
-               enrich=False,
                pp_threshold=0.8,
                d_threshold=-10,
                spans=20):
@@ -111,12 +115,14 @@ class Ingest:
         :param skip_ocr: If True, PDFs with no metadata associated will be skipped. If False, OCR will be performed
         :param visualize_proposals: Debugging option, will write images with bounding boxes from proposals to tmp
         :param aggregations: List of aggregations to run over resulting objects
+        :param batch_size: 2000 is a good number
         :param compute_word_vecs: Whether to compute word vectors over the corpus
         :param ngram: n in ngram for word vecs
-        :param enrich: If true run semantic enrichment on ingest output parquets
         :param pp_threshold: postprocess_score threshold for identifying an object for context enrichment
         :param d_threshold: detect_score threshold
         :param spans: number of words either side of an object coreference to capture for context
+        also report out table identification statistics, precision, recall and f1. Does nothing if
+        use_table_context_enrichment not also True.
         """
         os.makedirs(images_pth, exist_ok=True)
         pdfnames = get_pdf_names(pdf_directory)
@@ -203,204 +209,15 @@ class Ingest:
             make_vecs(result_df, ngram)
         result_df.to_parquet(os.path.join(result_path, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
 
-        if enrich:
+        if self.use_table_context_enrichment:
             logger.info('BEGIN ENRICH PROCESS')
-            self.enrich(file_path=result_path,
-                        dataset_id=dataset_id,
-                        pp_threshold=pp_threshold,
-                        d_threshold=d_threshold,
-                        spans=spans)
-
-    def enrich(self, file_path: str, dataset_id: str, pp_threshold: float, d_threshold: float, spans: int):
-        """
-        add rows to dataset_id_tables.parquet
-        :param file_path: a directory full of parquets (ingest output) to process
-        :param dataset_id: ingest process dataset_id
-        :param pp_threshold: float cut off for postprocess_score to process as table caption
-        :param d_threshold: float cut off for detect_score to process as table caption
-        :param spans: number of words each side of label to pull in as context for each table label in content text
-                if None will use regex to pull out full stop to full stop span around the table label
-        """
-
-        dataset_id_df_path = ''
-        tables_df_path = ''
-        for pq in glob.glob(os.path.join(file_path, '*.parquet')):
-            if os.path.basename(pq) == dataset_id+'.parquet':
-                dataset_id_df_path = pq
-            if os.path.basename(pq) == dataset_id+'_tables.parquet':
-                tables_df_path = pq
-
-        logger.info(f'getting all pdfs with tables: {tables_df_path}')
-        basename = os.path.basename(tables_df_path)
-        tables_df = pd.read_parquet(tables_df_path)
-        pdf_names_with_tables = list(set(tables_df['pdf_name'].values.tolist()))
-
-        # Get the 'documents.parquet', only rows from docs with tables
-        dataset_id_df = pd.read_parquet(dataset_id_df_path)
-        dataset_id_df = dataset_id_df[dataset_id_df['pdf_name'].isin(pdf_names_with_tables)]
-
-        single_doc_dfs = []
-        table_rows_per_doc_dfs = []
-        logger.info('split ingest output into docs')
-        for name in tqdm(pdf_names_with_tables):
-            single_doc_dfs.append(dataset_id_df[dataset_id_df['pdf_name'] == name])
-            table_rows_per_doc_dfs.append(tables_df[tables_df['pdf_name'] == name])
-
-        partial_get_context = functools.partial(Ingest.get_contexts,
-                                                pp_threshold,
-                                                d_threshold,
-                                                spans)
-        logger.info(f'start enrichment processing with doc count {len(single_doc_dfs)}')
-        enriched = [self.client.submit(partial_get_context,
-                                       doc_and_tables_dfs,
-                                       resources={'process': 1})
-                    for doc_and_tables_dfs in zip(single_doc_dfs, table_rows_per_doc_dfs)]
-        progress(enriched)
-        logger.info('collecting all enriched docs')
-        enriched = [e.result() for e in enriched]
-        df = pd.concat(enriched)
-        logger.info(f'size of df returned from enrichment: {len(df)}')
-        df = df.reset_index(drop=True)
-
-        output_path = os.path.join(file_path, basename+'_enriched_fixed')
-        logger.info(f'outputting data: {output_path}')
-        df.to_parquet(output_path)
-
-    @classmethod
-    def get_contexts(cls, pp_threshold, d_threshold, spans, doc_and_tables_dfs):
-        """
-        perform context enrichment per doc in ingest output parquet - code to run on dask cluster worker
-        :param pp_threshold: postprocess_score value needed to act on a given Table or Table Caption
-        :param d_threshold: detect_score value needed to act on a given Table or Table Caption
-        :param spans: number of words either side of a label to capture as context in doc content
-        :param doc_and_tables_dfs: input dataframes - representing one doc of output from ingest pipeline, and
-        associated tables
-        :return doc_df: input dataframe with any enriched rows added
-        """
-
-        # disable SettingWithCopyWarning - safe since always over writing original
-        pd.options.mode.chained_assignment = None
-
-        # aggregate all doc words into one list of words, excepting tables and table captions
-        doc_df = doc_and_tables_dfs[0]
-        pp_classes_to_ignore = ['Table', 'Table Caption']
-        all_doc_words = []
-        for index, row in doc_df.iterrows():
-            if row['postprocess_cls'] not in pp_classes_to_ignore:
-                all_doc_words.append(row['content'].split())
-
-        context_column = 'context_from_text'
-
-        tables_df = doc_and_tables_dfs[1]
-        tables_df[context_column] = None  # create enriched content column
-        original_tables_df = tables_df.copy()  # copy to iterate over, copy to update
-        tables_df_columns = tables_df.columns.tolist()  # columns for writing final df
-        logger.debug(f'tables_df_columns:{tables_df_columns}')
-        pdf_name = original_tables_df.pdf_name.to_list()[0]
-
-        label_length = 2
-        # attempt to update empty 'caption_contents' from 'content'
-        try:
-            original_tables_df['caption_content'] = [
-                re.sub(r"[^0-9a-zA-Z ]+", '', ' '.join(content.split()[:label_length]))
-                if (caption_content is None) and
-                   (pp_score >= pp_threshold) and
-                   (d_score >= d_threshold) and
-                   (len(content.split()) >= label_length) and
-                   (content.split()[:label_length][0].lower() == 'table') and
-                   (re.sub(r"[^0-9a-zA-Z ]+", '', content).split()[:label_length][1].isdigit())
-                else caption_content
-                for caption_content, pp_score, d_score, content in zip(original_tables_df['caption_content'],
-                                                                       original_tables_df['postprocess_score'],
-                                                                       original_tables_df['detect_score'],
-                                                                       original_tables_df['content'])
-            ]
-        except Exception as e:
-            logger.info(f"{pdf_name} failed updating caption_contents:\n {e}")
-            logger.info(f'table dump:\n {original_tables_df}')
-
-        # set label on each table column row:
-        # assume valid labels are only text and numbers and '.' e.g. table 14.3
-        # can't have a trailing non-alphanumeric e.g end in '.'
-        original_tables_df['table_label'] = [
-            re.sub(r"[^0-9a-zA-Z., ]+", '', ' '.join(caption_content.split()[:label_length]))
-            if caption_content and
-               (pp_score >= pp_threshold) and
-               (d_score >= d_threshold)
-            else None
-            for caption_content, pp_score, d_score in zip(original_tables_df['caption_content'],
-                                                          original_tables_df['postprocess_score'],
-                                                          original_tables_df['detect_score'])
-        ]
-        # remove last char of label if non-alphanumeric (if not None)
-        try:
-            original_tables_df['table_label'] = [
-                label[:len(label) - 1]
-                if label and re.match(r"[^0-9a-zA-Z]", label[-1])
-                else label
-                for label in original_tables_df['table_label']
-            ]
-        except Exception as e:
-            logger.info(f"{pdf_name} failed to clip non-alphanumeric last char in label: {e}")
-
-        all_labels = original_tables_df['table_label'].tolist()
-        logger.info(f"{pdf_name}: {all_labels}")
-
-        # for each row in the original_tables_df that has a table_label
-        for index, row in original_tables_df.iterrows():
-            table_label = row['table_label']
-            if table_label:
-                # collect contexts from doc_df
-                contexts = []
-                for words in all_doc_words:
-                    # mark where each label occurs in list of all doc words
-                    # allow for any character beside the table label e.g. Table 2. or Table 2,
-                    try:
-                        indices = [
-                                j
-                                for j in range(len(words))
-                                if re.match(table_label+r'\S', ' '.join(words[j:j + label_length]))
-                                # if table_label == ' '.join(words[j:j + label_length])
-                        ]
-
-                        logger.debug(f'indices: {indices}')
-
-                        # iterate over list in indices column to extract words before labels in content
-                        logger.debug('getting semantic context')
-                        prefixes = [
-                                ' '.join(words[i - spans:i])
-                                if i - spans >= 0
-                                else ' '.join(words[0:i])
-                                for i in indices
-                        ]
-                        logger.debug(f'prefixes: {prefixes}')
-                        # iterate over list in indices column to extract words after labels in content
-                        suffixes = [
-                                ' '.join(words[i + label_length:i + label_length + spans])
-                                if i + label_length + spans <= len(words)
-                                else ' '.join(words[i + label_length:len(words)])
-                                for i in indices
-                        ]
-                        logger.debug(f'suffixes: {suffixes}')
-
-                        logger.debug(f'list(zip(prefixes, suffixes)):{list(zip(prefixes, suffixes))}')
-                        # join prefixes and suffixes together
-                        contexts.append(' '.join([
-                                prefix + ' ' + table_label + ' ' + suffix
-                                for prefix, suffix in list(zip(prefixes, suffixes))
-                                ]
-                            )
-                        )
-                        logger.debug(f'contexts: {contexts}')
-
-                    except Exception as e:
-                        logger.info(f"{pdf_name} failed fetching context indices for '{table_label}':\n {e}")
-                        logger.info(f'table row:\n {row}')
-
-                # add all context to context column
-                tables_df.at[index, context_column] = ' '.join(contexts).strip()
-
-        return tables_df.loc[:, tables_df_columns]
+            context_enrichment(file_path=result_path,
+                               dataset_id=dataset_id,
+                               pp_threshold=pp_threshold,
+                               d_threshold=d_threshold,
+                               spans=spans,
+                               client=self.client,
+                               use_qa_table_enrichment=self.use_qa_table_enrichment)
 
     def write_images_for_annotation(self, pdf_dir, img_dir):
         """
@@ -512,4 +329,3 @@ class Ingest:
             else:
                 objs.append(obj)
         return objs
-
