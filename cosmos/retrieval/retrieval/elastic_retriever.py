@@ -84,7 +84,7 @@ class Entity(EntityObjectIndex):
         '''
         return hashlib.sha1(f"{self.canonical_id}{self.name}{self.description}{self.types}{self.aliases}{self.dataset_id}".encode('utf-8')).hexdigest()
 
-    def add_object(self, cls, dataset_id, content, header_content, area, detect_score, postprocess_score, pdf_name, img_path=None, commit=True):
+    def add_object(self, cls, dataset_id, content, header_content, context_from_text, area, detect_score, postprocess_score, pdf_name, img_path=None, commit=True):
         obj = Object(
             # required make sure the answer is stored in the same shard
             _routing=self.meta.id,
@@ -97,7 +97,7 @@ class Entity(EntityObjectIndex):
             dataset_id=dataset_id,
             content=content,
             header_content=header_content,
-            full_content=combine_content([content, header_content]),
+            full_content=combine_content([content, header_content, context_from_text]),
             area=area,
             detect_score=detect_score,
             postprocess_score=postprocess_score,
@@ -138,6 +138,7 @@ class Object(EntityObjectIndex):
     dataset_id = Text(fields={'raw': Keyword()})
     header_content = Text()
     content = Text()
+    context_from_text = Text()
     full_content = Text()
     area = Integer()
     pdf_name = Text(fields={'raw': Keyword()})
@@ -188,7 +189,8 @@ class ElasticRetriever(Retriever):
         self.hosts = hosts
         self.awsauth = awsauth
 
-    def search(self, query, entity_search=False, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None, dataset_id=None):
+    # TODO: oof, I don't really want to pass in more crap here.
+    def search(self, query, entity_search=False, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None, dataset_id=None, content_field="full_content"):
         if self.awsauth is not None:
             connections.create_connection(hosts=self.hosts,
                                           http_auth=self.awsauth,
@@ -229,7 +231,7 @@ class ElasticRetriever(Retriever):
                 dq = dq & Q('bool', should=[Q('match_phrase', name=f"{i}.pdf") for i in docids])
                 doc_filter=True
             if len(document_filter_terms) > 0:
-                dq = dq & Q('bool', must=[Q('match_phrase', full_content=i) for i in document_filter_terms])
+                dq = dq & Q('bool', must=[Q('match_phrase', **{content_field:i}) for i in document_filter_terms])
                 doc_filter=True
 
             if doc_filter:
@@ -238,7 +240,6 @@ class ElasticRetriever(Retriever):
                 pdf_names = []
                 for resp in ds.scan():
                     pdf_names.append(resp['name'])
-                logging.info(f"{len(pdf_names)} pdfs found")
 
             q = Q()
             if query is None:
@@ -248,9 +249,9 @@ class ElasticRetriever(Retriever):
             else:
                 query_list = [query]
             if inclusive:
-                q = q & Q('bool', must=[Q('match_phrase', full_content=i) for i in query_list])
+                q = q & Q('bool', must=[Q('match_phrase', **{content_field:i}) for i in query_list])
             else:
-                q = q & Q('bool', should=[Q('match_phrase', full_content=i) for i in query_list])
+                q = q & Q('bool', should=[Q('match_phrase', **{content_field:i}) for i in query_list])
 
             start = page * ndocs
             end = start + ndocs
@@ -298,6 +299,7 @@ class ElasticRetriever(Retriever):
                         'base_confidence': obj.detect_score,
                         'content': obj.content,
                         'header_content': obj.header_content,
+                        'context_from_text' : obj.context_from_text if 'context_from_text' in obj else None
                     }],
                 } for obj in final_results
             ]
@@ -394,6 +396,7 @@ class ElasticRetriever(Retriever):
                                 dataset_id=row['dataset_id'],
                                 content=row['content'],
                                 header_content=row['section_header'],
+                                context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                                 full_content=combine_contents([row['content'], row['section_header']]),
                                 area=get_size(row['obj_bbs']),
                                 detect_score=row['detect_score'],
@@ -440,7 +443,8 @@ class ElasticRetriever(Retriever):
                         dataset_id=row['dataset_id'],
                         content=row['content'],
                         header_content=row['caption_content'],
-                        full_content=combine_contents([row['content'], row['caption_content']]),
+                        context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
+                        full_content=combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
                         area=get_size(row['obj_bbs']),
                         detect_score=row['detect_score'],
                         postprocess_score=row['postprocess_score'],
@@ -487,7 +491,8 @@ class ElasticRetriever(Retriever):
                            dataset_id=row['dataset_id'],
                            content=row['content'],
                            header_content=row['caption_content'],
-                           full_content=combine_contents([row['content'], row['caption_content']]),
+                           context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
+                           full_content=combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
                            area=get_size(row['obj_bbs']),
                            detect_score=row['detect_score'],
                            postprocess_score=row['postprocess_score'],
@@ -534,6 +539,7 @@ class ElasticRetriever(Retriever):
                            dataset_id=row['dataset_id'],
                            content=row['content'],
                            header_content='',
+                           context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                            full_content=combine_contents([row['content']]),
                            area=get_size(row['equation_bb']),
                            detect_score=row['detect_score'],

@@ -55,6 +55,7 @@ parameter_defs = {
         'api_key': '(str, Required) - String token that grants access to the COSMOS extractions.',
         'query': '(str, Required) - term or comma-separated list of terms to search for. Default search logic will utilize an OR of comma-separated words.',
         'doi': '(str) - DOI of an article. Case-insensitive.',
+        'aske_id': '(str) - ASKE-ID of an article.',
         'docid' : '(str) - xDD ID of an article to search',
         'type': '[Table, Figure, Equation, Body Text, Combined] - the type of object to search for.',
         'page': '(int) - Page of results (starts at 0)',
@@ -73,6 +74,7 @@ fields_defs = {
         "v" : "API version",
         "pdf_name" : "Filename of documents",
         "bibjson" : "Bibliographical JSON of document (looked up within xDD)",
+        "content_field" : "Content field to search [content, header_content, context_from_text, or full_content]",
         "[header/child/object].id" : "Internal COSMOS id of object",
         "[header/child/object].bytes" : "base64 ASCII-decoded image bytes of the object",
         "[header/child/object].content" : "Text content within the object",
@@ -98,7 +100,17 @@ def require_apikey(fcn):
                 abort(401)
     return decorated_function
 
-def get_docid(doi):
+
+def get_docid_from_aske_id(aske_id):
+    resp = requests.get(f"https://xdd.wisc.edu/api/articles?aske_id={aske_id}")
+    if resp.status_code == 200:
+        data = resp.json()
+        if 'success' in data:
+            for i in data['success']['data']:
+                return i['_gddid']
+    return ''
+
+def get_docid_from_doi(doi):
     resp = requests.get(f"https://xdd.wisc.edu/api/articles?doi={doi}")
     if resp.status_code == 200:
         data = resp.json()
@@ -173,14 +185,14 @@ def route_help(endpoint):
                     "v" : VERSION,
                     "description" : f"Query the COSMOS extractions for objects and contexts mentioning a term passing filtration criteria. Utilizes the Elasticsearch retrieval engine. Objects matching the query are returned, along with their parent or children objects resulting from the COSMOS contextual aggregation process (e.g. figures will be return as a child object for a figure caption mentioning a phrase; all body text within a section will be returned as children to a section header mentioning a term). Result order is determined by search rank (results with high-density mentions of the term will appear first). {N_RESULTS} results are returned per page.",
                     'options': {
-                        "parameters" : makedict(["api_key", "query", "type", "page", "inclusive", "base_confidence", "postprocessing_confidence", "image_type", "ignore_bytes", "id"], parameter_defs),
+                        "parameters" : makedict(["api_key", "query", "type", "page", "inclusive", "base_confidence", "postprocessing_confidence", "image_type", "ignore_bytes", "id", "doi", "aske_id"], parameter_defs),
                         'output_formats' : 'json',
                         'examples' : [
                             f'/api/{VERSION}/search?query=temperature&type=Figure&base_confidence=1.0&postprocessing_confidence=0.7',
                             f'/api/{VERSION}/search?query=remdesevir,chloroquine&inclusive=true&base_confidence=1.0&postprocessing_confidence=0.7',
                             f'/api/{VERSION}/search?query=ACE2&type=Table&base_confidence=1.0&postprocessing_confidence=0.7&document_filter_terms=covid-19'
                             ],
-                        'fields' : makedict(["page", "total", "v", "pdf_name","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence"], fields_defs)
+                        'fields' : makedict(["page", "total", "v", "pdf_name","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence", "content_field"], fields_defs)
                         }
                     }
                 }
@@ -192,7 +204,7 @@ def route_help(endpoint):
                     "v" : VERSION,
                     "description" : f"Retrieve objects extracted by COSMOS for a particular document, searching via DOI or xDD document id.",
                     'options': {
-                        'parameters' : makedict(['api_key', 'doi', 'docid', 'image_type', 'ignore_bytes', 'type'], parameter_defs),
+                        'parameters' : makedict(['api_key', 'doi', 'aske_id', 'docid', 'image_type', 'ignore_bytes', 'type'], parameter_defs),
                         'output_formats' : 'json',
                         'examples' : [
                             f'/api/{VERSION}/document?docid=593024fdcf58f137a8785652',
@@ -249,9 +261,17 @@ def document():
     docid = request.args.get('docid', default='', type=str)
     doi = request.args.get('doi', default='', type=str)
     if docid == '' and doi != '':
-        docid = get_docid(doi)
+        docid = get_docid_from_doi(doi)
         if docid == '':
             return jsonify({'error' : 'DOI not in xDD system!', 'v' : VERSION})
+
+    aske_id = request.args.get('aske_id', default='', type=str)
+    if docid == '' and aske_id != '':
+        if doi != '':
+            return jsonify({'error' : 'aske_id and doi parameters are incompatible!', 'v' : VERSION})
+        docid = get_docid_from_aske_id(aske_id)
+        if docid == '':
+            return jsonify({'error' : 'ASKE-ID not in xDD system!', 'v' : VERSION})
 
     image_type = request.args.get('image_type', default=IMG_TYPE, type=str)
     ignore_bytes = request.args.get('ignore_bytes', default='False', type=str)
@@ -310,12 +330,11 @@ def get_image_bytes(img_pth, image_type, content, cls):
 def search():
     if len(request.args) == 0:
         return jsonify(route_help(request.endpoint))
-    current_app.logger.info("args:")
-    current_app.logger.info(request.args)
     query = request.args.get('query', type=str)
     obj_type = request.args.get('type', type=str)
     inclusive = request.args.get('inclusive', default='False', type=str)
     image_type = request.args.get('image_type', default=IMG_TYPE, type=str)
+    content_field = request.args.get('content_field', default='full_content', type=str)
     try:
         inclusive = bool(util.strtobool(inclusive))
     except ValueError:
@@ -332,9 +351,18 @@ def search():
     docids = request.args.get('docids', default='', type=str).split(',')
     doi = request.args.get('doi', default='', type=str)
     if docids == [''] and doi != '':
-        docids = [get_docid(doi)]
+        docids = [get_docid_from_doi(doi)]
         if docids == ['']:
             return jsonify({'error' : 'DOI not in xDD system!', 'v' : VERSION})
+
+    aske_id = request.args.get('aske_id', default='', type=str)
+    if docids == [''] and aske_id != '':
+        if doi != '':
+            return jsonify({'error' : 'aske_id and doi parameters are incompatible!', 'v' : VERSION})
+        docids = [get_docid_from_aske_id(aske_id)]
+        if docids == ['']:
+            return jsonify({'error' : 'ASKE-ID not in xDD system!', 'v' : VERSION})
+
     if docids == ['']: docids=[]
 
     if obj_type == 'Body Text':
@@ -359,13 +387,13 @@ def search():
 
     count = current_app.retriever.search(query, entity_search=False, ndocs=N_RESULTS, page=page_num, cls=obj_type, dataset_id=DATASET_ID,
                                                detect_min=base_confidence, postprocess_min=postprocessing_confidence,
-                                               get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id)
+                                               get_count=True, final=False, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id, content_field=content_field)
     if 'count' in request.endpoint:
         return jsonify({'total_results': count, 'v': VERSION, 'license': LICENSE})
     current_app.logger.info(f"page: {page_num}, cls: {obj_type}, detect_min: {base_confidence}, postprocess_min: {postprocessing_confidence}")
     current_app.logger.info(f"Passing in {document_filter_terms}")
     results = current_app.retriever.search(query, entity_search=False, ndocs=N_RESULTS, page=page_num, cls=obj_type, dataset_id=DATASET_ID,
-                                         detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id)
+                                         detect_min=base_confidence, postprocess_min=postprocessing_confidence, get_count=False, final=True, inclusive=inclusive, document_filter_terms=document_filter_terms, docids=docids, obj_id=obj_id, content_field=content_field)
     if len(results) == 0:
         return {'page': 0, 'objects': [], 'v': VERSION, 'license' : LICENSE}
     image_dir = '/data/images'
