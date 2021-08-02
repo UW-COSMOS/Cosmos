@@ -248,7 +248,6 @@ class ElasticRetriever(Retriever):
                 query_list = query.split(",")
             else:
                 query_list = [query]
-            logger.info(f"{[{**{content_field:i}} for i in query_list]}")
             if inclusive:
                 q = q & Q('bool', must=[Q('match_phrase', **{content_field:i}) for i in query_list])
             else:
