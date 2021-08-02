@@ -17,6 +17,7 @@ from ingest.detect import detect
 from dask.distributed import Client, progress, as_completed
 from ingest.utils.preprocess import resize_png
 from ingest.utils.pdf_helpers import get_pdf_names
+from ingest.utils.normalize_text import normalize_text
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
 from ingest.process.aggregation.aggregate import aggregate_router
@@ -48,7 +49,7 @@ class Ingest:
     """
     def __init__(self, scheduler_address, use_semantic_detection=False, client=None, tmp_dir=None,
                  use_xgboost_postprocess=False, use_rules_postprocess=False, use_table_context_enrichment=False,
-                 use_qa_table_enrichment=False):
+                 use_qa_table_enrichment=False, use_text_normalization=False):
         """
         :param scheduler_address: Address to existing Dask scheduler
         :param use_semantic_detection: Whether or not to run semantic detection
@@ -68,6 +69,7 @@ class Ingest:
         self.use_xgboost_postprocess = use_xgboost_postprocess
         self.use_rules_postprocess = use_rules_postprocess
         self.use_semantic_detection = use_semantic_detection
+        self.use_text_normalization = use_text_normalization
         self.tmp_dir = tmp_dir
         self.use_table_context_enrichment = use_table_context_enrichment
         self.use_qa_table_enrichment = use_qa_table_enrichment
@@ -174,6 +176,8 @@ class Ingest:
                 obj = pickle.load(rf)
                 for ind, c in enumerate(obj['content']):
                     bb, cls, text = c
+                    if self.use_text_normalization:
+                        text = normalize_text(text)
                     scores, classes = zip(*cls)
                     scores = list(scores)
                     classes = list(classes)
