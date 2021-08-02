@@ -66,7 +66,8 @@ services:
     command: "python3.8 -m ingest.scripts.ingest_documents --use-semantic-detection \
               --use-rules-postprocess --use-xgboost-postprocess -a pdfs -a sections -a tables -a figures -a equations \
               --no-compute-word-vecs --ngram 3 \
-              --no-enrich \
+              --use-table-context-enrichment \
+              --use-text-normalization \
               --input-path /input --output-path /output --dataset-id documents_5Feb \
               --cluster tcp://scheduler:8786 --tmp-dir /mytmp"
 
