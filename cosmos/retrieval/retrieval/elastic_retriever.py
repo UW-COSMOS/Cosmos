@@ -98,6 +98,7 @@ class Entity(EntityObjectIndex):
             content=content,
             header_content=header_content,
             full_content=combine_content([content, header_content, context_from_text]),
+            local_content=combine_content([content, header_content]),
             area=area,
             detect_score=detect_score,
             postprocess_score=postprocess_score,
@@ -140,6 +141,7 @@ class Object(EntityObjectIndex):
     content = Text()
     context_from_text = Text()
     full_content = Text()
+    local_content = Text()
     area = Integer()
     pdf_name = Text(fields={'raw': Keyword()})
     img_pth = Text(fields={'raw': Keyword()})
@@ -190,7 +192,7 @@ class ElasticRetriever(Retriever):
         self.awsauth = awsauth
 
     # TODO: oof, I don't really want to pass in more crap here.
-    def search(self, query, entity_search=False, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None, dataset_id=None, content_field="full_content"):
+    def search(self, query, entity_search=False, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None, dataset_id=None, content_field="local_content"):
         if self.awsauth is not None:
             connections.create_connection(hosts=self.hosts,
                                           http_auth=self.awsauth,
@@ -398,6 +400,7 @@ class ElasticRetriever(Retriever):
                                 header_content=row['section_header'],
                                 context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                                 full_content=combine_contents([row['content'], row['section_header']]),
+                                local_content=combine_contents([row['content'], row['section_header']]),
                                 area=get_size(row['obj_bbs']),
                                 detect_score=row['detect_score'],
                                 postprocess_score=row['postprocess_score'],
@@ -445,6 +448,7 @@ class ElasticRetriever(Retriever):
                         header_content=row['caption_content'],
                         context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                         full_content=combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
+                        local_content=combine_contents([row['content'], row['caption_content']]),
                         area=get_size(row['obj_bbs']),
                         detect_score=row['detect_score'],
                         postprocess_score=row['postprocess_score'],
@@ -493,6 +497,7 @@ class ElasticRetriever(Retriever):
                            header_content=row['caption_content'],
                            context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                            full_content=combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
+                           local_content=combine_contents([row['content'], row['caption_content']]),
                            area=get_size(row['obj_bbs']),
                            detect_score=row['detect_score'],
                            postprocess_score=row['postprocess_score'],
@@ -541,6 +546,7 @@ class ElasticRetriever(Retriever):
                            header_content='',
                            context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                            full_content=combine_contents([row['content']]),
+                           local_content=combine_contents([row['content']]),
                            area=get_size(row['equation_bb']),
                            detect_score=row['detect_score'],
                            postprocess_score=row['postprocess_score'],
