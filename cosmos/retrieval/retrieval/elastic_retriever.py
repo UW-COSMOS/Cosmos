@@ -346,7 +346,7 @@ class ElasticRetriever(Retriever):
             df = pd.read_parquet(document_parquet)
             for ind, row in df.iterrows():
                 to_add.append(FullDocument(name=row['pdf_name'], dataset_id=row['dataset_id'], content=row['content']))
-                if len(to_add) == 1000:
+                if len(to_add) == 50:
                     bulk(connections.get_connection(), (upsert(d) for d in to_add))
                     to_add = []
             bulk(connections.get_connection(), (upsert(d) for d in to_add))
@@ -406,7 +406,7 @@ class ElasticRetriever(Retriever):
                                 postprocess_score=row['postprocess_score'],
                                 pdf_name=row['pdf_name'],
                            ))
-                    if len(to_add) == 1000:
+                    if len(to_add) == 500:
                         bulk(connections.get_connection(), (upsert(d) for d in to_add))
                         to_add = []
                 bulk(connections.get_connection(), (upsert(d) for d in to_add))
@@ -455,7 +455,7 @@ class ElasticRetriever(Retriever):
                         pdf_name=row['pdf_name'],
                         img_pth=row['img_pth'],
                         ))
-                    if len(to_add) == 1000:
+                    if len(to_add) == 25:
                         bulk(connections.get_connection(), (upsert(d) for d in to_add))
                         to_add = []
             bulk(connections.get_connection(), (upsert(d) for d in to_add))
@@ -504,7 +504,7 @@ class ElasticRetriever(Retriever):
                            pdf_name=row['pdf_name'],
                            img_pth=row['img_pth'],
                            ))
-                    if len(to_add) == 1000:
+                    if len(to_add) == 50:
                         bulk(connections.get_connection(), (upsert(d) for d in to_add))
                         to_add = []
                 bulk(connections.get_connection(), (upsert(d) for d in to_add))
@@ -532,7 +532,7 @@ class ElasticRetriever(Retriever):
                                            row['pdf_name'],
                                            row['img_pth'],
                                            commit=False))
-                            if len(to_add) == 100:
+                            if len(to_add) == 50:
                                 bulk(connections.get_connection(), (o.to_dict(True) for o in to_add), request_timeout=20, max_retries=1)
                                 to_add = []
                     if to_add == []: continue
@@ -553,7 +553,7 @@ class ElasticRetriever(Retriever):
                            pdf_name=row['pdf_name'],
                            img_pth=row['img_pth'],
                            ))
-                    if len(to_add) == 500:
+                    if len(to_add) == 50:
                         bulk(connections.get_connection(), (upsert(d) for d in to_add))
                         to_add = []
                 bulk(connections.get_connection(), (upsert(d) for d in to_add))
