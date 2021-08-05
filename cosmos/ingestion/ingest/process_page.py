@@ -58,7 +58,7 @@ def xgboost_postprocess(pkl_path):
         worker = get_worker()
         dp = None
         for plg in worker.plugins:
-            if 'process' in plg:
+            if 'Process' in plg:
                 dp = worker.plugins[plg]
                 break
         if dp is None:

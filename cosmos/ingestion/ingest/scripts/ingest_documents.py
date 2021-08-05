@@ -11,6 +11,7 @@ import os
 @click.option('--use-rules-postprocess/--no-rules-postprocess', type=bool, default='False', help='enable or disable rules postprocess')
 @click.option('--use-table-context-enrichment/--no-table-context-enrichment', type=bool, default='False', help='add body text context to table text based on table corefences in text')
 @click.option('--use-qa-table-enrichment/--no-qa-table-enrichment', type=bool, default='False', help='output table detection statistics based on table corefences in text')
+@click.option('--use-text-normalization/--no-text-normalization', type=bool, default='False', help='normalize text (ligature/unicode cleanup)')
 @click.option('--aggregation', '-a', multiple=True, default=[])
 @click.option('--input-path', type=click.Path(exists=True), help='define the path to your input documents')
 @click.option('--dataset-id', type=str, default='cosmos', help='dataset id')
@@ -29,6 +30,7 @@ def ingest_documents(cluster,
                      use_rules_postprocess,
                      use_table_context_enrichment,
                      use_qa_table_enrichment,
+                     use_text_normalization,
                      aggregation,
                      input_path,
                      dataset_id,
@@ -46,7 +48,8 @@ def ingest_documents(cluster,
                     use_xgboost_postprocess=use_xgboost_postprocess,
                     use_rules_postprocess=use_rules_postprocess,
                     use_table_context_enrichment=use_table_context_enrichment,
-                    use_qa_table_enrichment=use_qa_table_enrichment)
+                    use_qa_table_enrichment=use_qa_table_enrichment,
+                    use_text_normalization=use_text_normalization)
     ingest.ingest(input_path,
                   dataset_id,
                   output_path,

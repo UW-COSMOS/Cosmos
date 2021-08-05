@@ -74,7 +74,7 @@ fields_defs = {
         "v" : "API version",
         "pdf_name" : "Filename of documents",
         "bibjson" : "Bibliographical JSON of document (looked up within xDD)",
-        "content_field" : "Content field to search [content, header_content, context_from_text, or full_content]",
+        "content_field" : "Content field to search [content, header_content, context_from_text, local_content (content + header_content) or full_content (content + header_content + context_from_text)]",
         "[header/child/object].id" : "Internal COSMOS id of object",
         "[header/child/object].bytes" : "base64 ASCII-decoded image bytes of the object",
         "[header/child/object].content" : "Text content within the object",
@@ -334,7 +334,7 @@ def search():
     obj_type = request.args.get('type', type=str)
     inclusive = request.args.get('inclusive', default='False', type=str)
     image_type = request.args.get('image_type', default=IMG_TYPE, type=str)
-    content_field = request.args.get('content_field', default='full_content', type=str)
+    content_field = request.args.get('content_field', default='local_content', type=str)
     try:
         inclusive = bool(util.strtobool(inclusive))
     except ValueError:

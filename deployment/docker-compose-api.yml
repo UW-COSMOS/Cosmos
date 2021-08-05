@@ -29,19 +29,19 @@ services:
     networks:
       swarm_network:
 
-  rerank_model:
-    image: $RETRIEVAL_IMAGE
-    environment:
-      - RERANKING_MODEL_PATH=/weights/bert_reranker
-      - RERANKING_BASE_MODEL=bert-base-uncased
-      - RERANKING_BATCH_SIZE=16
-      - RERANKING_DEVICE=cuda
-      - RERANKING_NUM_WORKERS=1
-      - OMP_NUM_THREADS=8
-    command: "dask-worker tcp://scheduler:8786 --nprocs 1 --nthreads 1 --memory-limit 0 --resources 'retrieval=1' --preload retrieval.bert_reranker.bert_reranking_retriever"
-    networks:
-      swarm_network:
-
+#  rerank_model:
+#    image: $RETRIEVAL_IMAGE
+#    environment:
+#      - RERANKING_MODEL_PATH=/weights/bert_reranker
+#      - RERANKING_BASE_MODEL=bert-base-uncased
+#      - RERANKING_BATCH_SIZE=16
+#      - RERANKING_DEVICE=cuda
+#      - RERANKING_NUM_WORKERS=1
+#      - OMP_NUM_THREADS=8
+#    command: "dask-worker tcp://scheduler:8786 --nprocs 1 --nthreads 1 --memory-limit 0 --resources 'retrieval=1' --preload retrieval.bert_reranker.bert_reranking_retriever"
+#    networks:
+#      swarm_network:
+#
   #qa_model:
   #  image: $EXTRACTION_IMAGE
   #  environment:
