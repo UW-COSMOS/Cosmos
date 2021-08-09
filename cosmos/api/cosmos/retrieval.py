@@ -111,7 +111,7 @@ def get_docid_from_aske_id(aske_id):
     return ''
 
 def get_docid_from_doi(doi):
-    resp = requests.get(f"https://xdd.wisc.edu/api/articles?doi={doi}")
+    resp = requests.get(f"https://xdd.wisc.edu/api/articles?doi={doi}&corpus=fulltext")
     if resp.status_code == 200:
         data = resp.json()
         if 'success' in data:
