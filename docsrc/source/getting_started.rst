@@ -39,6 +39,7 @@ uwcosmos/cosmos-base-cpu:latest. If you use the CPU version, make sure to change
 Depending on your machine, you can scale the process by setting DETECT_PROCS and WORKER_PROCS to the desired number of
 processes.
 
+
 Finally, make sure to set the final four directories, denoting:
 1. an input directory pointing to your PDFs (all pdfs will need to  be renamed to valid docids)
 2. a temporary directory with sufficient hard drive space to write images and such
@@ -55,6 +56,16 @@ To process the images, run the following line:
     docker-compose -f deployment/docker-compose-ingest.yml -p cosmos up
 
 The docker-compose ingest application will process all the documents and then just idle when it is finished. You can ctrl-c out of it at that stage.
+
+Newer versions of docker-compose (starting with v1.27) require a slightly
+different syntax for declaring GPU resources, and require the .env file to be
+places within the ./deployments directory. A version of the docker-compose
+definitions compatible with newer versions is supplied
+(docker-compose-ingest-newdc.yml) and can be invoked identically:
+
+.. code-block:: console
+
+    docker-compose -f deployment/docker-compose-ingest-newdc.yml -p cosmos up
 
 The output directory you defined will now be populated with a set of Parquet_ files, as well as an images directory
 containing object specific images, and saved word embeddings over the input corpus. 

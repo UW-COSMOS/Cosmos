@@ -1,73 +1,34 @@
-
-
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
-  
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
   <title>Ingestion &mdash; Cosmos 0.0.1 documentation</title>
-  
-
-  
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-
-  
-  
-
-  
-  
-
-  
-
-  
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
-    
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-
-    
+    <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Retrieval" href="retrieval.html" />
     <link rel="prev" title="Getting Started" href="getting_started.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
-
-          
             <a href="index.html" class="icon icon-home"> Cosmos
-          
-
-          
           </a>
-
-          
-            
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -75,19 +36,8 @@
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
-              <p class="caption"><span class="caption-text">Contents</span></p>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Ingestion</a><ul>
@@ -100,83 +50,45 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="retrieval.html">Retrieval</a></li>
+<li class="toctree-l1"><a class="reference internal" href="retrieval.html#elasticsearch-index-fields">Elasticsearch Index - Fields</a></li>
 <li class="toctree-l1"><a class="reference internal" href="extraction.html">Extraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="aggregations.html">Aggregations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="docker_builds.html">Building the docker images</a></li>
 <li class="toctree-l1"><a class="reference internal" href="existing_es.html">Reading data into an existing ElasticSearch cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">Cosmos</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-        
       <li>Ingestion</li>
-    
-    
       <li class="wy-breadcrumbs-aside">
-        
-          
             <a href="_sources/ingest.rst.txt" rel="nofollow"> View page source</a>
-          
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-            
-  <div class="section" id="ingestion">
-<h1>Ingestion<a class="headerlink" href="#ingestion" title="Permalink to this headline">¶</a></h1>
+             
+  <section id="ingestion">
+<h1>Ingestion<a class="headerlink" href="#ingestion" title="Permalink to this headline"></a></h1>
 <p>The ingestion pipeline performs a variety of useful tasks, such as reading PDFs, extracting text, detecting page regions,
 and building word embeddings over the output.</p>
 <p>Here we detail the end to end ingestion algorithm for reference.</p>
-<div class="section" id="reading-pdfs">
-<h2>Reading PDFs<a class="headerlink" href="#reading-pdfs" title="Permalink to this headline">¶</a></h2>
+<section id="reading-pdfs">
+<h2>Reading PDFs<a class="headerlink" href="#reading-pdfs" title="Permalink to this headline"></a></h2>
 <p>First, we use _PDFMiner.six to extract the metadata layer from the document, if it has one. As one might expect, the PDF
 text layer, especially for more recent PDFs, is of considerably higher quality than the text that is OCR’d.</p>
 <p>The metadata is read into a dataframe, which indexes the text by its location on the page. Later, these indices will be
@@ -184,9 +96,9 @@ used to map the text back to the detected objects.</p>
 <p>We use _Ghostscript to convert the PDF to a list of images, one for each page. Images are preprocessed using Pillow to
 resize the longer edge to 1920 pixels, then padded with white space along the shorter side to produce a standard
 1920x1920 image for each page.</p>
-</div>
-<div class="section" id="grid-proposals">
-<h2>Grid Proposals<a class="headerlink" href="#grid-proposals" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="grid-proposals">
+<h2>Grid Proposals<a class="headerlink" href="#grid-proposals" title="Permalink to this headline"></a></h2>
 <p>Given the outputted images, we turn to proposing regions on the page which must be classified.
 We did not obtain sufficiently good results using object detectors which automatically specify regions of interest
 (e.g. Faster-RCNN). For the most part, high quality results can be obtained by algorithmically proposing regions on the
@@ -197,84 +109,67 @@ divided into rows. For each final cell in the grid, the nearest non white pixel 
 found to calculate the final region proposal.</p>
 <p>This algorithm was designed with scientific papers in mind, and it works well in that respect. It also
 can work for other document types, but your mileage may vary.</p>
-</div>
-<div class="section" id="object-classification">
-<h2>Object Classification<a class="headerlink" href="#object-classification" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="object-classification">
+<h2>Object Classification<a class="headerlink" href="#object-classification" title="Permalink to this headline"></a></h2>
 <p>For each proposed region, we crop the region and use a deep neural network to classify as one of the input labels.
 We use an architecture called Attentive-RCNN, which was developed by our team to take into account region information
 surrounding the proposed region. For more information, see our _preprint.</p>
 <p>We also incorporate text and higher level features by passing the results of our deep learning model to an XGBoost
 model. Optionally, these results can also be augmented with a set of high level rules.</p>
-</div>
-<div class="section" id="aggregations">
-<h2>Aggregations<a class="headerlink" href="#aggregations" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="aggregations">
+<h2>Aggregations<a class="headerlink" href="#aggregations" title="Permalink to this headline"></a></h2>
 <p>The classified objects alone lose a lot of information. For example, we organize papers into sections, not blobs of body
 text. We associate captions with tables and figures, which explain the visual diagrams. To recover these structures,
 we aggregate intuitive groups of initial predictions into superclasses. For example, in the sections aggregation,
 we look for labelled section headers, then append all proceeding body text sections to produce a full section.</p>
-<p>For more information on the aggregations, see the <span class="xref std std-ref">Aggregations</span> section.</p>
-</div>
-<div class="section" id="word-embeddings">
-<h2>Word Embeddings<a class="headerlink" href="#word-embeddings" title="Permalink to this headline">¶</a></h2>
+<p>For more information on the aggregations, see the <a class="reference internal" href="aggregations.html#aggregations"><span class="std std-ref">Aggregations</span></a> section.</p>
+</section>
+<section id="word-embeddings">
+<h2>Word Embeddings<a class="headerlink" href="#word-embeddings" title="Permalink to this headline"></a></h2>
 <p>We provide the option to train word embeddings on top of the extracted corpuses. We use _FastText to train over the extracted
 corpus at ingestion time. The resulting embeddings are saved to disk.</p>
-</div>
-<div class="section" id="context-enrichment">
-<h2>Context Enrichment<a class="headerlink" href="#context-enrichment" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="context-enrichment">
+<h2>Context Enrichment<a class="headerlink" href="#context-enrichment" title="Permalink to this headline"></a></h2>
 <p>If the enrich option is enabled at ingest time, all output parquet files from the Ingest process are enhanced with
 semantic context. For every table or table caption row in those output parquets every mention of the table label for
 that row is detected within all the content (text) from that document. That context is then appended to the output
 parquets as a duplicate of the original table or table caption row with the original content replaced by all the available
 context text. Searches on context-enriched data that include relevant context should return the tables themselves.</p>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>
-           
           </div>
-          <footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="retrieval.html" class="btn btn-neutral float-right" title="Retrieval" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="retrieval.html" class="btn btn-neutral float-right" title="Retrieval" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        &#169; Copyright 2020, UW-Cosmos.
-
-    </p>
+    <p>&#169; Copyright 2020, UW-Cosmos.</p>
   </div>
-    
-    
-    
-    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

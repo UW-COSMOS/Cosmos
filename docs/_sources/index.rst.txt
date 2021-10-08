@@ -30,5 +30,7 @@ to answer queries with subspans retrieved from the retrieval module.
    ingest.rst
    retrieval.rst
    extraction.rst
+   aggregations.rst
    docker_builds.rst
    existing_es.rst
+   troubleshooting.rst

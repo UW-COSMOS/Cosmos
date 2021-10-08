@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reading data into an existing ElasticSearch cluster &mdash; Cosmos 0.0.1 documentation</title>
+  <title>Troubleshooting &mdash; Cosmos 0.0.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -18,8 +18,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Troubleshooting" href="troubleshooting.html" />
-    <link rel="prev" title="Building the docker images" href="docker_builds.html" /> 
+    <link rel="prev" title="Reading data into an existing ElasticSearch cluster" href="existing_es.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -46,8 +45,11 @@
 <li class="toctree-l1"><a class="reference internal" href="extraction.html">Extraction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="aggregations.html">Aggregations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="docker_builds.html">Building the docker images</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Reading data into an existing ElasticSearch cluster</a></li>
-<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="existing_es.html">Reading data into an existing ElasticSearch cluster</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Troubleshooting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting Started</a></li>
+</ul>
+</li>
 </ul>
 
         </div>
@@ -64,9 +66,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Reading data into an existing ElasticSearch cluster</li>
+      <li>Troubleshooting</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="_sources/existing_es.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/troubleshooting.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -74,23 +76,59 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="reading-data-into-an-existing-elasticsearch-cluster">
-<span id="existing-es-cluster"></span><h1>Reading data into an existing ElasticSearch cluster<a class="headerlink" href="#reading-data-into-an-existing-elasticsearch-cluster" title="Permalink to this headline"></a></h1>
-<p>If you already have an existing ElasticSearch cluster setup and do not wish to spawn an additional one, in
-docker-compose-api.yml, remove the es01 service.</p>
-<p>Then in your .env file, redefine the following environment variable:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">ELASTIC_ADDRESS</span><span class="o">=</span>your.elasticsearch.address
-</pre></div>
-</div>
-<p>The retrieval and upload images will then look at the updated ELASTIC_ADDRESS.</p>
+  <section id="troubleshooting">
+<h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline"></a></h1>
+<section id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline"></a></h2>
+<table class="colwidths-given docutils align-default" id="id1">
+<caption><span class="caption-text">Getting Started Troubleshooting</span><a class="headerlink" href="#id1" title="Permalink to this table"></a></caption>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Situation</p></th>
+<th class="head"><p>Error</p></th>
+<th class="head"><p>Solution</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>When trying to docker-compose up:</p></td>
+<td><p>Creating cosmos_scheduler_1 … error</p>
+<p>ERROR: for cosmos_scheduler_1  Cannot start service scheduler: failed to get network during CreateEndpoint: network uzio31or6rp2lz9v7px9nn9zi not found</p>
+<p>ERROR: for scheduler  Cannot start service scheduler: failed to get network during CreateEndpoint: network uzio31or6rp2lz9v7px9nn9zi not found</p>
+<p>ERROR: Encountered errors while bringing up the project.</p>
+</td>
+<td><p>Try to docker-compose up with a different name space e.g. docker-compose -f ‘deployment/docker-compose-api.yml’ -p orange up</p>
+<p>Note that you’ll need to use this namespace across all the docker-compose applications</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p>When trying to docker-compose up:</p></td>
+<td><p>es01                | Exception in thread “main” java.nio.file.FileSystemException: /tmp/elasticsearch-12223023449335744691: No space left on device</p></td>
+<td><p>Docker is out of space, try a docker system prune or remove images you’re not using</p></td>
+</tr>
+<tr class="row-even"><td><p>When trying to docker-compose up:</p></td>
+<td><p>es01                | uncaught exception in thread [main]</p>
+<p>es01                | {“type”: “server”, “timestamp”: “2021-02-23T05:09:14,120Z”, “level”: “ERROR”, “component”: “o.e.b.ElasticsearchUncaughtExceptionHandler”, “cluster.name”: “es-docker-cluster”, “node.name”: “es01”, “mes</p>
+<p>sage”: “uncaught exception in thread [main]”,</p>
+<p>es01                | “stacktrace”: [“org.elasticsearch.bootstrap.StartupException: ElasticsearchException[failed to bind service]; nested: AccessDeniedException[/usr/share/elasticsearch/data/nodes];”,</p>
+<p>…</p>
+<p>es01                | ElasticsearchException[failed to bind service]; nested: AccessDeniedException[/usr/share/elasticsearch/data/nodes];</p>
+<p>es01                | Likely root cause: java.nio.file.AccessDeniedException: /usr/share/elasticsearch/data/nodes</p>
+</td>
+<td><p>sudo chmod 777 on the ELASTIC_DATA_PATH folder defined in the .env file in the Cosmos/ folder</p></td>
+</tr>
+</tbody>
+</table>
+</section>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="docker_builds.html" class="btn btn-neutral float-left" title="Building the docker images" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="troubleshooting.html" class="btn btn-neutral float-right" title="Troubleshooting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="existing_es.html" class="btn btn-neutral float-left" title="Reading data into an existing ElasticSearch cluster" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>
