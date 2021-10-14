@@ -44,6 +44,10 @@ def context_enrichment(file_path: str, dataset_id: str, pp_threshold: float, d_t
     logger.info(f'getting all pdfs with tables: {tables_df_path}')
     table_file_name = os.path.basename(tables_df_path).split('.')[0]
     tables_df = pd.read_parquet(tables_df_path)
+    if tables_df.empty:
+        logger.warning(f'No tables found in output!')
+        return
+
     pdf_names_with_tables = list(set(tables_df['pdf_name'].values.tolist()))
 
     # Get the 'documents.parquet', only rows from docs with tables
