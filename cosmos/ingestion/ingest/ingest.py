@@ -12,7 +12,7 @@ from PIL import Image
 import io
 import subprocess
 import glob
-from ingest.process_page import propose_and_pad, xgboost_postprocess, rules_postprocess
+from ingest.process_page import propose_and_pad, xgboost_postprocess, rules_postprocess, get_objects, aggregate
 from ingest.detect import detect
 from dask.distributed import Client, progress, as_completed
 from ingest.utils.preprocess import resize_png
@@ -83,6 +83,90 @@ class Ingest:
         """Simple client cleanup"""
         if self.client is not None:
             self.client.close()
+
+    def ingest_single_pdf(self,
+               pdfname,
+               dataset_id,
+               result_path,
+               images_pth,
+               skip_ocr=True,
+               visualize_proposals=False,
+               aggregations=[],
+               batch_size=2000,
+               compute_word_vecs=False,
+               ngram=1,
+               pp_threshold=0.8,
+               d_threshold=-10,
+               spans=20):
+        """
+        Handler for ingestion pipeline.
+
+        Given a directory of PDFs, run the cosmos ingestion pipeline. This will identifies page objects, and optionally
+        perform aggregations over objects (eg associating tables with table captions in scientific document pipelines)
+
+        By default, a single parquet file will be written, containing each identified page object and its text.
+
+        If additional aggregations are defined, a parquet file will be written for each defined aggregation.
+
+        For additional information on the aggregations and schemas for the output files, see the documentation.
+
+        :param pdf_directory: path to a directory of PDFs to process
+        :param dataset_id: The dataset id for this PDF set
+        :param result_path: Path to output directory where parquets and additional images will be written
+        :param images_pth: Path to where images can be written to (tmp, not output images directory) # TODO: this isn't true--I think this _is_ the image output dir.
+        :param skip_ocr: If True, PDFs with no metadata associated will be skipped. If False, OCR will be performed
+        :param visualize_proposals: Debugging option, will write images with bounding boxes from proposals to tmp
+        :param aggregations: List of aggregations to run over resulting objects
+        :param batch_size: 2000 is a good number
+        :param compute_word_vecs: Whether to compute word vectors over the corpus
+        :param ngram: n in ngram for word vecs
+        :param pp_threshold: postprocess_score threshold for identifying an object for context enrichment
+        :param d_threshold: detect_score threshold
+        :param spans: number of words either side of an object coreference to capture for context
+        also report out table identification statistics, precision, recall and f1. Does nothing if
+        use_table_context_enrichment not also True.
+        """
+        os.makedirs(images_pth, exist_ok=True)
+
+        logger.info(f"result_path: {result_path}, images_pth: {images_pth}")
+        logger.info('Starting ingestion. Converting PDFs to images.')
+
+        images = Ingest.pdf_to_images(dataset_id, self.images_tmp, pdfname)
+        logger.info('Done converting to images. Starting detection and text extraction')
+        images_queue = [i for i in images if i is not None]
+        logger.info(f'images queue length:{len(images_queue)}')
+
+        iterator = iter(images_queue)
+        while chunk := list(islice(iterator, batch_size)): # fan out the pages for only this document
+            partial_propose = functools.partial(propose_and_pad, visualize=visualize_proposals)
+            chunk = self.client.map(partial_propose, chunk, resources={'process': 1}, priority=8)
+            if self.use_semantic_detection:
+                chunk = self.client.map(detect, chunk, resources={'GPU': 1}, priority=8)
+                chunk = self.client.map(regroup, chunk, resources={'process': 1})
+                pool_text_ocr_opt = functools.partial(pool_text, skip_ocr=skip_ocr)
+                chunk = self.client.map(pool_text_ocr_opt, chunk, resources={'process': 1})
+                if self.use_xgboost_postprocess:
+                    chunk = self.client.map(xgboost_postprocess, chunk, resources={'process': 1})
+                    if self.use_rules_postprocess:
+                        chunk = self.client.map(rules_postprocess, chunk, resources={'process': 1})
+                        # here chunk is an array of pickle paths.
+            partial_get_object = functools.partial(get_object, use_text_normalization=self.use_text_normalization)
+            chunk = self.client.map(partial_get_object, chunk, resources={'process':1})
+            partial_agg = functools.partial(aggregate, aggregations=aggregations, result_path=result_path, images_path=images_pth, pdfname=pdfname)
+            aggregated = self.client.submit(partial_agg, chunk, resources={'process':1}) # *don't* want to map this one.
+            final_df = aggregated.result()
+
+            # TODO: this is looking for differently-named things since I renamed the outputs to be doc-specific
+#            if self.use_table_context_enrichment:
+#                logger.info('BEGIN ENRICH PROCESS')
+#                context_enrichment(file_path=result_path,
+#                                   dataset_id=dataset_id,
+#                                   pp_threshold=pp_threshold,
+#                                   d_threshold=d_threshold,
+#                                   spans=spans,
+#                                   client=self.client,
+#                                   use_qa_table_enrichment=self.use_qa_table_enrichment)
+            final_df.to_parquet(os.path.join(result_path, f'{os.path.basename(pdfname)}.parquet'), engine='pyarrow', compression='gzip')
 
     def ingest(self,
                pdf_directory,
