@@ -150,8 +150,8 @@ class Ingest:
                     if self.use_rules_postprocess:
                         chunk = self.client.map(rules_postprocess, chunk, resources={'process': 1})
                         # here chunk is an array of pickle paths.
-            partial_get_object = functools.partial(get_object, use_text_normalization=self.use_text_normalization)
-            chunk = self.client.map(partial_get_object, chunk, resources={'process':1})
+            partial_get_objects = functools.partial(get_objects, use_text_normalization=self.use_text_normalization)
+            chunk = self.client.map(partial_get_objects, chunk, resources={'process':1})
             partial_agg = functools.partial(aggregate, aggregations=aggregations, result_path=result_path, images_path=images_pth, pdfname=pdfname)
             aggregated = self.client.submit(partial_agg, chunk, resources={'process':1}) # *don't* want to map this one.
             final_df = aggregated.result()
