@@ -53,9 +53,11 @@ def propose_and_pad(obj, visualize=False):
         pickle.dump(obj, wf)
     return pkl_path
 
-def aggregate(pck, aggregations, result_path, images_path, pdfname):
+def aggregate(pck, aggregations, result_path, images_path):
     pck = [i for j in pck for i in j]
-    logger.info(f"Aggregating {len(pck)} objects")
+    logger.info(f"Aggregating {len(pck)} objects. First one looks like this:")
+    logger.info(pck[0])
+    pdfname = pck[0]['pdf_name']
     result_df = pd.DataFrame(pck)
     result_df['detect_cls'] = result_df['classes'].apply(lambda x: x[0])
     result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
@@ -66,7 +68,8 @@ def aggregate(pck, aggregations, result_path, images_path, pdfname):
         name = f'{pdfname}_{aggregation}.parquet'
         aggregate_df.to_parquet(os.path.join(result_path, name), engine='pyarrow', compression='gzip')
     # TODO: this isn't really necessary probably? We're not transforming pck in this function, we're just sending it back to make the workflow management slightly easier to read.
-    return result_df
+    # TODO: and this is an awful way to resolve the pdf name
+    return result_df, pdfname
 
 def get_objects(pck, use_text_normalization):
     final_objects = []

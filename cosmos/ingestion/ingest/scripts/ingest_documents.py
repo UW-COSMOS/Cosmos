@@ -1,5 +1,7 @@
 import click
 from ingest.ingest import Ingest
+from ingest.utils.pdf_helpers import get_pdf_names
+import glob
 import os
 
 
@@ -23,6 +25,7 @@ import os
 @click.option('--pp_threshold', type=float, default=0.8, help='postprocess_score threshold for identifying an object for table context enrichment')
 @click.option('--d_threshold', type=float, default=-10, help='detect_score threshold for identifying an object for table context enrichment')
 @click.option('--spans', type=int, default=20, help='number of words either side of a table coreference to capture for context')
+@click.option('--pdfs/--no-pdfs', type=bool, default='False', help='')
 def ingest_documents(cluster,
                      tmp_dir,
                      use_semantic_detection,
@@ -41,7 +44,8 @@ def ingest_documents(cluster,
                      ngram,
                      pp_threshold,
                      d_threshold,
-                     spans):
+                     spans,
+                     pdfs):
     ingest = Ingest(cluster,
                     tmp_dir=tmp_dir,
                     use_semantic_detection=use_semantic_detection,
@@ -50,18 +54,33 @@ def ingest_documents(cluster,
                     use_table_context_enrichment=use_table_context_enrichment,
                     use_qa_table_enrichment=use_qa_table_enrichment,
                     use_text_normalization=use_text_normalization)
-    ingest.ingest(input_path,
-                  dataset_id,
-                  output_path,
-                  os.path.join(output_path, 'images'),
-                  skip_ocr=skip_ocr,
-                  visualize_proposals=visualize_proposals,
-                  aggregations=aggregation,
-                  compute_word_vecs=compute_word_vecs,
-                  ngram=ngram,
-                  pp_threshold=pp_threshold,
-                  d_threshold=d_threshold,
-                  spans=spans)
+
+    if pdfs:
+        ingest.ingest_pdfs(input_path,
+                      dataset_id,
+                      output_path,
+                      os.path.join(output_path, 'images'),
+                      skip_ocr=skip_ocr,
+                      visualize_proposals=visualize_proposals,
+                      aggregations=aggregation,
+                      compute_word_vecs=compute_word_vecs,
+                      ngram=ngram,
+                      pp_threshold=pp_threshold,
+                      d_threshold=d_threshold,
+                      spans=spans)
+    else:
+        ingest.ingest(input_path,
+                      dataset_id,
+                      output_path,
+                      os.path.join(output_path, 'images'),
+                      skip_ocr=skip_ocr,
+                      visualize_proposals=visualize_proposals,
+                      aggregations=aggregation,
+                      compute_word_vecs=compute_word_vecs,
+                      ngram=ngram,
+                      pp_threshold=pp_threshold,
+                      d_threshold=d_threshold,
+                      spans=spans)
 
 
 if __name__ == '__main__':

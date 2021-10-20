@@ -84,8 +84,8 @@ class Ingest:
         if self.client is not None:
             self.client.close()
 
-    def ingest_single_pdf(self,
-               pdfname,
+    def ingest_pdfs(self,
+               pdf_directory,
                dataset_id,
                result_path,
                images_pth,
@@ -131,17 +131,23 @@ class Ingest:
         logger.info(f"result_path: {result_path}, images_pth: {images_pth}")
         logger.info('Starting ingestion. Converting PDFs to images.')
 
-        images = Ingest.pdf_to_images(dataset_id, self.images_tmp, pdfname)
-        logger.info('Done converting to images. Starting detection and text extraction')
-        images_queue = [i for i in images if i is not None]
-        logger.info(f'images queue length:{len(images_queue)}')
+#        images = Ingest.pdf_to_images(dataset_id, self.images_tmp, pdfname)
+#        logger.info('Done converting to images. Starting detection and text extraction')
+#        images_queue = [i for i in images if i is not None]
+#        logger.info(f'images queue length:{len(images_queue)}')
 
-        iterator = iter(images_queue)
-        while chunk := list(islice(iterator, batch_size)): # fan out the pages for only this document
+        pdfnames = get_pdf_names(pdf_directory)
+        # TODO: split the pdfnames into batches
+        logger.info(f'loading {len(pdfnames)} pdfs. e.g. {pdfnames[0]}')
+        pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
+        logger.info('Starting ingestion. Converting PDFs to images.')
+        splitter = self.client.map(pdf_to_images, pdfnames, resources={'process': 1})
+        final_results = []
+        for _, pages in as_completed(splitter, with_results=True):
             partial_propose = functools.partial(propose_and_pad, visualize=visualize_proposals)
-            chunk = self.client.map(partial_propose, chunk, resources={'process': 1}, priority=8)
+            chunk = self.client.map(partial_propose, pages, resources={'process': 1})
             if self.use_semantic_detection:
-                chunk = self.client.map(detect, chunk, resources={'GPU': 1}, priority=8)
+                chunk = self.client.map(detect, chunk, resources={'GPU': 1})
                 chunk = self.client.map(regroup, chunk, resources={'process': 1})
                 pool_text_ocr_opt = functools.partial(pool_text, skip_ocr=skip_ocr)
                 chunk = self.client.map(pool_text_ocr_opt, chunk, resources={'process': 1})
@@ -149,24 +155,25 @@ class Ingest:
                     chunk = self.client.map(xgboost_postprocess, chunk, resources={'process': 1})
                     if self.use_rules_postprocess:
                         chunk = self.client.map(rules_postprocess, chunk, resources={'process': 1})
-                        # here chunk is an array of pickle paths.
             partial_get_objects = functools.partial(get_objects, use_text_normalization=self.use_text_normalization)
             chunk = self.client.map(partial_get_objects, chunk, resources={'process':1})
-            partial_agg = functools.partial(aggregate, aggregations=aggregations, result_path=result_path, images_path=images_pth, pdfname=pdfname)
+            partial_agg = functools.partial(aggregate, aggregations=aggregations, result_path=result_path, images_path=images_pth)
             aggregated = self.client.submit(partial_agg, chunk, resources={'process':1}) # *don't* want to map this one.
-            final_df = aggregated.result()
+            final_results.append(aggregated)
+        for _, i in as_completed(final_results, with_results=True): # testing..
+            final_df, pdfname = i
 
             # TODO: this is looking for differently-named things since I renamed the outputs to be doc-specific
-#            if self.use_table_context_enrichment:
-#                logger.info('BEGIN ENRICH PROCESS')
-#                context_enrichment(file_path=result_path,
-#                                   dataset_id=dataset_id,
-#                                   pp_threshold=pp_threshold,
-#                                   d_threshold=d_threshold,
-#                                   spans=spans,
-#                                   client=self.client,
-#                                   use_qa_table_enrichment=self.use_qa_table_enrichment)
             final_df.to_parquet(os.path.join(result_path, f'{os.path.basename(pdfname)}.parquet'), engine='pyarrow', compression='gzip')
+        if self.use_table_context_enrichment:
+            logger.info('BEGIN ENRICH PROCESS')
+            context_enrichment(file_path=result_path,
+                    dataset_id=dataset_id,
+                    pp_threshold=pp_threshold,
+                    d_threshold=d_threshold,
+                    spans=spans,
+                    client=self.client,
+                    use_qa_table_enrichment=self.use_qa_table_enrichment)
 
     def ingest(self,
                pdf_directory,
