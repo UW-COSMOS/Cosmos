@@ -35,6 +35,12 @@ if "API_KEYS" in os.environ:
 else:
     API_KEYS = []
 
+if "CONTENT_FIELD" in os.environ:
+    CONTENT_FIELD = os.environ["CONTENT_FIELD"]
+else:
+    CONTENT_FIELD = "local_content"
+
+
 if "N_RESULTS" in os.environ:
     N_RESULTS=int(os.environ['N_RESULTS'])
 else:
@@ -65,7 +71,8 @@ parameter_defs = {
         'postprocessing_confidence': '(0.0-1.0) - Confidence score of the COSMOS post-processing model. Only results with confidence higher than the specified value will be returned. Default is 0.7.',
         'document_filter_terms': '(str) - Comma- or space-separated list of additional terms to require at the document level. Applies AND logic to comma- or space-separated words.',
         "image_type": "[jpg, thumbnail, original] - Which type of image to bring back. Original (uncompressed PNG), compressed JPG, or thumbnail (max dim. 200px).",
-        'ignore_bytes': '(bool) If true, do not return the bytes of the extracted image (e.g. only return text content of objects)'
+        'ignore_bytes': '(bool) If true, do not return the bytes of the extracted image (e.g. only return text content of objects)',
+        "content_field" : f"Content field to search [content, header_content, context_from_text, local_content (content + header_content) or full_content (content + header_content + context_from_text)]. Defaults to {CONTENT_FIELD}",
         }
 
 fields_defs = {
@@ -74,7 +81,6 @@ fields_defs = {
         "v" : "API version",
         "pdf_name" : "Filename of documents",
         "bibjson" : "Bibliographical JSON of document (looked up within xDD)",
-        "content_field" : "Content field to search [content, header_content, context_from_text, local_content (content + header_content) or full_content (content + header_content + context_from_text)]",
         "[header/child/object].id" : "Internal COSMOS id of object",
         "[header/child/object].bytes" : "base64 ASCII-decoded image bytes of the object",
         "[header/child/object].content" : "Text content within the object",
@@ -185,14 +191,14 @@ def route_help(endpoint):
                     "v" : VERSION,
                     "description" : f"Query the COSMOS extractions for objects and contexts mentioning a term passing filtration criteria. Utilizes the Elasticsearch retrieval engine. Objects matching the query are returned, along with their parent or children objects resulting from the COSMOS contextual aggregation process (e.g. figures will be return as a child object for a figure caption mentioning a phrase; all body text within a section will be returned as children to a section header mentioning a term). Result order is determined by search rank (results with high-density mentions of the term will appear first). {N_RESULTS} results are returned per page.",
                     'options': {
-                        "parameters" : makedict(["api_key", "query", "type", "page", "inclusive", "base_confidence", "postprocessing_confidence", "image_type", "ignore_bytes", "id", "doi", "aske_id"], parameter_defs),
+                        "parameters" : makedict(["api_key", "query", "type", "page", "inclusive", "base_confidence", "postprocessing_confidence", "image_type", "ignore_bytes", "id", "doi", "aske_id", "content_field"], parameter_defs),
                         'output_formats' : 'json',
                         'examples' : [
                             f'/api/{VERSION}/search?query=temperature&type=Figure&base_confidence=1.0&postprocessing_confidence=0.7',
                             f'/api/{VERSION}/search?query=remdesevir,chloroquine&inclusive=true&base_confidence=1.0&postprocessing_confidence=0.7',
                             f'/api/{VERSION}/search?query=ACE2&type=Table&base_confidence=1.0&postprocessing_confidence=0.7&document_filter_terms=covid-19'
                             ],
-                        'fields' : makedict(["page", "total", "v", "pdf_name","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence", "content_field"], fields_defs)
+                        'fields' : makedict(["page", "total", "v", "pdf_name","bibjson","[header/child/object].id","[header/child/object].bytes","[header/child/object].content","[header/child/object].page_number","[header/child/object].cls","[header/child/object].base_confidence","[header/child/object].postprocessing_confidence"], fields_defs)
                         }
                     }
                 }
@@ -298,12 +304,12 @@ def document():
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                child['bytes'] = get_image_bytes(img_pth, image_type, " ".join([child[i] if i in child and child[i] is not None else "" for i in ["content", "header_content"]]) , child["cls"])
+                child['bytes'] = get_image_bytes(img_pth, image_type, " ".join([child[i] if i in child and child[i] is not None else "" for i in ["content", "header_content"]]) , child["cls"], bibjsons['docid'])
             else:
                 child['bytes'] = None
     return jsonify({'v' : VERSION, 'total': count, 'page': 0, 'bibjson' : bibjsons[docid], 'objects': results, 'license' : LICENSE})
 
-def get_image_bytes(img_pth, image_type, content, cls):
+def get_image_bytes(img_pth, image_type, content, cls, bibjson):
     cbytes = None
     image_dir = '/data/images'
     if not os.path.exists(os.path.join(image_dir, img_pth)):
@@ -320,6 +326,14 @@ def get_image_bytes(img_pth, image_type, content, cls):
     if cls=="Figure" and ("permission" in content.lower() or "copyright" in content.lower() or "reproduced from" in content.lower() or "reproduced with" in content.lower()):
         image_dir = "./cosmos/"
         img_pth = "Copyright.png"
+    # Springer checks
+    if "springer" in bibjson['publisher'].lower() or "nature" in bibjson['publisher'].lower():
+        image_dir = "./cosmos/"
+        img_pth = "Copyright.png"
+    for link in bibjson['link']:
+        if "springer" in link['url'] or "nature.com" in link['url']:
+            image_dir = "./cosmos/"
+            img_pth = "Copyright.png"
     with open(os.path.join(image_dir, img_pth), 'rb') as imf:
         cbytes = base64.b64encode(imf.read()).decode('ascii')
     return cbytes
@@ -334,7 +348,7 @@ def search():
     obj_type = request.args.get('type', type=str)
     inclusive = request.args.get('inclusive', default='False', type=str)
     image_type = request.args.get('image_type', default=IMG_TYPE, type=str)
-    content_field = request.args.get('content_field', default='local_content', type=str)
+    content_field = request.args.get('content_field', default=CONTENT_FIELD, type=str)
     try:
         inclusive = bool(util.strtobool(inclusive))
     except ValueError:
@@ -403,7 +417,7 @@ def search():
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                child['bytes'] = get_image_bytes(img_pth, image_type, " ".join([child[i] if i in child and child[i] is not None else "" for i in ["content", "header_content"]]) , child["cls"])
+                child['bytes'] = get_image_bytes(img_pth, image_type, " ".join([child[i] if i in child and child[i] is not None else "" for i in ["content", "header_content"]]) , child["cls"], result['bibjson'])
             else:
                 child['bytes'] = None
 
@@ -446,7 +460,7 @@ def object(objid):
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
-                child['bytes'] = get_image_bytes(img_pth, image_type, " ".join([child[i] if i in child and child[i] is not None else "" for i in ["content", "header_content"]]) , child["cls"])
+                child['bytes'] = get_image_bytes(img_pth, image_type, " ".join([child[i] if i in child and child[i] is not None else "" for i in ["content", "header_content"]]) , child["cls"], result['bibjson'])
             else:
                 child['bytes'] = None
     return jsonify({'v' : VERSION, 'total': count, 'page': page_num, 'objects': results, 'license' : LICENSE})
