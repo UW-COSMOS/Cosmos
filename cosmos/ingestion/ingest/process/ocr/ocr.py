@@ -17,19 +17,19 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
 
-def regroup(pkl_path):
-    with open(pkl_path, 'rb') as rf:
-        obj = pickle.load(rf)
+def regroup(obj: dict) -> dict:
+#    with open(pkl_path, 'rb') as rf:
+#        obj = pickle.load(rf)
     l = group_cls(obj['detected_objs'], 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
     obj['detected_objs'] = group_cls(l, 'Figure')
-    with open(pkl_path, 'wb') as wf:
-        pickle.dump(obj, wf)
-    return pkl_path
+#    with open(pkl_path, 'wb') as wf:
+#        pickle.dump(obj, wf)
+    return obj
 
 
-def pool_text(pkl_path, skip_ocr=True):
-    with open(pkl_path, 'rb') as rf:
-        obj = pickle.load(rf)
+def pool_text(obj: dict, skip_ocr: bool=True) -> dict:
+#    with open(pkl_path, 'rb') as rf:
+#        obj = pickle.load(rf)
     meta_df = obj['meta']
     detect_objs = obj['detected_objs']
     if meta_df is not None:
@@ -39,9 +39,9 @@ def pool_text(pkl_path, skip_ocr=True):
     else:
         text_map = _placeholder_map(detect_objs)
     obj['content'] = text_map
-    with open(pkl_path, 'wb') as wf:
-        pickle.dump(obj, wf)
-    return pkl_path
+#    with open(pkl_path, 'wb') as wf:
+#        pickle.dump(obj, wf)
+    return obj
 
 
 def check_overlap(b2, row):

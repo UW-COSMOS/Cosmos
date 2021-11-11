@@ -22,7 +22,8 @@ def aggregate_equations(page_group, write_images_pth):
     page_content = ' '.join([p['content'] for p in objs])
     final_objs = []
     for t in targets:
-        img = Image.open(t['img_pth']).convert('RGB').crop(t['bounding_box'])
+#        img = Image.open(t['img_pth']).convert('RGB').crop(t['bounding_box'])
+        img = t['img_pth'].convert('RGB').crop(t['bounding_box'])
         imgid = uuid.uuid4()
         pth = os.path.join(write_images_pth, f'{imgid}.png')
         img.save(pth)
@@ -80,14 +81,16 @@ def caption_associate(page_group, caption_class, write_images_pth):
         group_obj['obj_bbs'] = min_obj['bounding_box']
         group_obj['detect_score'] = min_obj['detect_score']
         group_obj['postprocess_score'] = min_obj['postprocess_score']
-        img = Image.open(min_obj['img_pth']).convert('RGB').crop(min_obj['bounding_box'])
+#        img = Image.open(min_obj['img_pth']).convert('RGB').crop(min_obj['bounding_box'])
+        img = min_obj['img_pth'].convert('RGB').crop(min_obj['bounding_box'])
         imgid = uuid.uuid4()
         pth = os.path.join(write_images_pth, f'{imgid}.png')
         img.save(pth)
         group_obj['img_pth'] = pth
         final_objs.append(group_obj)
     for obj in objs:
-        img = Image.open(obj['img_pth']).convert('RGB').crop(obj['bounding_box'])
+#        img = Image.open(obj['img_pth']).convert('RGB').crop(obj['bounding_box'])
+        img = obj['img_pth'].convert('RGB').crop(obj['bounding_box'])
         imgid = uuid.uuid4()
         pth = os.path.join(write_images_pth, f'{imgid}.png')
         img.save(pth)
