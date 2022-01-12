@@ -1,4 +1,4 @@
-FROM uwcosmos/cosmos-base:latest
+FROM iaross/cosmos-base:dev
 
 COPY deployment/weights/model_weights.pth /weights/model_weights.pth
 COPY deployment/weights/pp_model_weights.pth /weights/pp_model_weights.pth

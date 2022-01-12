@@ -113,7 +113,7 @@ class Entity(EntityObjectIndex):
         '''
         return hashlib.sha1(f"{self.canonical_id}{self.name}{self.description}{self.types}{self.aliases}{self.dataset_id}".encode('utf-8')).hexdigest()
 
-    def add_object(self, cls, dataset_id, content, header_content, bbox, area, detect_score, postprocess_score, pdf_name, page_num, img_path=None, commit=True):
+    def add_object(self, cls, dataset_id, content, header_content, context_from_text, bbox, area, detect_score, postprocess_score, pdf_name, img_path=None, commit=True):
         obj = Object(
             # required make sure the answer is stored in the same shard
             _routing=self.meta.id,
@@ -126,7 +126,8 @@ class Entity(EntityObjectIndex):
             dataset_id=dataset_id,
             content=content,
             header_content=header_content,
-            full_content=combine_content([content, header_content]),
+            full_content=combine_content([content, header_content, context_from_text]),
+            local_content=combine_content([content, header_content]),
             bbox=bbox,
             area=area,
             detect_score=detect_score,
@@ -169,7 +170,9 @@ class Object(EntityObjectIndex):
     dataset_id = Text(fields={'raw': Keyword()})
     header_content = Text()
     content = Text()
+    context_from_text = Text()
     full_content = Text()
+    local_content = Text()
     area = Integer()
     bbox = ESObject()
     page_num = Integer()
@@ -221,7 +224,8 @@ class ElasticRetriever(Retriever):
         self.hosts = hosts
         self.awsauth = awsauth
 
-    def search(self, query, entity_search=False, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None, dataset_id=None):
+    # TODO: oof, I don't really want to pass in more crap here.
+    def search(self, query, entity_search=False, ndocs=30, page=0, cls=None, detect_min=None, postprocess_min=None, get_count=False, final=False, inclusive=False, document_filter_terms=[], docids=[], obj_id=None, dataset_id=None, content_field="local_content"):
         if self.awsauth is not None:
             connections.create_connection(hosts=self.hosts,
                                           http_auth=self.awsauth,
@@ -261,10 +265,8 @@ class ElasticRetriever(Retriever):
             if len(docids) > 0:
                 dq = dq & Q('bool', should=[Q('match_phrase', name=f"{i}.pdf") for i in docids])
                 doc_filter=True
-            logger.info(f"adding document_filter_terms: {document_filter_terms}")
             if len(document_filter_terms) > 0:
-                logger.info(f"adding document_filter_terms")
-                dq = dq & Q('bool', must=[Q('match_phrase', content=i) for i in document_filter_terms])
+                dq = dq & Q('bool', must=[Q('match_phrase', **{content_field:i}) for i in document_filter_terms])
                 doc_filter=True
 
             if doc_filter:
@@ -273,7 +275,6 @@ class ElasticRetriever(Retriever):
                 pdf_names = []
                 for resp in ds.scan():
                     pdf_names.append(resp['name'])
-                logger.info(f"{len(pdf_names)} pdfs found")
 
             q = Q()
             if query is None:
@@ -283,9 +284,9 @@ class ElasticRetriever(Retriever):
             else:
                 query_list = [query]
             if inclusive:
-                q = q & Q('bool', must=[Q('match_phrase', full_content=i) for i in query_list])
+                q = q & Q('bool', must=[Q('match_phrase', **{content_field:i}) for i in query_list])
             else:
-                q = q & Q('bool', should=[Q('match_phrase', full_content=i) for i in query_list])
+                q = q & Q('bool', should=[Q('match_phrase', **{content_field:i}) for i in query_list])
 
             start = page * ndocs
             end = start + ndocs
@@ -333,6 +334,7 @@ class ElasticRetriever(Retriever):
                         'base_confidence': obj.detect_score,
                         'content': obj.content,
                         'header_content': obj.header_content,
+                        'context_from_text' : obj.context_from_text if 'context_from_text' in obj else None
                     }],
                 } for obj in final_results
             ]
@@ -349,7 +351,11 @@ class ElasticRetriever(Retriever):
                                           )
         else:
             connections.create_connection(hosts=self.hosts)
-        return Object.get(id=id)
+        try:
+            obj = Object.get(id=id)
+        except:
+            obj = None
+        return obj
 
     def build_index(self, document_parquet, entities_parquet, section_parquet, tables_parquet, figures_parquet, equations_parquet):
         if self.awsauth is not None:
@@ -373,7 +379,7 @@ class ElasticRetriever(Retriever):
             df = pd.read_parquet(document_parquet)
             for ind, row in df.iterrows():
                 to_add.append(FullDocument(name=row['pdf_name'], dataset_id=row['dataset_id'], content=row['content']))
-                if len(to_add) == 1000:
+                if len(to_add) == 50:
                     bulk(connections.get_connection(), (upsert(d) for d in to_add))
                     to_add = []
             bulk(connections.get_connection(), (upsert(d) for d in to_add))
@@ -405,6 +411,7 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['section_header'],
+                                           combine_contents([row['content'], row['section_header']]),
                                            get_poly(row['obj_bbs']),
                                            get_size(row['obj_bbs']),
                                            row['detect_score'],
@@ -427,15 +434,17 @@ class ElasticRetriever(Retriever):
                                 dataset_id=row['dataset_id'],
                                 content=row['content'],
                                 header_content=row['section_header'],
+                                context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                                 full_content=combine_contents([row['content'], row['section_header']]),
                                 bbox=get_poly(row['obj_bbs']),
+                                local_content=combine_contents([row['content'], row['section_header']]),
                                 area=get_size(row['obj_bbs']),
                                 detect_score=row['detect_score'],
                                 postprocess_score=row['postprocess_score'],
                                 page_num= get_section_page(row['obj_pages']), # hack: only grab the first bbox's page IAR - 24.Feb.2021
                                 pdf_name=row['pdf_name'],
                            ))
-                    if len(to_add) == 1000:
+                    if len(to_add) == 500:
                         bulk(connections.get_connection(), (upsert(d) for d in to_add))
                         to_add = []
                 bulk(connections.get_connection(), (upsert(d) for d in to_add))
@@ -457,6 +466,7 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['caption_content'],
+                                           combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
                                            get_poly(row['obj_bbs']),
                                            get_size(row['obj_bbs']),
                                            row['detect_score'],
@@ -477,8 +487,10 @@ class ElasticRetriever(Retriever):
                         dataset_id=row['dataset_id'],
                         content=row['content'],
                         header_content=row['caption_content'],
-                        full_content=combine_contents([row['content'], row['caption_content']]),
+                        full_content=combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
                         bbox=get_poly(row['obj_bbs']),
+                        context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
+                        local_content=combine_contents([row['content'], row['caption_content']]),
                         area=get_size(row['obj_bbs']),
                         detect_score=row['detect_score'],
                         postprocess_score=row['postprocess_score'],
@@ -486,7 +498,7 @@ class ElasticRetriever(Retriever):
                         pdf_name=row['pdf_name'],
                         img_pth=row['img_pth'],
                         ))
-                    if len(to_add) == 1000:
+                    if len(to_add) == 25:
                         bulk(connections.get_connection(), (upsert(d) for d in to_add))
                         to_add = []
             bulk(connections.get_connection(), (upsert(d) for d in to_add))
@@ -508,6 +520,7 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['caption_content'],
+                                           combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
                                            get_poly(row['obj_bbs']),
                                            get_size(row['obj_bbs']),
                                            row['detect_score'],
@@ -528,7 +541,9 @@ class ElasticRetriever(Retriever):
                            dataset_id=row['dataset_id'],
                            content=row['content'],
                            header_content=row['caption_content'],
-                           full_content=combine_contents([row['content'], row['caption_content']]),
+                           context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
+                           full_content=combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
+                           local_content=combine_contents([row['content'], row['caption_content']]),
                            bbox=get_poly(row['obj_bbs']),
                            area=get_size(row['obj_bbs']),
                            detect_score=row['detect_score'],
@@ -537,7 +552,7 @@ class ElasticRetriever(Retriever):
                            pdf_name=row['pdf_name'],
                            img_pth=row['img_pth'],
                            ))
-                    if len(to_add) == 1000:
+                    if len(to_add) == 50:
                         bulk(connections.get_connection(), (upsert(d) for d in to_add))
                         to_add = []
                 bulk(connections.get_connection(), (upsert(d) for d in to_add))
@@ -567,7 +582,7 @@ class ElasticRetriever(Retriever):
                                            row['pdf_name'],
                                            row['img_pth'],
                                            commit=False))
-                            if len(to_add) == 100:
+                            if len(to_add) == 50:
                                 bulk(connections.get_connection(), (o.to_dict(True) for o in to_add), request_timeout=20, max_retries=1)
                                 to_add = []
                     if to_add == []: continue
@@ -579,7 +594,9 @@ class ElasticRetriever(Retriever):
                            dataset_id=row['dataset_id'],
                            content=row['content'],
                            header_content='',
+                           context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                            full_content=combine_contents([row['content']]),
+                           local_content=combine_contents([row['content']]),
                            bbox=get_poly(row['equation_bb']),
                            area=get_size(row['equation_bb']),
                            detect_score=row['detect_score'],
@@ -589,6 +606,7 @@ class ElasticRetriever(Retriever):
                            img_pth=row['img_pth'],
                            ))
                     if len(to_add) == 200:
+                    if len(to_add) == 50:
                         bulk(connections.get_connection(), (upsert(d) for d in to_add))
                         to_add = []
                 bulk(connections.get_connection(), (upsert(d) for d in to_add))

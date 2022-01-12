@@ -17,15 +17,17 @@ from ingest.detect import detect
 from dask.distributed import Client, progress, as_completed
 from ingest.utils.preprocess import resize_png
 from ingest.utils.pdf_helpers import get_pdf_names
+from ingest.utils.normalize_text import normalize_text
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
 from ingest.process.aggregation.aggregate import aggregate_router
 from ingest.process.representation_learning.compute_word_vecs import make_vecs
+from ingest.process.enrich.context_enrichment import context_enrichment
 import pandas as pd
 import signal
 import logging
 from itertools import islice
-from typing import List
+
 
 logging.basicConfig(format='%(levelname)s :: %(filename) :: %(funcName)s :: %(asctime)s :: %(message)s', level=logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.ERROR)
@@ -45,8 +47,9 @@ class Ingest:
     Ingest class
     Handles running the ingestion pipeline
     """
-    def __init__(self, scheduler_address, use_semantic_detection=False, client=None,
-                       tmp_dir=None, use_xgboost_postprocess=False, use_rules_postprocess=False):
+    def __init__(self, scheduler_address, use_semantic_detection=False, client=None, tmp_dir=None,
+                 use_xgboost_postprocess=False, use_rules_postprocess=False, use_table_context_enrichment=False,
+                 use_qa_table_enrichment=False, use_text_normalization=False):
         """
         :param scheduler_address: Address to existing Dask scheduler
         :param use_semantic_detection: Whether or not to run semantic detection
@@ -54,6 +57,8 @@ class Ingest:
         :param tmp_dir: Path to temporary directory which intermediate files and images will be written
         :param use_xgboost_postprocess: Whether to use the XGBoost postprocessing model
         :param use_rules_postprocess: Whether to utilize the rules postprocessing, which is specific to scientific docs
+        :param use_table_context_enrichment: If true run semantic enrichment on ingest output parquets
+        :param use_qa_table_enrichment: If true and use_table_context_enrichment is True report tables detection stats
         """
         logger.info("Initializing Ingest object")
         self.client = client
@@ -64,7 +69,10 @@ class Ingest:
         self.use_xgboost_postprocess = use_xgboost_postprocess
         self.use_rules_postprocess = use_rules_postprocess
         self.use_semantic_detection = use_semantic_detection
+        self.use_text_normalization = use_text_normalization
         self.tmp_dir = tmp_dir
+        self.use_table_context_enrichment = use_table_context_enrichment
+        self.use_qa_table_enrichment = use_qa_table_enrichment
         if tmp_dir is None:
             raise ValueError("tmp_dir must be passed in")
         # Create a subdirectory for tmp files
@@ -87,8 +95,8 @@ class Ingest:
                batch_size=2000,
                compute_word_vecs=False,
                ngram=1,
-               enrich=False,
-               threshold=0.8,
+               pp_threshold=0.8,
+               d_threshold=-10,
                spans=20):
         """
         Handler for ingestion pipeline.
@@ -109,14 +117,18 @@ class Ingest:
         :param skip_ocr: If True, PDFs with no metadata associated will be skipped. If False, OCR will be performed
         :param visualize_proposals: Debugging option, will write images with bounding boxes from proposals to tmp
         :param aggregations: List of aggregations to run over resulting objects
+        :param batch_size: 2000 is a good number
         :param compute_word_vecs: Whether to compute word vectors over the corpus
         :param ngram: n in ngram for word vecs
-        :param enrich: If true run semantic enrichment on ingest output parquets
-        :param threshold: postprocess_score threshold for identifying an object for context enrichment
+        :param pp_threshold: postprocess_score threshold for identifying an object for context enrichment
+        :param d_threshold: detect_score threshold
         :param spans: number of words either side of an object coreference to capture for context
+        also report out table identification statistics, precision, recall and f1. Does nothing if
+        use_table_context_enrichment not also True.
         """
         os.makedirs(images_pth, exist_ok=True)
         pdfnames = get_pdf_names(pdf_directory)
+        logger.debug(f'loading {len(pdfnames)} pdfs. e.g. {pdfnames[0]}')
         pdf_to_images = functools.partial(Ingest.pdf_to_images, dataset_id, self.images_tmp)
         logger.info('Starting ingestion. Converting PDFs to images.')
         images = [self.client.submit(pdf_to_images, pdf, resources={'process': 1}) for pdf in pdfnames]
@@ -139,6 +151,7 @@ class Ingest:
         images = [i.result() for i in images]
         images = [i for i in images if i is not None]
         images_queue = [i for il in images for i in il]
+        logger.debug(f'images queue length:{len(images_queue)}')
         images = []
         iterator = iter(images_queue)
         while chunk := list(islice(iterator, batch_size)):
@@ -163,6 +176,8 @@ class Ingest:
                 obj = pickle.load(rf)
                 for ind, c in enumerate(obj['content']):
                     bb, cls, text = c
+                    if self.use_text_normalization:
+                        text = normalize_text(text)
                     scores, classes = zip(*cls)
                     scores = list(scores)
                     classes = list(classes)
@@ -198,165 +213,15 @@ class Ingest:
             make_vecs(result_df, ngram)
         result_df.to_parquet(os.path.join(result_path, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
 
-        if enrich:
-            logger.info('start enrich process')
-            self.enrich(file_path=result_path,
-                        dataset_id=dataset_id,
-                        threshold=threshold,
-                        spans=spans)
-
-    @staticmethod
-    def needed_columns_are_in_df(to_check: List, to_interrogate: List) -> bool:
-        """
-        True if all of to_check values are in to_interrogate, else False
-        """
-        if all(x in to_interrogate for x in to_check):
-            return True
-        else:
-            return False
-
-    def enrich(self, file_path: str, dataset_id: str, threshold: float, spans: int):
-        """
-        iterate over all ingest output parquets and run distributed context enrichment process
-        :param file_path: a directory full of parquets (ingest output) to process
-        :param dataset_id: ingest process dataset_id
-        :param threshold: float cut off for postprocess table detection score to process as table caption
-        :param spans: number of words each side of label to pull in as context for each table label in content text
-                if None will use regex to pull out full stop to full stop span around the table label
-        """
-
-        for pq in glob.glob(os.path.join(file_path, '*.parquet')):
-            logger.info(f'processing file: {pq}')
-            df = pd.read_parquet(pq)
-            basename = os.path.basename(pq)
-
-            needed_columns = [
-                'content',
-                'postprocess_cls',
-                'postprocess_score'
-            ]
-
-            if Ingest.needed_columns_are_in_df(needed_columns, list(df.columns)):
-
-                if dataset_id:
-                    logger.info(f'limit enrichment to dataset id: {dataset_id}')
-                    df = df[df['dataset_id'] == dataset_id]
-
-                # GET ALL DOCUMENTS, LIST OF DFs
-                all_pdf_names = list(df.pdf_name.unique())
-                single_doc_dfs = []
-
-                logger.info('split ingest output into docs')
-                for name in all_pdf_names:
-                    single_doc_dfs.append(df[df['pdf_name'] == name])
-
-                partial_get_context = functools.partial(Ingest.get_contexts,
-                                                        threshold,
-                                                        spans)
-                logger.info(f'start enrichment processing with doc count {len(single_doc_dfs)}')
-                enriched = [self.client.submit(partial_get_context,
-                                               doc_df,
-                                               resources={'process': 1})
-                            for doc_df in single_doc_dfs]
-                progress(enriched)
-                logger.info('collecting all enriched docs')
-                enriched = [e.result() for e in enriched]
-                df = pd.concat(enriched)
-                logger.info(f'size of df returned from enrichment: {len(df)}')
-                df = df.reset_index(drop=True)
-
-            else:
-                pass
-            logger.info(f'outputting data: {os.path.join(file_path, basename)}')
-            df.to_parquet(os.path.join(file_path, basename))
-
-    @classmethod
-    def get_contexts(cls, threshold, spans, doc_df):
-        """
-        perform context enrichment per doc in ingest output parquet - code to run on dask cluster worker
-        :param threshold: postprocess_score value needed to act on a given postprocess_cls Table or Table Caption
-        :param spans: number of words either side of a label to capture as context in doc content
-        :param doc_df: input dataframe - one doc of output from ingest pipeline
-        :return doc_df: input dataframe with any enriched rows added
-        """
-        # disable SettingWithCopyWarning - safe since always over writing original
-        pd.options.mode.chained_assignment = None
-        original_df = doc_df.copy()
-
-        label_length = 2
-        classes = ['Table', 'Table Caption']
-
-        # get first label_length words of every content cell in df if it's classified correctly and scored highly enough
-        logger.info('setting table labels')
-        doc_df['table_label'] = [
-            ' '.join(content.split()[:label_length])
-            if (pp_cls in classes) and (pp_score >= threshold)
-            else None
-            for content, pp_cls, pp_score in zip(doc_df['content'],
-                                                 doc_df['postprocess_cls'],
-                                                 doc_df['postprocess_score'])
-        ]
-
-        # if table_label series has no values, just return original df
-        if len(doc_df[doc_df["table_label"].astype(bool)]) == 0:
-            return original_df
-
-        # aggregate all doc words into one list of words
-        words = ' '.join(doc_df.content.tolist()).split()
-
-        # mark where each label occurs in list of all doc words
-        doc_df['indices'] = [
-            [
-                j
-                for j in range(len(words))
-                if table_label == ' '.join(words[j:j + label_length])
-            ]
-            for table_label in doc_df['table_label']
-        ]
-
-        # iterate over list in indices column to extract words before labels in content
-        logger.info('getting semantic context')
-        doc_df['prefix'] = [
-            [
-                ' '.join(words[i - spans:i])
-                if i - spans >= 0
-                else ' '.join(words[0:i])
-                for i in index
-            ]
-            for index in doc_df['indices']
-        ]
-
-        # iterate over list in indices column to extract words after labels in content
-        doc_df['suffix'] = [
-            [
-                ' '.join(words[i + label_length:i + label_length + spans])
-                if i + label_length + spans <= len(words)
-                else ' '.join(words[i + label_length:len(words)])
-                for i in index
-            ]
-            for index in doc_df['indices']
-        ]
-
-        # join prefixes and suffixes together
-        doc_df['context'] = [
-            [
-                prefix[i] + ' ' + suffix[i]
-                for i in range(len(prefix))
-            ]
-            for prefix, suffix in zip(doc_df['prefix'], doc_df['suffix'])
-        ]
-
-        # remove rows without context (empty lists)
-        logger.info('removing rows with no semantic context')
-        doc_df = doc_df[doc_df['context'].apply(lambda x: len(x) > 0)]
-
-        # replace content with context as text only
-        logger.info('replace content with context')
-        doc_df['content'] = [' '.join(x) for x in doc_df['context']]
-
-        # append context only df to original df using only original columns
-        logger.info('append context to original and return')
-        return original_df.append(doc_df.loc[:, list(original_df.columns)])
+        if self.use_table_context_enrichment:
+            logger.info('BEGIN ENRICH PROCESS')
+            context_enrichment(file_path=result_path,
+                               dataset_id=dataset_id,
+                               pp_threshold=pp_threshold,
+                               d_threshold=d_threshold,
+                               spans=spans,
+                               client=self.client,
+                               use_qa_table_enrichment=self.use_qa_table_enrichment)
 
     def write_images_for_annotation(self, pdf_dir, img_dir):
         """
@@ -468,4 +333,3 @@ class Ingest:
             else:
                 objs.append(obj)
         return objs
-

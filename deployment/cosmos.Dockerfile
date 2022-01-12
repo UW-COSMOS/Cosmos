@@ -20,6 +20,7 @@ RUN apt-get install -y \
     python3.8 \
     python3-pip
 
+RUN python3.8 -m pip install -U pip
 RUN python3.8 -m pip install -v numpy
 
 RUN DEBIAN_FRONTEND="noninteractive" TZ=America/New_York apt-get install -y python3-opencv
@@ -54,4 +55,5 @@ RUN python3.8 -m pip install \
     transformers \
     elasticsearch_dsl \
     opencv-python \
-    fasttext
+    fasttext \
+    ftfy
