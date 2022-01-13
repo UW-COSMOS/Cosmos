@@ -175,8 +175,6 @@ class ElasticPageRetriever(Retriever):
         objects_to_add = []
         for i, row in unique_pages.iterrows():
 
-            # TODO: want to write bbox, classes, scores, postprocess_cls, postprocess_score, detect_cls, detect_score to detected-objects index
-
             to_add.append(Page(pdf_name=i[0],
                     page_num=i[1],
                     dataset_id=i[2],
@@ -210,6 +208,7 @@ class ElasticPageRetriever(Retriever):
                 to_add = []
                 objects_to_add = []
         bulk(connections.get_connection(), (upsert(d) for d in to_add))
+        bulk(connections.get_connection(), (upsert(o) for o in objects_to_add))
         logger.info('Done building page index')
 
     def detected_object_annotate(self, object_id, field, value):
