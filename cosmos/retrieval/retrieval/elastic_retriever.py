@@ -605,7 +605,6 @@ class ElasticRetriever(Retriever):
                            pdf_name=row['pdf_name'],
                            img_pth=row['img_pth'],
                            ))
-                    if len(to_add) == 200:
                     if len(to_add) == 50:
                         bulk(connections.get_connection(), (upsert(d) for d in to_add))
                         to_add = []
