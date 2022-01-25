@@ -66,6 +66,7 @@ class SPECTERizer:
 
     @staticmethod
     def _build_df(doc_ids: Tuple[str], specter_vectors: List[List[float]]) -> pd.DataFrame:
+        """assemble output df from doc_id tuple and SPECTER vector list"""
         return pd.DataFrame.from_dict(
             {
                 'pdf_name': list(doc_ids),
@@ -85,7 +86,7 @@ class SPECTERizer:
 
 def main():
     # demonstrate specter vector production and output format
-    # set up input _sections.parquet
+    # set up input documents_sections.parquet
     filepath = Path.cwd()
     dataset_id = 'documents'
     input_parquet_path = filepath / (dataset_id + '_sections.parquet')
