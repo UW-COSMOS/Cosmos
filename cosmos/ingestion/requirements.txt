@@ -14,7 +14,7 @@ gevent
 pytest
 torch
 torchvision
-numpy==1.15.4
+numpy==1.22.0
 pyyaml
 hyperyaml
 scikit-image
