@@ -30,3 +30,6 @@ cosmos/database/*.ini
 dask-worker-space/
 *.parquet
 docsrc/build/
+cosmos/scripts/allenai/specter/*
+!cosmos/scripts/allenai/specter/get_model.md
+
