@@ -41,7 +41,7 @@ processes.
 
 
 Finally, make sure to set the final four directories, denoting:
-1. an input directory pointing to your PDFs (all pdfs will need to  be renamed to valid docids)
+1. an input directory pointing to your PDFs
 2. a temporary directory with sufficient hard drive space to write images and such
 3. an output directory to write information. 
 4. Note that the directory serving as ELASTIC_DATA_PATH will need its permissions set to allow read/write by any user, in order to accommodate ElasticSearch's permissions model (e.g. sudo chmod 777 /path/to/es/directory).
