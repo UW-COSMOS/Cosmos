@@ -33,7 +33,7 @@ Open a file named .env in the directory, and populate it with the following:
     ELASTIC_DATA_PATH=/path/to/es/directory
 
 The first seven lines in the file define which images to use. The default cosmos images assumes access to a CUDA
-enabled GPU. To utilize a CPU, append to each image "-cpu". For example, change uwcosmos/cosmos-base:latest to
+enabled GPU with at least 8GB of memory. To utilize a CPU, append to each image "-cpu". For example, change uwcosmos/cosmos-base:latest to
 uwcosmos/cosmos-base-cpu:latest. If you use the CPU version, make sure to change all \*_DEVICE from 'cuda' to 'cpu'.
 
 Depending on your machine, you can scale the process by setting DETECT_PROCS and WORKER_PROCS to the desired number of
