@@ -37,7 +37,7 @@ enabled GPU. To utilize a CPU, append to each image "-cpu". For example, change 
 uwcosmos/cosmos-base-cpu:latest. If you use the CPU version, make sure to change all \*_DEVICE from 'cuda' to 'cpu'.
 
 Depending on your machine, you can scale the process by setting DETECT_PROCS and WORKER_PROCS to the desired number of
-processes.
+processes. For academic papers (~10 pages) and a GPU, the processing should take around a minute. Without a GPU, a similar document can take up to a half hour.
 
 
 Finally, make sure to set the final four directories, denoting:
