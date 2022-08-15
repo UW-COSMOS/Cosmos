@@ -59,7 +59,7 @@ The docker-compose ingest application will process all the documents and then ju
 
 Newer versions of docker-compose (starting with v1.27) require a slightly
 different syntax for declaring GPU resources, and require the .env file to be
-places within the ./deployments directory. A version of the docker-compose
+placed within the ./deployments directory. A version of the docker-compose
 definitions compatible with newer versions is supplied
 (docker-compose-ingest-newdc.yml) and can be invoked identically:
 
