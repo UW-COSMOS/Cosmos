@@ -219,8 +219,8 @@ class TableLocationProcessor:
     def _extract_tables(self) -> List[Tuple[str, pd.DataFrame]]:
         """get pkl_path output file path and dataframe from each table location"""
         self._add_pkl_paths_column()
-        return [(x.pkl_path, x.extract_table()[0])
-                for x in self._get_table_locations()]
+        for x in self._get_table_locations():
+            yield (x.pkl_path, x.extract_table()[0])
 
     def extract_csvs(self) -> None:
         """save each table location df as a csv with that pdfs name and an incrementing int"""
