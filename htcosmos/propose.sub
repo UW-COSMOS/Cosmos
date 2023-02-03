@@ -1,0 +1,37 @@
+universe = docker
+docker_image = uwcosmos/cosmos-ingestion
+
+# request_disk should be at least 10x the size of the input files
+# propose typically uses about 3.5 GB
+# add cpus=xx disk=yy memory=zz on the submit command line to override these defaults
+request_disk = $(disk:500MB)
+request_memory = $(memory:2GB)
+request_cpus = $(cpus:1)
+
+# need this to match to backfill slots in CHTC
++WantFlocking=true
+# avoid the slowest CHTC machines
+Requirements = versionGE(Microarch,"x86_64-v3")
+
+INPUT_DIR = $(FROM:input)
+OUT_DIR = output
+INFO_DIR = pages
+
+# use the environment to tell the script to just make PNG files and propose
+env = ;JUST_PROPOSE=True;KEEP_INFO=page,pickle
+
+SCRIPT = make_parquet.py
+executable = /usr/bin/python3.8
+transfer_executable = false
+arguments = $Fnx(SCRIPT) $Fn(INPUT_DIR) $(INFO_DIR) $(OUT_DIR)
+
+transfer_input_files = $(SCRIPT), $(INPUT_DIR)
+transfer_output_files = $(OUT_DIR), $(INFO_DIR)
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT_OR_EVICT
+
+output = $(CLUSTERID).out
+error = $(CLUSTERID).err
+log = propose.log
+
+queue
