@@ -65,6 +65,46 @@ def tlog(msg):
     now = datetime.now().strftime('%X.%f')
     print(f'{now} {msg}')
 
+def tlog_flush(msg):
+    now = datetime.now().strftime('%X.%f')
+    print(f'{now} {msg}', flush=True)
+
+# create progress file and tlog the same message, also flush output
+def set_progress(filename, msg):
+    now = datetime.now().strftime('%X.%f')
+    line = f'{now} {msg}'
+    with open(filename, 'w') as wf:
+        print(line, file=wf, flush=True)
+    print(line, flush=True)
+
+def clear_progress(filename):
+    try:
+        os.remove(filename)
+    except FileNotFoundError:
+        return False
+    return True
+
+def check_progress(filename):
+    return os.path.isfile(filename)
+
+# given an page image filename, return the page number
+def get_page_num(image_name):
+    return int(image_name.split("_")[-1])
+
+# given an page image filename, return a sort key
+def get_page_key(image_name):
+    return 1000+int(image_name.split("_")[-1])
+
+def load_image(image_path):
+    with open(image_path, 'rb') as bimage:
+        bstring = bimage.read()
+    bytesio = io.BytesIO(bstring)
+    try:
+        img = Image.open(bytesio).convert('RGB')
+    except Exception as e:
+        return None
+    return img
+
 def pull_meta(meta, limit, page_num, scale_w, scale_h):
     meta2 = None
     if meta is not None:
@@ -78,10 +118,14 @@ def pull_meta(meta, limit, page_num, scale_w, scale_h):
         meta2 = json.loads(meta2)
     return meta2
 
+#def sim_run_inference(model, detect_objs, model_config, device_str, session):
+#    detected = {'0':{'dummy':'value'}}
+#    softmax = {'0':{'dummy':'value'}}
+#    return (detected, softmax)
 
-def process_pages(filename, page_info_dir, out_dir, meta, limit, model, model_config, device_str, postprocess_model, pp_classes, aggregations):
 
-    use_text_normalization = True
+def process_pages(filename, pages, page_info_dir, meta, limit, model, model_config, device_str):
+
     just_propose = os.environ.get("JUST_PROPOSE") is not None
 
     tlog(f"create database engine")
@@ -94,73 +138,87 @@ def process_pages(filename, page_info_dir, out_dir, meta, limit, model, model_co
     pdf_name = os.path.basename(filename)
     dataset_id = Path(filename).stem
     objs = []    # working dict, saved as pickle
-    results = [] # result dict, saved as parquet
-
     infofiles = {} # files we may want to delete before we exit.
 
-    names = glob.glob(f'{page_info_dir}/{pdf_name}_*[0-9]')
+    tlog_flush(f'processing {pdf_name} and files matching it from {page_info_dir}')
 
-    tlog(f'processing {pdf_name} and files matching it from {page_info_dir}')
-
-    for image_path in names:
+    for image_path in pages:
 
         infofiles[image_path] = 'page'
 
         image_name = os.path.basename(image_path)
         try:
-            page_num = int(image_name.split("_")[-1])
+            page_num = get_page_num(image_name)
         except ValueError:
             raise Exception(f'{image_path}')
 
         page_name = f'pdf_{page_num}'
         tlog(f'processing {page_name} from {image_path}')
 
-        # get the page image
-        with open(image_path, 'rb') as bimage:
-            bstring = bimage.read()
-        bytesio = io.BytesIO(bstring)
-        try:
-            img = Image.open(bytesio).convert('RGB')
-        except Exception as e:
-            #logger.error(str(e), exc_info=True)
-            #logger.error(f'Image opening error pdf: {pdf_name}')
-            return []
-
-        tlog(f'{image_name} is {img.size} resizing to 1920')
-        orig_w, orig_h = img.size
-
-        # get or create the metadata (we need the proposals)
-        #
+        # load or create the per-page dict
         pkl_path = f'{image_path}.pkl'
         if (os.path.isfile(pkl_path)):
             with open(pkl_path, 'rb') as rf:
                 obj = pickle.load(rf)
         else:
-            obj = {'orig_w': orig_w, 'orig_h': orig_h, 'dataset_id': dataset_id, 'pdf_name': pdf_name, 'page_num': page_num, 'page_id': image_name}
-        obj['page_path'] = image_path
+            obj = {'dataset_id': dataset_id, 'pdf_name': pdf_name, 'page_num': page_num, 'page_id': image_name}
 
         # the inference model uses this as a key for the output data
-        id = '0'
-        obj['id'] = id
+        model_id = '0'
+        obj['id'] = model_id
+        obj['page_path'] = image_path
 
-        # the model wants square images of size 1920, so we resize and square it now
-        img, img_size = resize_png(img, return_size=True)
-        tlog(f'{page_name} is now {img_size}')
-        padded_img = pad_image(img)
-        tlog(f'{page_name} padded to {padded_img.size}')
-        # the padding operation is
-        #want_image_size = 1920
-        #d_w = want_image_size - w
-        #d_h = want_image_size - h
-        #padding = (0,0,d_w, d_h)
-        #padded_img = ImageOps.expand(img, padding, fill="#fff")
-
-        # the aggregation code needs access to the padded image
+        # the processing looks a resized-padded image.
+        # but the proposal step only looks at the resized image
         pad_img_path = f'{image_path}_pad'
-        padded_img.save(pad_img_path, "PNG")
-        infofiles[pad_img_path] = 'pad'
+
+        proposals = obj.get('proposals')
+        make_proposals = proposals is None or just_propose
+
+        # if we already have proposals, then we don't need to load the non-padded image
+        # we can just load the padded image.  If there is no padded image then we 
+        # load the page image and resize/pad it.
+        if os.path.isfile(pad_img_path) and not make_proposals:
+            padded_img = load_image(pad_img_path)
+            if padded_img is None:
+                tlog_flush(f'ERROR: failed to read padded image {pad_img_path} - aborting this pdf')
+                return (False, objs, infofiles)
+
+            orig_w = obj['orig_w']
+            orig_h = obj['orig_h']
+        else:
+            # get the page image
+            img = load_image(image_path)
+            if img is None:
+                tlog(f'ERROR: failed to read image {image_path} - aborting this pdf')
+                return (False, objs, infofiles)
+
+            tlog(f'{image_name} is {img.size} resizing to 1920')
+            orig_w, orig_h = img.size
+            obj['orig_w'] = orig_w
+            obj['orig_h'] = orig_h
+
+            # the model wants square images of size 1920, so we resize and square it now
+            img, img_size = resize_png(img, return_size=True)
+            tlog(f'{page_name} is now {img_size}')
+            padded_img = pad_image(img)
+            tlog(f'{page_name} padded to {padded_img.size}')
+            # the padding operation is
+            #want_image_size = 1920
+            #d_w = want_image_size - w
+            #d_h = want_image_size - h
+            #padding = (0,0,d_w, d_h)
+            #padded_img = ImageOps.expand(img, padding, fill="#fff")
+
+            # the aggregation code also needs access to the padded image
+            # so save this file for later
+            padded_img.save(pad_img_path, "PNG")
+            infofiles[pad_img_path] = 'pad'
+
+        # refresh the path to the padded image in case we are resuming on a different machine
         obj['pad_img'] = pad_img_path
 
+        # if meta/limit is supplied, store/refresh the page relevent meta info
         if limit is not None:
            obj['pdf_limit'] = limit
         else:
@@ -180,15 +238,14 @@ def process_pages(filename, page_info_dir, out_dir, meta, limit, model, model_co
             obj['meta'] = meta2
             obj['dims'] = dims
 
-        # get proposed coords for detection
-        proposals = obj.get('proposals')
-        if proposals is None:
+        # get proposed coords for use by the inference model
+        if make_proposals:
             tlog(f'{page_name} get proposals')
             proposals = get_proposals(img)
             obj['proposals'] = proposals
             if just_propose:
                 pkl_path = f'{page_info_dir}/{image_name}.pkl'
-                tlog(f'writing {page_name} proposals to {pkl_path}')
+                tlog_flush(f'writing {page_name} proposals to {pkl_path}')
                 with open(pkl_path, 'wb') as wf:
                     pickle.dump(obj, wf)
                 # tj's debugging stuff - also write to json files
@@ -197,33 +254,135 @@ def process_pages(filename, page_info_dir, out_dir, meta, limit, model, model_co
                 with open(json_path, 'w') as wf:
                     json.dump(obj, wf)
                 infofiles[json_path] = 'json'
+                objs.append(obj)
+
                 continue
 
-
         tlog(f'{page_name} invoke inference model')
-        tlog(f'   proposing: {proposals}')
+        tlog(f'   proposals: {proposals}')
 
-        detect_obj = {'id': id, 'proposals': proposals, 'img': padded_img}
+        detect_obj = {'id': model_id, 'proposals': proposals, 'img': padded_img}
         detected_objs, softmax_detected_objs = run_inference(model, [detect_obj], model_config, device_str, session)
 
         tlog(f'{page_name} inference complete')
         #tlog(f'--- detected_objs={detected_objs} ---')
         #tlog(f'--- softmax_detected_objs={softmax_detected_objs} ---')
 
-        detected = detected_objs[id]
-        softmax = softmax_detected_objs[id]
+        detected = detected_objs[model_id]
+        softmax = softmax_detected_objs[model_id]
 
         #tlog(f'--- detected={detected} ---')
         #tlog(f'--- softmax={softmax} ---')
 
+        # save results and clear any lingering post-processing data
+        # to indicate post-processing is still needed
+        obj['detected_objs'] = detected
+        obj['softmax_objs'] = softmax
+        obj.pop('content', None)
+        obj.pop('xgboost_content', None)
+        obj.pop('rules_content', None)
+
+        # put output pickles into an ouput directory
+        pkl_path = f'{page_info_dir}/{image_name}.pkl'
+        tlog_flush(f'writing {page_name} model results to {pkl_path}')
+        with open(pkl_path, 'wb') as wf:
+            pickle.dump(obj, wf)
+        infofiles[pkl_path] = 'pickle'
+
+        # tj's debugging stuff - also write model results to json files
+        #json_path = f'{page_info_dir}/{image_name}.json'
+        #tlog(f'also saving pickle for {page_name} as json')
+        #with open(json_path, 'w') as wf:
+        #    json.dump(obj, wf)
+        #infofiles[json_path] = 'json'
+
+        json_path = f'{page_info_dir}/{image_name}.detected.json'
+        with open(json_path, 'w') as wf:
+            json.dump(detected_objs, wf)
+        infofiles[json_path] = 'json'
+        json_path = f'{page_info_dir}/{image_name}.softmax.json'
+        with open(json_path, 'w') as wf:
+            json.dump(softmax_detected_objs, wf)
+        infofiles[json_path] = 'json'
+        # ^^ tj's debugging stuff
+
+        objs.append(obj)
+
+    tlog(f'close database session')
+    session.close()
+
+    # return a list of temprary files to be returned or deleted
+    return (True, objs, infofiles)
+
+# 
+# post inference aggregation of the page metadata
+# and creation of parquet files and png files needed by them
+#
+def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, pp_classes, aggregations):
+
+    use_text_normalization = True
+
+    pdf_name = os.path.basename(filename)
+    dataset_id = Path(filename).stem
+    results = [] # result list, saved as parquet
+    objs = []    # intermediate page dicts
+    infofiles = {} # files we may want to delete before we exit.
+
+    tlog(f'post-processing {pdf_name} and files matching it from {page_info_dir}')
+
+    for image_path in pages:
+
+        image_name = os.path.basename(image_path)
+        try:
+            page_num = get_page_num(image_name)
+        except ValueError:
+            raise Exception(f'{image_path}')
+
+        page_name = f'pdf_{page_num}'
+        pkl_path = f'{image_path}.pkl'
+        tlog(f'post-processing {page_name} from {pkl_path}')
+
+        # get or create the metadata (we need the proposals)
+        #
+        try:
+            with open(pkl_path, 'rb') as rf:
+                obj = pickle.load(rf)
+        except Exception as e:
+            tlog(f'ERROR: failed to read pickle {pkl_path} - aborting this pdf')
+            return (False, objs, infofiles)
+
+        # refresh the page path
+        obj['page_path'] = image_path
+
+        # we need the result of the inference model in order to proceed
+        if 'detected_objs' in obj.keys():
+            detected = obj['detected_objs']
+        else:
+            tlog_flush(f'ERROR: no detected_objs in {pkl_path} - aborting this pdf')
+            return (False, objs, infofiles)
+
+        # the aggregation code needs access to the padded image, so if
+        # it does not exist, we need to make it now
+        pad_img_path = f'{image_path}_pad'
+        if not os.path.isfile(pad_img_path):
+            img = load_image(image_path)
+            if img is None:
+                tlog_flush(f'ERROR: failed to read image {image_path} - aborting this pdf')
+                return (False, objs, infofiles)
+
+            img, img_size = resize_png(img, return_size=True)
+            padded_img = pad_image(img)
+            padded_img.save(pad_img_path, "PNG")
+
+        # refresh the padded image path, and let the KEEP_INFO code know about it
+        obj['pad_img'] = pad_img_path
+        infofiles[pad_img_path] = 'pad'
+
+        # --- post-processing work ---
         # regroup
         detected = group_cls(detected, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
         detected = group_cls(detected, 'Figure')
         tlog(f'{page_name} regroup complete')
-
-        # save results
-        obj['detected_objs'] = detected
-        obj['softmax_objs'] = softmax
 
         # pool_text
         meta_df = obj['meta']
@@ -249,28 +408,13 @@ def process_pages(filename, page_info_dir, out_dir, meta, limit, model, model_co
         tlog(f'{page_name} rules_postprocess complete')
 
         # put output pickles into an ouput directory
-        pkl_path = f'{page_info_dir}/{image_name}.pkl'
-        tlog(f'writing {page_name} model results to {pkl_path}')
+        tlog_flush(f'writing {page_name} post-processing results to {pkl_path}')
         with open(pkl_path, 'wb') as wf:
             pickle.dump(obj, wf)
         infofiles[pkl_path] = 'pickle'
 
-        # tj's debugging stuff - also write model results to json files
-        json_path = f'{page_info_dir}/{image_name}.json'
-        tlog(f'also saving pickle for {page_name} as json')
-        with open(json_path, 'w') as wf:
-            json.dump(obj, wf)
-        infofiles[json_path] = 'json'
-
-        json_path = f'{page_info_dir}/{image_name}.detected.json'
-        with open(json_path, 'w') as wf:
-            json.dump(detected_objs, wf)
-        infofiles[json_path] = 'json'
-        json_path = f'{page_info_dir}/{image_name}.softmax.json'
-        with open(json_path, 'w') as wf:
-            json.dump(softmax_detected_objs, wf)
-        infofiles[json_path] = 'json'
-        # ^^ tj's debugging stuff
+        # add to the list of intermediate objects that we return
+        objs.append(obj)
 
         # aggregate
         for ind, c in enumerate(obj['content']):
@@ -299,7 +443,8 @@ def process_pages(filename, page_info_dir, out_dir, meta, limit, model, model_co
                         }
             results.append(final_obj)
 
-        tlog(f'done processing {image_path}\n')
+
+        tlog(f'done post-processing {pkl_path}\n')
 
     if len(results) > 0:
         tlog(f'creating parquet files')
@@ -312,107 +457,224 @@ def process_pages(filename, page_info_dir, out_dir, meta, limit, model, model_co
             name = f'{dataset_id}_{aggregation}.parquet'
             aggregate_df.to_parquet(os.path.join(out_dir, name), engine='pyarrow', compression='gzip')
 
-    tlog(f'close database session')
-    session.close()
-
     # return a list of temprary files to be returned or deleted
-    return infofiles
+    return (True, objs, infofiles)
 
-if __name__ == '__main__':
-    if len(sys.argv) < 4:
-        print("Usage: python make_parquet.py <pdf-dir> <page_info_dir> <output_dir>")
-        sys.exit(1)
+# Main processing function
+#
+def main_process(pdf_dir, page_info_dir, out_dir):
 
-    (pdf_dir, page_info_dir, out_dir) = sys.argv[1:]
-
-    create_pages = True # assume we will be creating the page PNG files
+    resume_mode = False # True if may be resuming from an previous run
+    # counts of stuff we do or failed to do
+    stats = {'gs':0, 'gs_error':0,
+             'process':0, 'process_error':0,
+             'aggregate':0, 'aggregate_error':0,
+             'pdfs':0, 'attempted':0, 'succeeded':0, 'finished':0, 'already':0 }
 
     # fetch processing options from the environment
-    just_propose = os.environ.get("JUST_PROPOSE") is not None
-    keep = {}
+    keep = {} # types of intermediate files we want to return (i.e. not delete)
     keep_info_list = os.environ.get("KEEP_INFO")
     if keep_info_list is not None:
         for t in keep_info_list.split(",") : keep[t] = True
 
+    # these indicate that we should not process to completion, but return
+    # partial results on purpose
+    just_propose = os.environ.get("JUST_PROPOSE") is not None
+    skip_aggregation = os.environ.get("SKIP_AGGREGATION") is not None
+    just_aggregation = os.environ.get("JUST_AGGREGATION") is not None
+
     # create our output and page_info directory if they do not already exist
-    # if the page_info directory exists, we will assume that the initial page
-    # PNG files were transferred in and skip creating them.
+    # if the page_info directory exists, we will check for {pdf}.*.complete files
+    # to know what parts of the processing we can skip
     tlog(f'create {out_dir}')
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     pi = Path(page_info_dir)
     if pi.is_dir():
-        # TODO: check for empty info dir instead of assuming an existing dir is non-empty
-        create_pages = False
+        resume_mode = True
     else:
         tlog(f'create {page_info_dir}')
         pi.mkdir(parents=True, exist_ok=True)
-    tlog(f"--- keep={keep} ---")
+    tlog(f'--- requested keep={keep} ---')
 
+    # inference model config
     model_config = os.environ.get("MODEL_CONFIG")
     weights_pth = os.environ.get("WEIGHTS_PTH")
     device_str = 'cpu'
-    cuda_visible_dev = os.environ.get("CUDA_VISIBLE_DEVICES")
-    if cuda_visible_dev is not None:
-        tlog(f"using gpu={cuda_visible_dev}")
-        device_str = 'cuda'
+    if model_config is None or weights_pth is None:
+        if not just_propose and not just_aggregation:
+            tlog('abort because environment has no MODEL_CONFIG or WEIGHTS_PTH')
+            sys.exit(1)
+    else:
+        # use a gpu for the model if we have one and we are actually doing the model
+        cuda_visible_dev = os.environ.get("CUDA_VISIBLE_DEVICES")
+        if cuda_visible_dev is not None:
+            tlog(f'using gpu={cuda_visible_dev}')
+            device_str = 'cuda'
 
-    # xgboost config
+    # xgboost post-processing config
     pp_weights_path = os.environ.get("PP_WEIGHTS_PTH")
-
     aggregation_list = os.environ.get("AGGREGATIONS")
+    if pp_weights_path is None or aggregation_list is None:
+        if not skip_aggregation and not just_propose:
+            tlog('abort because environment has no PP_WEIGHTS_PATH or AGGREGATIONS')
+            sys.exit(1)
+        skip_aggregation = True
+
+    # interpret the partial processing options, just_propose, skip_aggregation and just_aggregation
     if just_propose:
+        skip_aggregation = True
         aggregations = None
         postprocess_model = None
         pp_classes = None
         model = None
         keep['pickle'] = True
         keep['page'] = True
+        stats['partial'] = 'proposed'
     else:
-        aggregations = aggregation_list.split(",")
-        tlog(f"--- aggregations={aggregations} ---")
+        if skip_aggregation:
+            aggregations = None
+            postprocess_model = None
+            pp_classes = None
+            keep['pickle'] = True
+            keep['page'] = True
+            stats['partial'] = 'processed'
+        else:
+            aggregations = aggregation_list.split(",")
+            tlog(f"--- aggregations={aggregations} ---")
 
-        tlog(f"loading xgboost model weights={pp_weights_path}")
-        postprocess_model = XGBClassifier()
-        postprocess_model.load_model(pp_weights_path)
+            tlog(f'loading xgboost model weights={pp_weights_path}')
+            postprocess_model = XGBClassifier()
+            postprocess_model.load_model(pp_weights_path)
 
-        #cfg = ConfigManager(model_config)
-        with open(model_config) as stream:
-            pp_classes = yaml.load(stream, yaml.Loader)["CLASSES"]
-        tlog(f"--- pp_classes={pp_classes} ---")
+            #cfg = ConfigManager(model_config)
+            with open(model_config) as stream:
+                pp_classes = yaml.load(stream, yaml.Loader)["CLASSES"]
+            tlog(f'--- pp_classes={pp_classes} ---')
 
-        tlog(f"loading inference model config={model_config} weights={weights_pth}")
-        model = get_model(model_config, weights_pth, device_str)
+        if just_aggregation:
+            model = None
+        else:
+            tlog(f'loading inference model config={model_config} weights={weights_pth}')
+            model = get_model(model_config, weights_pth, device_str)
 
+    # ------- main PDF processing loop --------
     # we will process all of the *.pdf files from the input dir
     #
     pdfs = glob.glob(f'{pdf_dir}/*.pdf')
     tlog(f'processing *.pdf files from {pdf_dir}')
     for filename in pdfs:
 
+        success = True
+        stats['pdfs'] += 1
+
         pdf_name = os.path.basename(filename)
         dataset_id = Path(filename).stem
 
-        meta = None
-        limit = None
+        # names of the various partial progress files
+        progress_filename_pages = f'{page_info_dir}/{pdf_name}.pages.complete'
+        progress_filename_propose = f'{page_info_dir}/{pdf_name}.propose.complete'
+        progress_filename_process = f'{page_info_dir}/{pdf_name}.process.complete'
+        progress_filename_parquet = f'{page_info_dir}/{pdf_name}.parquet.complete'
+
+        if check_progress(progress_filename_parquet):
+            stats['already'] += 1
+            continue
+
+        stats['attempted'] += 1
+
+        create_pages = not resume_mode
+        pages = glob.glob(f'{page_info_dir}/{pdf_name}_*[0-9]')
+        if len(pages) == 0:
+            create_pages = True
+        else:
+            create_pages = not check_progress(progress_filename_pages)
+            if not create_pages:
+                tlog(f'skipping page print because {progress_filename_pages} exists')
+
         if create_pages:
-            tlog(f'parse pdf {filename}')
-            meta, limit = parse_pdf(filename)
+            clear_progress(progress_filename_pages)
+            clear_progress(progress_filename_propose)
+            clear_progress(progress_filename_process)
+            clear_progress(progress_filename_parquet)
 
-            tlog(f'print pages for {pdf_name}')
-            subprocess.run(['gs', '-dBATCH',
-                            '-dNOPAUSE',
-                            '-sDEVICE=png16m',
-                            '-dGraphicsAlphaBits=4',
-                            '-dTextAlphaBits=4',
-                            '-r600',
-                            f'-sOutputFile="{page_info_dir}/{pdf_name}_%d"',
-                            filename], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+            timelimit = 10*60 # wait no longer than 10 minutes
+            tlog(f'print pages for {pdf_name} with timeout={timelimit}')
+            args = ['gs', '-dBATCH',
+                          '-dNOPAUSE',
+                          '-sDEVICE=png16m',
+                          '-dGraphicsAlphaBits=4',
+                          '-dTextAlphaBits=4',
+                          '-r600',
+                          f'-sOutputFile="{page_info_dir}/{pdf_name}_%d"',
+                          filename]
+            try:
+                result = subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
+                                        timeout=timelimit, check=True)
+                pages = glob.glob(f'{page_info_dir}/{pdf_name}_*[0-9]')
+                num = len(pages)
+                set_progress(progress_filename_pages, f'printed {num} pages for {pdf_name}')
+                stats['gs'] += 1;
+            except subprocess.SubprocessError as e:
+                pages = []
+                stats['gs_error'] += 1;
+                if isinstance(subprocess.TimeoutExpired):
+                    tlog_flush(f'ERROR: timeout printing {pdf_name} pages - skipping this pdf')
+                else:
+                    tlog_flush(f'ERROR: ghostscript error: {e.returncode} for {pdf_name}')
+                success = False
 
+        # lets process the pages in page number order, does it matter? probably not...
+        pages.sort(key=get_page_key)
+
+        infofiles = {}
         # process each of the page files we just created or were transfered in
-        infofiles = process_pages(filename, page_info_dir, out_dir,
-                                meta, limit,
-                                model, model_config, device_str,
-                                postprocess_model, pp_classes, aggregations)
+        if success and not just_aggregation:
+            check = progress_filename_process;
+            if (just_propose):
+               check = progress_filename_propose
+            success = check_progress(check)
+            if success:
+                tlog_flush(f'skipping processing because {check} exists')
+            else:
+                # process_pages needs the parse_pdf metadata if processing will be
+                # or might be doing the propose step.  This is a bit awkward but we
+                # want to support both the workflow where we propose and process each
+                # page in a single job, and also the workflow where we propose
+                # in a separate job, and process in a later job.  In the second case
+                # the inference processing step does not need to re-parse the pdf.
+                meta = None
+                limit = None
+                if not just_propose and check_progress(progress_filename_propose):
+                    tlog(f'skipping parse_pdf because {progress_filename_propose} exists')
+                else:
+                    tlog(f'parse pdf {filename}')
+                    meta, limit = parse_pdf(filename)
+
+                success, objs, infofiles = process_pages(filename, pages, page_info_dir,
+                                                            meta, limit,
+                                                            model, model_config, device_str)
+                if success:
+                    num = len(objs)
+                    if just_propose:
+                        set_progress(progress_filename_propose, f'just_propose for {num} pages for {pdf_name}')
+                    else:
+                        set_progress(progress_filename_process, f'processed {num} pages for {pdf_name}')
+                    stats['process'] += 1
+                else:
+                    stats['process_error'] += 1
+                    tlog_flush(f'failed to process {pdf_name}')
+
+        if success and not skip_aggregation:
+            success, objs, moar_infofiles = aggregate_pages(filename, pages, page_info_dir, out_dir,
+                                                            postprocess_model, pp_classes, aggregations)
+            infofiles.update(moar_infofiles)
+            if success:
+                stats['aggregate'] += 1
+                set_progress(progress_filename_parquet, f'created parquet files for {pdf_name}')
+                stats['finished'] += 1
+            else:
+                stats['aggregate_error'] += 1
+                tlog_flush(f'failed to aggregate {pdf_name}')
 
         # remove the infofiles created by processing that we have not been told to keep
         for file,type in infofiles.items():
@@ -422,8 +684,39 @@ if __name__ == '__main__':
                 tlog(f'          rm {type} {file}')
                 os.remove(file)
 
+        if success:
+            stats['succeeded'] += 1
+
+    return stats
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 4:
+        print("Usage: python make_parquet.py <pdf-dir> <page_info_dir> <output_dir>")
+        sys.exit(1)
+
+    (pdf_dir, page_info_dir, out_dir) = sys.argv[1:]
+
+    stats = main_process(pdf_dir, page_info_dir, out_dir)
+    tlog(f'--- stats={stats} ---')
+
     #tlog(f'sleep(60) to make memory tracking more accurate when processing takes < 60 sec')
     #time.sleep(60)
 
-    tlog(f'done')
+    # report on what we did and decide what our exit code will be
+    attempted = stats['attempted']
+    succeeded = stats['succeeded']
+    finished = stats['finished']
+    already = stats['already']
+    failed = attempted - succeeded
+    if already > 0:
+        tlog(f'Skipped {already} pdf files because of completion files.')
+    work = stats.get('partial')
+    if work is None:
+        tlog(f'Created {finished} parquet data sets out of {attempted} attempted.')
+    else:
+        tlog(f'Successfully {work} {succeeded} pdf files out of {attempted} attempted.')
+    if failed > 0:
+        tlog(f'Failed to process {failed} pdf files.')
+        sys.exit(1)
 
