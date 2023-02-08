@@ -18,7 +18,7 @@ OUT_DIR = output
 INFO_DIR = pages
 
 # use the environment to tell the script to just make PNG files and propose
-env = ;JUST_PROPOSE=True;KEEP_INFO=page,pickle
+env = ;JUST_PROPOSE=True;KEEP_INFO=page,pickle,pad
 
 SCRIPT = make_parquet.py
 executable = /usr/bin/python3.8
@@ -30,6 +30,9 @@ transfer_output_files = $(OUT_DIR), $(INFO_DIR)
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT_OR_EVICT
 
+if $(append)
+   erase_output_and_error_on_restart = false
+endif
 output = $(CLUSTERID).out
 error = $(CLUSTERID).err
 log = propose.log

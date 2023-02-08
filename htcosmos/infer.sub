@@ -24,8 +24,6 @@ require_gpus = $(require_gpus) && GlobalMemoryMb >= 8192
 # do a cpu-only run by clearing the GPU request
 if $(propose)
     use_cpu = 1
-elif $(post)
-    use_cpu = 1
 endif
 if $(use_cpu)
     request_gpus =
@@ -47,28 +45,14 @@ INFO_DIR = pages
 
 # This controls what temporary data we return in the INFO_DIR
 # This only filters *new* files. it has no effect on files already in the INFO_DIR
-KEEP_INFO=pickle
+KEEP_INFO=pickle,page,pad
 
 # paths to the model in the docker image. these will get put into the job environment
 MODEL_CONFIG=/configs/model_config.yaml
 WEIGHTS_PTH=/weights/model_weights.pth
-PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
-AGGREGATIONS=pdfs,sections,tables,figures,equations
 
 # pass configuration info to the job in the environment
-env = ;MODEL_CONFIG=$(MODEL_CONFIG);WEIGHTS_PTH=$(WEIGHTS_PTH);PP_WEIGHTS_PTH=$(PP_WEIGHTS_PTH)
-env = $(env);AGGREGATIONS=$(AGGREGATIONS);KEEP_INFO=$(KEEP_INFO)
-
-# if the submit was invoked with propose=1 on the command line,
-# tell the script to quit after the propose step for each page
-# when JUST_PROPOSE is true, pickles and pages are always returned regardless of KEEP_INFO
-if $(propose)
-   env = $(env);JUST_PROPOSE=True
-elif $(infer)
-   env = $(env);SKIP_AGGREGATION=True
-elif $(post)
-   env = $(env);JUST_AGGREGATION=True
-endif
+env = ;MODEL_CONFIG=$(MODEL_CONFIG);WEIGHTS_PTH=$(WEIGHTS_PTH);KEEP_INFO=$(KEEP_INFO);SKIP_AGGREGATION=True
 
 # the actual job, the script will get copied from the submit machine
 # but we will use the python that is installed in the docker image
@@ -87,6 +71,6 @@ if $(append)
 endif
 output = $(CLUSTERID).out
 error = $(CLUSTERID).err
-log = parquet.log
+log = infer.log
 
 queue
