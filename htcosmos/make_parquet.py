@@ -69,7 +69,13 @@ def tlog_flush(msg):
     now = datetime.now().strftime('%X.%f')
     print(f'{now} {msg}', flush=True)
 
-# create progress file and tlog the same message, also flush output
+# helper for creating debugging infofiles in json format
+def debug_file(obj, json_path):
+    with open(json_path, 'w') as wf:
+        json.dump(obj, wf)
+    return json_path
+
+""" create progress file and tlog the same message, also flush output """
 def set_progress(filename, msg):
     now = datetime.now().strftime('%X.%f')
     line = f'{now} {msg}'
@@ -77,6 +83,7 @@ def set_progress(filename, msg):
         print(line, file=wf, flush=True)
     print(line, flush=True)
 
+""" delete progress file if it exists """
 def clear_progress(filename):
     try:
         os.remove(filename)
@@ -84,6 +91,7 @@ def clear_progress(filename):
         return False
     return True
 
+""" check if progress file exists """
 def check_progress(filename):
     return os.path.isfile(filename)
 
@@ -95,6 +103,7 @@ def get_page_num(image_name):
 def get_page_key(image_name):
     return 1000+int(image_name.split("_")[-1])
 
+# load an image file and convert  to RGB, if unable to load return None
 def load_image(image_path):
     with open(image_path, 'rb') as bimage:
         bstring = bimage.read()
@@ -105,6 +114,7 @@ def load_image(image_path):
         return None
     return img
 
+# copy metadata and scale data in the copy the given page by the given scale factors
 def pull_meta(meta, limit, page_num, scale_w, scale_h):
     meta2 = None
     if meta is not None:
@@ -118,12 +128,45 @@ def pull_meta(meta, limit, page_num, scale_w, scale_h):
         meta2 = json.loads(meta2)
     return meta2
 
-#def sim_run_inference(model, detect_objs, model_config, device_str, session):
-#    detected = {'0':{'dummy':'value'}}
-#    softmax = {'0':{'dummy':'value'}}
-#    return (detected, softmax)
+"""
+    Main processing function for the pages in a single PDF file.
 
+    This function processes a input list of page .PNG files and creates a dict for each page which it saves
+    as a pickle file. the JUST_PROPOSE environment variable controls whether this function does GPU inference
+    processing or not.  When JUST_PROPOSE is not set, this function will read existing page pickles and use the
+    proposals in those pickles, if no proposal is found it will do the proposal.  It will then invoke the GPU
+    inference model and save the result in the pickle and also return it.
 
+    When JUST_PROPOSE is set, it will do the proposal for each page, overwriting any proposal data in the
+    input pickle and return the proposal results.
+
+    If any of the pages cannot be processed, False will be returned along with the objs and infofiles created
+    up to that point.
+
+    args:
+        filename      - relative path the the PDF file being processed, typically {pdf_dir)/{dataset_id}.pdf
+        pages         - list of relative paths to the page PNG files for the PDF, typically {page_info_dir}/{dataset_id}_{page_num}.png
+        page_info_dir - relative path to intermediate directory for pickles, padded images and other infofiles
+        meta          - PDF metadata or None
+        limit         - PDF page size in pixels or None
+        model         - GPU inference model or None
+        model_config  - GPU inference model or None
+        device_str    - the value 'cpu', 'cuda' or None
+
+    return: (success, objs, infofiles)
+        success       - a boolean value that indicates overall success or failure
+        objs          - a list of dict objects, one for each input page in the pages list
+        infofiles     - a dict of temporary files created in the {page_info_dir}
+                        dict key is filename and value is the type of file, one of
+                           'page'   - page PNG files
+                           'pad'    - scaled and padded page PNG files.  these are needed by aggregation
+                           'pickle' - contents of a page dict saved as a pickle file
+                           'json'   - selected page processing results saved as json data
+
+    The meta, and limit values can be None if the processing is skipping the propose step
+    The model, model_config and device_str values can be None if processing is just doing the propose step
+
+"""
 def process_pages(filename, pages, page_info_dir, meta, limit, model, model_config, device_str):
 
     just_propose = os.environ.get("JUST_PROPOSE") is not None
@@ -150,7 +193,7 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         try:
             page_num = get_page_num(image_name)
         except ValueError:
-            raise Exception(f'{image_path}')
+            raise Exception(f'cannot extract page number from {image_path}')
 
         page_name = f'pdf_{page_num}'
         tlog(f'processing {page_name} from {image_path}')
@@ -220,7 +263,7 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
 
         # if meta/limit is supplied, store/refresh the page relevent meta info
         if limit is not None:
-           obj['pdf_limit'] = limit
+            obj['pdf_limit'] = limit
         else:
             limit = obj.get('pdf_limit')
 
@@ -248,12 +291,8 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
                 tlog_flush(f'writing {page_name} proposals to {pkl_path}')
                 with open(pkl_path, 'wb') as wf:
                     pickle.dump(obj, wf)
-                # tj's debugging stuff - also write to json files
-                json_path = f'{page_info_dir}/{image_name}.json'
-                tlog(f'also writing {page_name} pickles as json')
-                with open(json_path, 'w') as wf:
-                    json.dump(obj, wf)
-                infofiles[json_path] = 'json'
+                # tj's debugging stuff - write proposals and meta also as json
+                # infofiles[debug_file(obj, f'{page_info_dir}/{image_name}.json')] = 'json'
                 objs.append(obj)
 
                 continue
@@ -265,14 +304,9 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         detected_objs, softmax_detected_objs = run_inference(model, [detect_obj], model_config, device_str, session)
 
         tlog(f'{page_name} inference complete')
-        #tlog(f'--- detected_objs={detected_objs} ---')
-        #tlog(f'--- softmax_detected_objs={softmax_detected_objs} ---')
 
         detected = detected_objs[model_id]
         softmax = softmax_detected_objs[model_id]
-
-        #tlog(f'--- detected={detected} ---')
-        #tlog(f'--- softmax={softmax} ---')
 
         # save results and clear any lingering post-processing data
         # to indicate post-processing is still needed
@@ -290,20 +324,9 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         infofiles[pkl_path] = 'pickle'
 
         # tj's debugging stuff - also write model results to json files
-        #json_path = f'{page_info_dir}/{image_name}.json'
-        #tlog(f'also saving pickle for {page_name} as json')
-        #with open(json_path, 'w') as wf:
-        #    json.dump(obj, wf)
-        #infofiles[json_path] = 'json'
-
-        json_path = f'{page_info_dir}/{image_name}.detected.json'
-        with open(json_path, 'w') as wf:
-            json.dump(detected_objs, wf)
-        infofiles[json_path] = 'json'
-        json_path = f'{page_info_dir}/{image_name}.softmax.json'
-        with open(json_path, 'w') as wf:
-            json.dump(softmax_detected_objs, wf)
-        infofiles[json_path] = 'json'
+        #infofiles[debug_file(obj, f'{page_info_dir}/{image_name}.json')] = 'json'
+        #infofiles[debug_file(detected_objs, f'{page_info_dir}/{image_name}.detected.json')] = 'json'
+        #infofiles[debug_file(softmax_detected_objs, f'{page_info_dir}/{image_name}.softmax.json')] = 'json'
         # ^^ tj's debugging stuff
 
         objs.append(obj)
@@ -314,10 +337,32 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
     # return a list of temprary files to be returned or deleted
     return (True, objs, infofiles)
 
-# 
-# post inference aggregation of the page metadata
-# and creation of parquet files and png files needed by them
-#
+"""
+    Post inference aggregation of the page metadata and creation of parquet files and png files needed by them
+
+    This function expects to consume the intermediate files produced by the process_pages function.  It will
+    create the resized,padded image files if they do not already exist in the {page_info_dir}, and then it will
+    perform the post-processing, aggregation and parquet creation steps for the input pages.  parquet files
+    will be written to {out_dir}, updated pickes and possibly padded page files are written to {page_info_dir}.
+
+    Args:
+        filename          - relative path the the PDF file being processed, typically {pdf_dir)/{dataset_id}.pdf
+        pages             - list of relative paths to the page PNG files for the PDF, typically {page_info_dir}/{dataset_id}_{page_num}.png
+        page_info_dir     - relative path to intermediate directory for pickles, padded images and other infofiles
+        out_dir           - relative path to output parquet files and png files referenced therein
+        postprocess_model - xgboost posprocessing model
+        pp_classes        - 'CLASSES' from the model config
+        aggregations      - list of aggregation categories, one parquet file is created for each entry in this list
+
+    return: (success, objs, infofiles)
+        success       - a boolean value that indicates overall success or failure
+        objs          - a list of dict objects, one for each input page in the pages list
+        infofiles     - a dict of temporary files created in the {page_info_dir}
+                          key is filename and value is the type of file, one of
+                           'pad'    - scaled and padded page PNG files.
+                           'pickle' - contents of a page dict saved as a pickle file
+
+"""
 def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, pp_classes, aggregations):
 
     use_text_normalization = True
@@ -336,7 +381,7 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
         try:
             page_num = get_page_num(image_name)
         except ValueError:
-            raise Exception(f'{image_path}')
+            raise Exception(f'cannot extract page number from {image_path}')
 
         page_name = f'pdf_{page_num}'
         pkl_path = f'{image_path}.pkl'
@@ -460,8 +505,23 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
     # return a list of temprary files to be returned or deleted
     return (True, objs, infofiles)
 
-# Main processing function
-#
+"""
+    main processing loop for PDF files, called by main after command line parsing.
+
+    This function processes each PDFs in the {pdf_dir} and invokes the other functions on each
+    PDF one at a time.  What processing happens depends on environment variables JUST_PROPOSE,
+    SKIP_AGGREGATION, and JUST_AGGREGATION, and on the presence or absence of *.complete files
+    in the intermediate processing directory.
+
+    Args:
+        pdf_dir       - directory for input PDF files
+        page_info_dir - in/out directory for intermediate files such as page PNGs and pickles
+        out_dir       - directory for output parquet files and the png files used therein
+
+    returns
+        stats         - dict of counts of processing successes and failures
+
+"""
 def main_process(pdf_dir, page_info_dir, out_dir):
 
     resume_mode = False # True if may be resuming from an previous run
@@ -613,10 +673,10 @@ def main_process(pdf_dir, page_info_dir, out_dir):
                 pages = glob.glob(f'{page_info_dir}/{pdf_name}_*[0-9]')
                 num = len(pages)
                 set_progress(progress_filename_pages, f'printed {num} pages for {pdf_name}')
-                stats['gs'] += 1;
+                stats['gs'] += 1
             except subprocess.SubprocessError as e:
                 pages = []
-                stats['gs_error'] += 1;
+                stats['gs_error'] += 1
                 if isinstance(subprocess.TimeoutExpired):
                     tlog_flush(f'ERROR: timeout printing {pdf_name} pages - skipping this pdf')
                 else:
@@ -629,7 +689,7 @@ def main_process(pdf_dir, page_info_dir, out_dir):
         infofiles = {}
         # process each of the page files we just created or were transfered in
         if success and not just_aggregation:
-            check = progress_filename_process;
+            check = progress_filename_process
             if (just_propose):
                check = progress_filename_propose
             success = check_progress(check)
@@ -677,11 +737,11 @@ def main_process(pdf_dir, page_info_dir, out_dir):
                 tlog_flush(f'failed to aggregate {pdf_name}')
 
         # remove the infofiles created by processing that we have not been told to keep
-        for file,type in infofiles.items():
-            if type in keep:
-                tlog(f'   keep_info {type} {file}')
+        for file,typ in infofiles.items():
+            if typ in keep:
+                tlog(f'   keep_info {typ} {file}')
             else:
-                tlog(f'          rm {type} {file}')
+                tlog(f'          rm {typ} {file}')
                 os.remove(file)
 
         if success:
