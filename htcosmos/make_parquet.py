@@ -679,7 +679,7 @@ def main_process(pdf_dir, page_info_dir, out_dir):
             except subprocess.SubprocessError as e:
                 pages = []
                 stats['gs_error'] += 1
-                if isinstance(subprocess.TimeoutExpired):
+                if isinstance(e, subprocess.TimeoutExpired):
                     tlog_flush(f'ERROR: timeout printing {pdf_name} pages - skipping this pdf')
                 else:
                     tlog_flush(f'ERROR: ghostscript error: {e.returncode} for {pdf_name}')
