@@ -165,6 +165,8 @@ class TableLocationProcessor:
 
         self.png_path = png_path
         self.output_path = output_path
+        if os.path.exists(self.output_path):
+            os.makedirs(self.output_path)
 
         self.orig_df = self.df.copy(deep=True)
         self.df = self.df[(self.df.detect_score >= d_score_cutoff) &
@@ -220,6 +222,7 @@ class TableLocationProcessor:
         """get pkl_path output file path and dataframe from each table location"""
         self._add_pkl_paths_column()
         for x in self._get_table_locations():
+            print(f"Working on {x.pdf_path}")
             yield (x.pkl_path, x.extract_table()[0])
 
     def extract_csvs(self) -> None:
