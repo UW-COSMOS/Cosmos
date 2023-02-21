@@ -330,10 +330,13 @@ def get_image_bytes(img_pth, image_type, content, cls, bibjson):
     if "springer" in bibjson['publisher'].lower() or "nature" in bibjson['publisher'].lower():
         image_dir = "./cosmos/"
         img_pth = "Copyright.png"
-    for link in bibjson['link']:
-        if "springer" in link['url'] or "nature.com" in link['url']:
-            image_dir = "./cosmos/"
-            img_pth = "Copyright.png"
+    if "link" in bibjson:
+        for link in bibjson['link']:
+            if "springer" in link['url'] or "nature.com" in link['url']:
+                image_dir = "./cosmos/"
+                img_pth = "Copyright.png"
+    else:
+        current_app.logger.warning("No link field for document {bibjson['_gddid']}!")
     with open(os.path.join(image_dir, img_pth), 'rb') as imf:
         cbytes = base64.b64encode(imf.read()).decode('ascii')
     return cbytes
