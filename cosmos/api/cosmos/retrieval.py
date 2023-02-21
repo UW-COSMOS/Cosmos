@@ -336,7 +336,7 @@ def get_image_bytes(img_pth, image_type, content, cls, bibjson):
                 image_dir = "./cosmos/"
                 img_pth = "Copyright.png"
     else:
-        current_app.logger.warning("No link field for document {bibjson['_gddid']}!")
+        current_app.logger.warning(f"No link field for document {bibjson['_gddid']}!")
     with open(os.path.join(image_dir, img_pth), 'rb') as imf:
         cbytes = base64.b64encode(imf.read()).decode('ascii')
     return cbytes
