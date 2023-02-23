@@ -33,7 +33,7 @@ redis==3.2.0
 requests
 scikit-image
 setuptools
-sklearn
+scikit-learn
 sqlalchemy
 tensorboard
 tensorboardX
