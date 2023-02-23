@@ -33,15 +33,15 @@ Open a file named .env in the directory, and populate it with the following:
     ELASTIC_DATA_PATH=/path/to/es/directory
 
 The first seven lines in the file define which images to use. The default cosmos images assumes access to a CUDA
-enabled GPU. To utilize a CPU, append to each image "-cpu". For example, change uwcosmos/cosmos-base:latest to
+enabled GPU with at least 8GB of memory. To utilize a CPU, append to each image "-cpu". For example, change uwcosmos/cosmos-base:latest to
 uwcosmos/cosmos-base-cpu:latest. If you use the CPU version, make sure to change all \*_DEVICE from 'cuda' to 'cpu'.
 
 Depending on your machine, you can scale the process by setting DETECT_PROCS and WORKER_PROCS to the desired number of
-processes.
+processes. For academic papers (~10 pages) and a GPU, the processing should take around a minute. Without a GPU, a similar document can take up to a half hour.
 
 
 Finally, make sure to set the final four directories, denoting:
-1. an input directory pointing to your PDFs (all pdfs will need to  be renamed to valid docids)
+1. an input directory pointing to your PDFs
 2. a temporary directory with sufficient hard drive space to write images and such
 3. an output directory to write information. 
 4. Note that the directory serving as ELASTIC_DATA_PATH will need its permissions set to allow read/write by any user, in order to accommodate ElasticSearch's permissions model (e.g. sudo chmod 777 /path/to/es/directory).

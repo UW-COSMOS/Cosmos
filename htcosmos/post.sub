@@ -1,0 +1,58 @@
+universe = docker
+
+# request_disk should be at least 10x the size of the input files
+# processing propose typically uses about 3.5 GB of CPU memory and 8GB of GPU memory
+# add cpus=xx disk=yy memory=zz on the submit command line to override these defaults
+request_disk = $(disk:500MB)
+request_memory = $(memory:2GB)
+request_cpus = $(cpus:1)
+
+# choose a docker image, by default we will use the newer one
+# the image then implies a GPU capability requirement
+docker_image = uwcosmos/cosmos-ingestion
+
+# tell CHTC pool that we want to match backfill resources
++WantFlocking=true
+Requirements = versionGE(Microarch,"x86_64-v3")
+
+# pdf files in INPUT_DIR, parquet files in OUT_DIR, temp pages and pickles in INFO_DIR
+# contents of the INFO_DIR will be treated as both input and output
+# INPUT_DIR can be set to the full path to the input  PDF files (use from=<path> on the command line)
+# but this submit file expects OUT_DIR and INFO_DIR to be relative to CWD at submit time
+INPUT_DIR = $(FROM:input)
+OUT_DIR = output
+INFO_DIR = pages
+
+# This controls what temporary data we return in the INFO_DIR
+# This only filters *new* files. it has no effect on files already in the INFO_DIR
+KEEP_INFO=pickle
+
+# paths to the model in the docker image. these will get put into the job environment
+MODEL_CONFIG=/configs/model_config.yaml
+PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
+AGGREGATIONS=pdfs,sections,tables,figures,equations
+
+# pass configuration info to the job in the environment
+env = ;MODEL_CONFIG=$(MODEL_CONFIG);PP_WEIGHTS_PTH=$(PP_WEIGHTS_PTH);AGGREGATIONS=$(AGGREGATIONS)
+env = $(env);JUST_AGGREGATION=True;KEEP_INFO=$(KEEP_INFO:no)
+
+# the actual job, the script will get copied from the submit machine
+# but we will use the python that is installed in the docker image
+SCRIPT = make_parquet.py
+executable = /usr/bin/python3.8
+transfer_executable = false
+arguments = $Fnx(SCRIPT) $Fn(INPUT_DIR) $(INFO_DIR) $(OUT_DIR)
+
+transfer_input_files = $(SCRIPT), $(INPUT_DIR), $(INFO_DIR)
+transfer_output_files = $(OUT_DIR), $(INFO_DIR)
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT_OR_EVICT
+
+if $(append)
+   erase_output_and_error_on_restart = false
+endif
+output = $(CLUSTERID).out
+error = $(CLUSTERID).err
+log = post.log
+
+queue

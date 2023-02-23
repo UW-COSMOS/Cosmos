@@ -1,0 +1,2 @@
+#!/bin/bash
+egrep "process|print|parse|get prop|inference|padded to|created|database" $1 | grep -v '\-\-\-' | grep -v "and files" | ./processing_time.pl
