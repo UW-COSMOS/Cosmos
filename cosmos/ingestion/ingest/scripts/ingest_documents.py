@@ -1,5 +1,6 @@
 import click
 from ingest.ingest import Ingest
+from ingest.utils.table_extraction import TableLocationProcessor
 import os
 
 
@@ -18,6 +19,7 @@ import os
 @click.option('--output-path', type=click.Path(), default='./', help='define a path for output')
 @click.option('--visualize-proposals/--no-visualize-proposals', type=bool, default='False', help='enable or disable proposal viz')
 @click.option('--skip-ocr/--no-skip-ocr', type=bool, default='True', help='Use OCR over documents with no metadata. Requires Tesseract v4 installed on system.')
+@click.option('--extract-tables/--no-extract-tables', type=bool, default='False', help='Extract a dataframe representation of identified table objects.')
 @click.option('--compute-word-vecs/--no-compute-word-vecs', type=bool, default='False', help='Compute word vectors')
 @click.option('--ngram', type=int, default=3, help='ngram for computing word vecs')
 @click.option('--pp_threshold', type=float, default=0.8, help='postprocess_score threshold for identifying an object for table context enrichment')
@@ -62,6 +64,13 @@ def ingest_documents(cluster,
                   pp_threshold=pp_threshold,
                   d_threshold=d_threshold,
                   spans=spans)
+    if extract_tables:
+        proc = TableLocationProcessor(
+                os.path.join(output_path, f"{dataset_id}_tables.parquet",
+                input_path,
+                os.path.join(output_path, 'tables')
+                )
+        _ = proc.extract_pickles()
 
 
 if __name__ == '__main__':
