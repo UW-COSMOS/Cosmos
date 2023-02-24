@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from pathlib import Path
 import pandas as pd
@@ -165,7 +166,7 @@ class TableLocationProcessor:
 
         self.png_path = png_path
         self.output_path = output_path
-        if os.path.exists(self.output_path):
+        if not os.path.exists(self.output_path):
             os.makedirs(self.output_path)
 
         self.orig_df = self.df.copy(deep=True)
