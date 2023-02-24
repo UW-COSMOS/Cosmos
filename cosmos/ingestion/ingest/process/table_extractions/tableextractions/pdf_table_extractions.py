@@ -19,7 +19,7 @@ import sys
 from typing import TypeVar, Callable
 
 import click
-from PyPDF2 import PdfFileReader
+from PyPDF2 import PdfReader
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from sqlalchemy.orm import sessionmaker
@@ -92,7 +92,7 @@ def extract_tables(pdf_bytes: bytes, pdf_name: str, table_coords: list, table_pa
     temp_pdf_name = create_pdf(pdf_name, pdf_bytes)
 
     # convert to camelot coords
-    PDFfile = PdfFileReader(open(temp_pdf_name, 'rb'))
+    PDFfile = PdfReader(open(temp_pdf_name, 'rb'))
     if PDFfile.isEncrypted:
         PDFfile.decrypt('')
     PDFcoords = PDFfile.getPage(0).mediaBox

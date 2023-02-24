@@ -39,6 +39,7 @@ def ingest_documents(cluster,
                      output_path,
                      visualize_proposals,
                      skip_ocr,
+                     extract_tables,
                      compute_word_vecs,
                      ngram,
                      pp_threshold,
@@ -66,9 +67,10 @@ def ingest_documents(cluster,
                   spans=spans)
     if extract_tables:
         proc = TableLocationProcessor(
-                os.path.join(output_path, f"{dataset_id}_tables.parquet",
-                input_path,
-                os.path.join(output_path, 'tables')
+                os.path.join(output_path, f"{dataset_id}_tables.parquet"),
+                str(input_path) + os.sep,
+                "",
+                os.path.join(output_path, 'tables/')
                 )
         _ = proc.extract_pickles()
 
