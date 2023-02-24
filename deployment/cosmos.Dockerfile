@@ -1,6 +1,8 @@
-FROM nvidia/cuda:10.1-devel-ubuntu18.04
+FROM nvidia/cuda:11.4.2-cudnn8-devel-ubuntu20.04
 
 RUN apt-get update
+ARG DEBIAN_FRONTEND="noninteractive"
+ENV TZ=America/New_York
 RUN apt-get install -y software-properties-common
 RUN add-apt-repository ppa:deadsnakes/ppa
 
