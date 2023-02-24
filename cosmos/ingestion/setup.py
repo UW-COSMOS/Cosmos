@@ -33,7 +33,9 @@ setup(
         "pascal-voc-writer",
         "pdfminer",
         "pytesseract",
-        "sklearn"
+        "scikit-learn",
+        "camelot-py[cv]",
+        "PyPDF2<3.0"
     ]
 )
 
