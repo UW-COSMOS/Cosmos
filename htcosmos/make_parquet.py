@@ -778,16 +778,17 @@ if __name__ == '__main__':
         tlog(f'Created {finished} parquet data sets out of {attempted} attempted.')
     else:
         tlog(f'Successfully {work} {succeeded} pdf files out of {attempted} attempted.')
-    if failed > 0:
-        tlog(f'Failed to process {failed} pdf files.')
-        sys.exit(1)
-
     # resave the images as jpg
     files = glob.glob(os.path.join(out_dir,"*.png"))
+    tlog(f"Converting {len(files)} snipped PNG files to JPG")
     for path in files:
         if os.path.exists(path.replace("png","jpg")): continue
         im = Image.open(path)
         im.save(path.replace("png","jpg"), quality=40, optimize=True)
         im.thumbnail((200,200))
         im.save(path.replace(".png","_thumb.jpg"), quality=40, optimize=True)
+    tlog("PNG to JPG converstion complete.")
+    if failed > 0:
+        tlog(f'Failed to process {failed} pdf files.')
+        sys.exit(1)
 
