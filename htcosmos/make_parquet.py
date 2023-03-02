@@ -172,7 +172,7 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
     just_propose = os.environ.get("JUST_PROPOSE") is not None
 
     tlog(f"create database engine")
-    engine = create_engine('sqlite:///:memory:', echo=False)  
+    engine = create_engine('sqlite:///:memory:', echo=False)
     Session = sessionmaker()
     Session.configure(bind=engine)
     Base.metadata.create_all(engine)
@@ -219,7 +219,7 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         make_proposals = proposals is None or just_propose
 
         # if we already have proposals, then we don't need to load the non-padded image
-        # we can just load the padded image.  If there is no padded image then we 
+        # we can just load the padded image.  If there is no padded image then we
         # load the page image and resize/pad it.
         if os.path.isfile(pad_img_path) and not make_proposals:
             padded_img = load_image(pad_img_path)
@@ -270,6 +270,9 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         if limit is not None:
             orig_w = limit[2]
             orig_h = limit[3]
+        else:
+            tlog(f'ERROR: parsing of {pdf_name} was unsuccessful - aborting this pdf')
+            return (False, objs, infofiles)
 
         if meta is not None:
             w,h = img.size
@@ -430,9 +433,8 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
         tlog(f'{page_name} regroup complete')
 
         # pool_text
-        meta_df = obj['meta']
-        if meta_df is not None:
-            text_map = _pool_text_meta(meta_df, obj['dims'][3], detected, obj['page_num'])
+        if "meta" in obj and obj['meta'] is not None:
+            text_map = _pool_text_meta(obj['meta'], obj['dims'][3], detected, obj['page_num'])
         #elif not skip_ocr:
         #    text_map = _pool_text_ocr(image_path, detected)
         else:
@@ -677,7 +679,7 @@ def main_process(pdf_dir, page_info_dir, out_dir):
             except subprocess.SubprocessError as e:
                 pages = []
                 stats['gs_error'] += 1
-                if isinstance(subprocess.TimeoutExpired):
+                if isinstance(e, subprocess.TimeoutExpired):
                     tlog_flush(f'ERROR: timeout printing {pdf_name} pages - skipping this pdf')
                 else:
                     tlog_flush(f'ERROR: ghostscript error: {e.returncode} for {pdf_name}')
@@ -776,6 +778,16 @@ if __name__ == '__main__':
         tlog(f'Created {finished} parquet data sets out of {attempted} attempted.')
     else:
         tlog(f'Successfully {work} {succeeded} pdf files out of {attempted} attempted.')
+    # resave the images as jpg
+    files = glob.glob(os.path.join(out_dir,"*.png"))
+    tlog(f"Converting {len(files)} snipped PNG files to JPG")
+    for path in files:
+        if os.path.exists(path.replace("png","jpg")): continue
+        im = Image.open(path)
+        im.save(path.replace("png","jpg"), quality=40, optimize=True)
+        im.thumbnail((200,200))
+        im.save(path.replace(".png","_thumb.jpg"), quality=40, optimize=True)
+    tlog("PNG to JPG converstion complete.")
     if failed > 0:
         tlog(f'Failed to process {failed} pdf files.')
         sys.exit(1)
