@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.4.2-cudnn8-devel-ubuntu20.04
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04
 
 RUN apt-get update
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -29,7 +29,7 @@ RUN DEBIAN_FRONTEND="noninteractive" TZ=America/New_York apt-get install -y pyth
 
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN python3.8 -m pip install torch==1.6.0+cu101 torchvision==0.7.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+RUN python3.8 -m pip install torch torchvision
 
 # Need this first for opencv
 RUN python3.8 -m pip install scikit-build
