@@ -32,6 +32,7 @@ from ingest.utils.visualize import write_regions
 from ingest.process.proposals.connected_components import get_proposals
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.utils.preprocess import resize_png
+from ingest.utils.table_extraction import TableLocationProcessor
 from ingest.process.detection.src.preprocess import pad_image
 from ingest.process.detection.src.infer import get_model, run_inference
 from ingest.process.detection.src.torch_model.train.data_layer.sql_types import Base
@@ -788,6 +789,13 @@ if __name__ == '__main__':
         im.thumbnail((200,200))
         im.save(path.replace(".png","_thumb.jpg"), quality=40, optimize=True)
     tlog("PNG to JPG converstion complete.")
+    tlog(f"Extracting tables")
+    files = glob.glob(os.path.join(out_dir,"*tables*.parquet"))
+    for fin in files:
+        tlog(fin)
+        proc = TableLocationProcessor(fin, pdf_dir + "/", "", os.path.join(out_dir, "tables/"))
+        _ = proc.extract_pickles()
+    tlog(f"Tables extracted.")
     if failed > 0:
         tlog(f'Failed to process {failed} pdf files.')
         sys.exit(1)
