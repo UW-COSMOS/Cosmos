@@ -170,8 +170,9 @@ class TableLocationProcessor:
             os.makedirs(self.output_path)
 
         self.orig_df = self.df.copy(deep=True)
-        self.df = self.df[(self.df.detect_score >= d_score_cutoff) &
-                          (self.df.postprocess_score >= pp_score_cutoff)]
+        if len(self.df) > 0:
+            self.df = self.df[(self.df.detect_score >= d_score_cutoff) &
+                              (self.df.postprocess_score >= pp_score_cutoff)]
         self.table_count = len(self.df)
         self.pdf_path = pdf_path
         self.flavor = flavor
