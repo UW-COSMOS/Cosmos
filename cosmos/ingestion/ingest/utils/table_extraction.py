@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import pandas as pd
 import camelot
+import pdfplumber
 
 from typing import List, Tuple, Union, Optional
 import logging
