@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import pandas as pd
 import camelot
+import pdfplumber
 
 from typing import List, Tuple, Union, Optional
 import logging
@@ -124,7 +125,7 @@ class TableLocation:
     @property
     def pdfplumber_page(self) -> str:
         """get page number as a str"""
-        return str(self.page)
+        return str(self.page - 1)
 
     def extract_table(self) -> Tuple[Optional[pd.DataFrame],
                                      str,
@@ -152,7 +153,7 @@ class TableLocation:
         try:
             with pdfplumber.open(self.pdf_path) as pdf:
                 page = pdf.pages[int(self.pdfplumber_page)]
-                table = page.crop(self.pdfplumber_table_area, relative=False, strict=True).extract_table()
+                table = page.crop(self.pdfplumber_table_area, relative=False, strict=True).extract_table(table_settings={'vertical_strategy':'text'})
                 pdfplumber_df = pd.DataFrame(table[1:], columns=table[0])
 
         except Exception as e:
@@ -288,7 +289,7 @@ class TableLocationProcessor:
             try:
                 df[1].to_pickle(pkl_path[:-4] + '_pdfplumber.pkl')
             except AttributeError:
-                logging.info(f'no table df to pickle: {pkl_path[:-4] + '_pdfplumber.pkl'}')   
+                logging.info(f"no table df to pickle: {pkl_path[:-4] + '_pdfplumber.pkl'}")   
 
         _ = self._update_table_parquet()
 
