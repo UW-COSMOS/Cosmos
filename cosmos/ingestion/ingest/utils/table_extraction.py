@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import pandas as pd
 import camelot
+import pdfplumber
 
 from typing import List, Tuple, Union, Optional
 import logging
@@ -107,6 +108,26 @@ class TableLocation:
         """get page number as a str"""
         return str(self.page)
 
+    @property
+    def pdfplumber_table_area(self) -> List[int]:
+        """
+        scale and return coordinates in pdfplumber order (x1, y1, x2, y2) as an integer tuple 
+        pdfplumber coord _system_ origin is top left, which is the same as COSMOS
+        pdfplumber table area is defined from top left to bottom right.
+        COSMOS page coordinates are scaled by a factor to make the longest dimension = 1920 px
+        """
+        pdfplumber_x1 = self.x1 / self.scale_factor
+        pdfplumber_x2 = self.x2 / self.scale_factor
+        pdfplumber_y1 = self.y1 / self.scale_factor
+        pdfplumber_y2 = self.y2 / self.scale_factor
+        coords = (pdfplumber_x1, pdfplumber_y1, pdfplumber_x2, pdfplumber_y2)
+        return tuple(map(int, coords))
+    
+    @property
+    def pdfplumber_page(self) -> str:
+        """get page number as a str"""
+        return str(self.page - 1)
+
     def extract_table(self) -> Tuple[Optional[pd.DataFrame],
                                      str,
                                      Optional[dict],
@@ -130,7 +151,19 @@ class TableLocation:
 
         log = 'table extracted'
 
-        return df, log, report, table
+        try:
+            with pdfplumber.open(self.pdf_path) as pdf:
+                page = pdf.pages[int(self.pdfplumber_page)]
+                table = page.crop(self.pdfplumber_table_area, relative=False, strict=True).extract_table(table_settings={'vertical_strategy':'text'})
+                pdfplumber_df = pd.DataFrame(table[1:], columns=table[0])
+
+        except Exception as e:
+            log = str(e)
+            logging.error(f'extract failed: {e}\n{self.pdf_path}\n{self.pdfplumber_page}\n{self.pdfplumber_table_area}\n')
+            self.pkl_path = None
+            return None, log, None, None
+
+        return [df, pdfplumber_df], log, report, table
 
 
 class TableLocationProcessor:
@@ -231,22 +264,33 @@ class TableLocationProcessor:
             yield (x.pkl_path, x.extract_table()[0])
 
     def extract_csvs(self) -> None:
-        """save each table location df as a csv with that pdfs name and an incrementing int"""
+        """save each table location df as a csv with that pdfs name and an incrementing int,
+        the table extracted by pdfplumber ends with the '_pdfplumber.csv' extension """
         for pkl_path, df in self._extract_tables():
             csv_path = pkl_path[:-4] + '.csv'
+            csv_path_pdfplumber = pkl_path[:-4] + '_pdfplumber.csv'
             try:
-                df.to_csv(csv_path, index=False)
+                df[0].to_csv(csv_path, index=False)
             except AttributeError:
                 logging.info(f'no df to csv: {pkl_path}')
+            try:
+                df[1].to_csv(csv_path_pdfplumber, index=False)
+            except AttributeError:
+                logging.info(f'no df to csv: {csv_path_pdfplumber}')
 
     def extract_pickles(self) -> None:
         """save each table location df as a pickled df with that pdf's name and an incrementing int
-        AND update the _tables.parquet with the path to those pkl files per row"""
+        AND update the _tables.parquet with the path to those pkl files per row,
+        the table extracted by pdfplumber ends with the '_pdfplumber.pkl' extension"""
         for pkl_path, df in self._extract_tables():
             try:
-                df.to_pickle(pkl_path)
+                df[0].to_pickle(pkl_path)
             except AttributeError:
                 logging.info(f'no table df to pickle: {pkl_path}')
+            try:
+                df[1].to_pickle(pkl_path[:-4] + '_pdfplumber.pkl')
+            except AttributeError:
+                logging.info(f"no table df to pickle: {pkl_path[:-4] + '_pdfplumber.pkl'}")   
 
         _ = self._update_table_parquet()
 

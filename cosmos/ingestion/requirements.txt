@@ -22,6 +22,7 @@ opencv-python
 pandas
 pascal-voc-writer
 pdfminer.six
+pdfplumber
 pillow
 pyarrow
 pymongo
