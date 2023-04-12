@@ -1,4 +1,5 @@
-FROM uwcosmos/cosmos-base:latest
+ARG VERSION=latest
+FROM uwcosmos/cosmos-base:$VERSION
 
 COPY cosmos/retrieval /retrieval
 WORKDIR /retrieval

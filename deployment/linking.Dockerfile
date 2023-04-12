@@ -1,4 +1,5 @@
-FROM uwcosmos/cosmos-base:latest
+ARG VERSION=latest
+FROM uwcosmos/cosmos-base:$VERSION
 
 RUN python3.8 -m pip install scispacy spacy==2.3.2
 RUN python3.8 -m pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.3.0/en_core_sci_lg-0.3.0.tar.gz
