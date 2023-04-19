@@ -133,6 +133,10 @@ class TableLocation:
                                      Optional[dict],
                                      Optional[camelot.core.TableList]]:
         """run camelot extraction on pdf table area"""
+        camelot_success = False
+        pdfplumber_success = False
+        camelot_df, pdfplumber_df, report, table = None, None, None, None
+        log = ''
 
         try:
             table = camelot.read_pdf(self.pdf_path,
@@ -140,30 +144,30 @@ class TableLocation:
                                      table_areas=self.camelot_table_area,
                                      flavor='stream'
                                      )
-            df = table[0].df
+            dcamelot_dff = table[0].df
             report = table[0].parsing_report
-
+            camelot_success = True
+            log += 'Camelot table extracted\n'
         except Exception as e:
-            log = str(e)
-            logging.error(f'extract failed: {e}\n{self.pdf_path}\n{self.camelot_page}\n{self.camelot_table_area}\n')
-            self.pkl_path = None
-            return None, log, None, None
-
-        log = 'table extracted'
+            log += f'Camelot extract failed: {e}\n{self.pdf_path}\n{self.camelot_page}\n{self.camelot_table_area}\n'
 
         try:
             with pdfplumber.open(self.pdf_path) as pdf:
                 page = pdf.pages[int(self.pdfplumber_page)]
                 table = page.crop(self.pdfplumber_table_area, relative=False, strict=True).extract_table(table_settings={'vertical_strategy':'text'})
                 pdfplumber_df = pd.DataFrame(table[1:], columns=table[0])
-
+                pdfplumber_success = True
+                log += 'Pdfplumber table extracted\n'
         except Exception as e:
-            log = str(e)
-            logging.error(f'extract failed: {e}\n{self.pdf_path}\n{self.pdfplumber_page}\n{self.pdfplumber_table_area}\n')
+            log += f'Pdfplumber extract failed: {e}\n{self.pdf_path}\n{self.pdfplumber_page}\n{self.pdfplumber_table_area}\n'
+
+        if camelot_success or pdfplumber_success:
+            print(log)
+            return [camelot_df, pdfplumber_df], log, report, table
+        else:
+            logging.error(log)
             self.pkl_path = None
             return None, log, None, None
-
-        return [df, pdfplumber_df], log, report, table
 
 
 class TableLocationProcessor:
@@ -271,11 +275,11 @@ class TableLocationProcessor:
             csv_path_pdfplumber = pkl_path[:-4] + '_pdfplumber.csv'
             try:
                 df[0].to_csv(csv_path, index=False)
-            except AttributeError:
+            except (AttributeError, TypeError):
                 logging.info(f'no df to csv: {pkl_path}')
             try:
                 df[1].to_csv(csv_path_pdfplumber, index=False)
-            except AttributeError:
+            except (AttributeError, TypeError):
                 logging.info(f'no df to csv: {csv_path_pdfplumber}')
 
     def extract_pickles(self) -> None:
@@ -285,11 +289,11 @@ class TableLocationProcessor:
         for pkl_path, df in self._extract_tables():
             try:
                 df[0].to_pickle(pkl_path)
-            except AttributeError:
+            except (AttributeError, TypeError):
                 logging.info(f'no table df to pickle: {pkl_path}')
             try:
                 df[1].to_pickle(pkl_path[:-4] + '_pdfplumber.pkl')
-            except AttributeError:
+            except (AttributeError, TypeError):
                 logging.info(f"no table df to pickle: {pkl_path[:-4] + '_pdfplumber.pkl'}")   
 
         _ = self._update_table_parquet()
