@@ -162,7 +162,6 @@ class TableLocation:
             log += f'Pdfplumber extract failed: {e}\n{self.pdf_path}\n{self.pdfplumber_page}\n{self.pdfplumber_table_area}\n'
 
         if camelot_success or pdfplumber_success:
-            print(log)
             return [camelot_df, pdfplumber_df], log, report, table
         else:
             logging.error(log)
