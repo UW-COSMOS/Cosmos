@@ -144,7 +144,7 @@ class TableLocation:
                                      table_areas=self.camelot_table_area,
                                      flavor='stream'
                                      )
-            dcamelot_dff = table[0].df
+            camelot_df = table[0].df
             report = table[0].parsing_report
             camelot_success = True
             log += 'Camelot table extracted\n'
