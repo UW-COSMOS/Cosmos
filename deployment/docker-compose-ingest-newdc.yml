@@ -25,7 +25,7 @@ services:
       - ${INPUT_DIR}:/input
       - ${TMP_DIR}:/mytmp
       - ${OUTPUT_DIR}:/output
-    command: "dask-worker tcp://scheduler:8786 --nprocs ${DETECT_PROCS} --nthreads 1 --memory-limit 0 --resources 'GPU=1' --preload ingest.preload_plugins.detect_setup"
+    command: "dask-worker tcp://scheduler:8786 --nworkers ${DETECT_PROCS} --nthreads 1 --memory-limit 0 --resources 'GPU=1' --preload ingest.preload_plugins.detect_setup"
     networks:
       swarm_network:
     depends_on:
@@ -47,7 +47,7 @@ services:
       - ${INPUT_DIR}:/input
       - ${TMP_DIR}:/mytmp
       - ${OUTPUT_DIR}:/output
-    command: "dask-worker tcp://scheduler:8786 --nprocs ${WORKER_PROCS} --nthreads 1 --memory-limit 0 --resources 'process=1' --preload ingest.preload_plugins.process_setup"
+    command: "dask-worker tcp://scheduler:8786 --nworkers ${WORKER_PROCS} --nthreads 1 --memory-limit 0 --resources 'process=1' --preload ingest.preload_plugins.process_setup"
     networks:
       swarm_network:
     depends_on:
