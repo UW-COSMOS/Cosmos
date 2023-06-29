@@ -500,6 +500,7 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
         result_df = pd.DataFrame(results)
         result_df['detect_cls'] = result_df['classes'].apply(lambda x: x[0])
         result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
+        result_df.to_parquet(os.path.join(out_dir, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
         for aggregation in aggregations:
             aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=out_dir)
             name = f'{dataset_id}_{aggregation}.parquet'
@@ -617,7 +618,11 @@ def main_process(pdf_dir, page_info_dir, out_dir):
         if just_aggregation:
             model = None
         else:
-            tlog(f'loading inference model config={model_config} weights={weights_pth}')
+            tlog(f'loading inference model config={model_config} weights={weights_pth}, {device_str}')
+            tlog(os.environ["LD_LIBRARY_PATH"])
+            import torch
+            tlog(torch.__file__)
+            tlog(torch.cuda.is_available())
             model = get_model(model_config, weights_pth, device_str)
 
     # ------- main PDF processing loop --------
@@ -753,6 +758,28 @@ def main_process(pdf_dir, page_info_dir, out_dir):
     return stats
 
 
+def resize_files(out_dir):
+    # resave the images as jpg
+    files = glob.glob(os.path.join(out_dir,"*.png"))
+    tlog(f"Converting {len(files)} snipped PNG files to JPG")
+    for path in files:
+        if os.path.exists(path.replace("png","jpg")): continue
+        im = Image.open(path)
+        im.save(path.replace("png","jpg"), quality=40, optimize=True)
+        im.thumbnail((200,200))
+        im.save(path.replace(".png","_thumb.jpg"), quality=40, optimize=True)
+        os.remove(path)
+    tlog("PNG to JPG converstion complete.")
+
+def extract_tables(pdf_dir, out_dir):
+    tlog(f"Extracting tables")
+    files = glob.glob(os.path.join(out_dir,"*tables*.parquet"))
+    for fin in files:
+        tlog(fin)
+        proc = TableLocationProcessor(fin, pdf_dir + "/", "", os.path.join(out_dir, "tables/"))
+        _ = proc.extract_pickles()
+    tlog(f"Tables extracted.")
+
 if __name__ == '__main__':
     if len(sys.argv) < 4:
         print("Usage: python make_parquet.py <pdf-dir> <page_info_dir> <output_dir>")
@@ -779,23 +806,8 @@ if __name__ == '__main__':
         tlog(f'Created {finished} parquet data sets out of {attempted} attempted.')
     else:
         tlog(f'Successfully {work} {succeeded} pdf files out of {attempted} attempted.')
-    # resave the images as jpg
-    files = glob.glob(os.path.join(out_dir,"*.png"))
-    tlog(f"Converting {len(files)} snipped PNG files to JPG")
-    for path in files:
-        if os.path.exists(path.replace("png","jpg")): continue
-        im = Image.open(path)
-        im.save(path.replace("png","jpg"), quality=40, optimize=True)
-        im.thumbnail((200,200))
-        im.save(path.replace(".png","_thumb.jpg"), quality=40, optimize=True)
-    tlog("PNG to JPG converstion complete.")
-    tlog(f"Extracting tables")
-    files = glob.glob(os.path.join(out_dir,"*tables*.parquet"))
-    for fin in files:
-        tlog(fin)
-        proc = TableLocationProcessor(fin, pdf_dir + "/", "", os.path.join(out_dir, "tables/"))
-        _ = proc.extract_pickles()
-    tlog(f"Tables extracted.")
+    resize_files(out_dir)
+    extract_tables(out_dir)
     if failed > 0:
         tlog(f'Failed to process {failed} pdf files.')
         sys.exit(1)
