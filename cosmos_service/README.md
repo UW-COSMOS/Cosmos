@@ -1,7 +1,7 @@
 
 To build the image and run it, exposing port 8089:
 
-``
+```
 docker build -t cs .; docker run -p 8089:8089 cs
 ```
 
