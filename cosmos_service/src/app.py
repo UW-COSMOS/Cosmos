@@ -10,13 +10,13 @@ import uuid
 from sqlalchemy import create_engine, update, select
 from sqlalchemy.orm import sessionmaker
 from processing_session_types import Base, CosmosSessionJob
+from multiprocessing import Process
 import time
-import asyncio
 
 import shutil
 
 # creating an in-memory DB appears to create issues with session lifetime, use a flat file instead
-engine = create_engine('sqlite:///sessions.db', echo=False, connect_args={"check_same_thread": False})
+engine = create_engine('sqlite:///sessions.db', echo=False)
 Base.metadata.create_all(engine)
 SessionLocal = sessionmaker(bind=engine)
 
@@ -33,7 +33,7 @@ os.environ["PP_WEIGHTS_PTH"]="/weights/pp_model_weights.pth"
 os.environ["AGGREGATIONS"]="pdfs,sections,tables,figures,equations"
 os.environ["LD_LIBRARY_PATH"]="/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
 
-async def process_document_task(pdf: UploadFile, job_id: uuid.UUID):
+def process_document_subprocess(pdf: UploadFile, job_id: uuid.UUID):
     # We cannot delete the output directory until after the result has been retrieved. Use a directory in /tmp,
     # rather than a true temporary directory, to store it block is a crude way to accomplish this
     out_dir = f"{tempfile.gettempdir()}/{job_id}"
@@ -69,8 +69,11 @@ async def process_document(pdf: UploadFile = File(...), background_tasks: Backgr
     job_id = uuid.uuid4()
     if not pdf.file or not pdf.filename:
         raise HTTPException(status_code=400, detail="Poorly constructed form upload")
-    background_tasks.add_task(process_document_task, pdf, job_id)
-
+    
+    # use multiprocessing since parquet processing contains several blocking operations that cannot be easily
+    # converted to a background task
+    document_subprocess = Process(target=process_document_subprocess, args = (pdf, job_id))
+    document_subprocess.start()
     return {
         "message": "PDF Processing in Background", 
         "job_id": job_id, 
