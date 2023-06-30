@@ -10,7 +10,6 @@ import uuid
 from sqlalchemy import create_engine, update, select
 from sqlalchemy.orm import sessionmaker
 from processing_session_types import Base, CosmosSessionJob
-import subprocessing
 import time
 from sys import argv
 
