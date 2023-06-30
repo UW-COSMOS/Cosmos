@@ -111,6 +111,7 @@ async def startup_event():
     Initialize FastAPI and add variables
     """
     import torch
+    torch.multiprocessing.set_start_method('spawn')
     logger.info(torch.cuda.is_available())
 
 #    # Initialize the pytorch model
