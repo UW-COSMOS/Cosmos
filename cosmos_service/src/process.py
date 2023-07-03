@@ -56,9 +56,6 @@ def process_document_subprocess(pdf_dir: str, job_id: uuid.UUID):
 
 
 if __name__ == '__main__':
-    """
-    Initialize FastAPI and add variables
-    """
     import torch
     logger.info(torch.cuda.is_available())
     process_document_subprocess(sys.argv[1], sys.argv[2])

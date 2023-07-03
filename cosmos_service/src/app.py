@@ -13,6 +13,7 @@ from processing_session_types import Base, CosmosSessionJob
 from subprocess import Popen
 from typing import List
 import time
+from process import process_document_subprocess
 import asyncio
 
 import shutil
@@ -39,7 +40,7 @@ queue = asyncio.Queue()
 workers : List[asyncio.Task] = None
 
 # number of cosmos pipeline work queues to run in parallel
-WORKER_COUNT = 2
+WORKER_COUNT = 1
 
 async def cosmos_worker(work_queue: asyncio.Queue):
     """
@@ -48,9 +49,7 @@ async def cosmos_worker(work_queue: asyncio.Queue):
     """
     while True:
         (pdf_dir, job_id) = await work_queue.get()
-        print(f"{pdf_dir}, {job_id}")
-        proc = await asyncio.create_subprocess_exec('python3.8','process.py', pdf_dir, job_id)
-        await proc.wait()
+        process_document_subprocess(pdf_dir, job_id)
         queue.task_done()
 
 
