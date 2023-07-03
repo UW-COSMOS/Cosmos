@@ -44,17 +44,21 @@ def process_document_subprocess(pdf_dir: str, job_id: uuid.UUID):
             job.is_started = True
             session.commit()
 
-        results = mp.main_process(pdf_dir, page_info_dir, out_dir)
-        mp.resize_files(out_dir)
-        zip_file_name = f"{zip_dir}/cosmos_output"
-        shutil.make_archive(zip_file_name, "zip", out_dir)
-        print(f"zip created at {zip_file_name}")
-        print(f"{pdf_dir} for pdfs; {page_info_dir} for page info; {out_dir} for output")
-        print(os.path.exists(zip_file_name + ".zip"))
+        cosmos_error : Exception = None
+        try: 
+            mp.main_process(pdf_dir, page_info_dir, out_dir)
+            mp.resize_files(out_dir)
+            shutil.make_archive(f"{zip_dir}/cosmos_output", "zip", out_dir)
+        except Exception as e:
+            cosmos_error = e
+            print("Cosmos processing failed!", cosmos_error)
 
         with SessionLocal() as session:
             job = session.get(CosmosSessionJob, str(job_id))
-            job.is_completed = True
+            if cosmos_error is None:
+                job.is_completed = True
+            else:
+                job.error = str(cosmos_error)
             session.commit()
 
 

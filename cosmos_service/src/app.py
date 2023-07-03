@@ -95,7 +95,9 @@ def get_processing_status(job_id: str):
             raise HTTPException(status_code=404, detail="Job not found")
         return { 
             "job_started": job.is_started,
-            "job_completed": job.is_completed
+            "job_completed": job.is_completed,
+            "time_in_queue": job.time_in_queue,
+            "time_processing": job.time_processing
         }
 
 @app.get("/process/{job_id}/result")
