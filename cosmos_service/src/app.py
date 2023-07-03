@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, update, select
 from sqlalchemy.orm import sessionmaker
 from processing_session_types import Base, CosmosSessionJob
 from subprocess import Popen
+from typing import List
 import time
 import asyncio
 
@@ -35,10 +36,16 @@ os.environ["AGGREGATIONS"]="pdfs,sections,tables,figures,equations"
 os.environ["LD_LIBRARY_PATH"]="/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
 
 queue = asyncio.Queue()
-worker : asyncio.Task = None
+workers : List[asyncio.Task] = None
+
+# number of cosmos pipeline work queues to run in parallel
+WORKER_COUNT = 2
 
 async def cosmos_worker(work_queue: asyncio.Queue):
-    print("cosmos task started")
+    """
+    Cosmos worker process. Continually poll from the work queue for new parameters to the pipeline,
+    and run the process
+    """
     while True:
         (pdf_dir, job_id) = await work_queue.get()
         print(f"{pdf_dir}, {job_id}")
@@ -98,13 +105,13 @@ def read_root():
 
 @app.on_event("startup")
 async def startup_event():
-    global worker
+    global workers
     """
     Initialize FastAPI and add variables
     """
     import torch
     logger.info(torch.cuda.is_available())
-    worker = asyncio.create_task(cosmos_worker(queue))
+    workers = [asyncio.create_task(cosmos_worker(queue)) for _ in range(WORKER_COUNT)]
 
 #    # Initialize the pytorch model
 #    model = Model()
@@ -117,9 +124,3 @@ async def startup_event():
 #        "scaler": load(CONFIG['SCALAR_PATH']),  # joblib.load
 #        "model": model
 #    }
-
-
-# @app.on_event("shutdown")
-# async def shutdown_event():
-#     worker.cancel()
-#     await queue.join()
