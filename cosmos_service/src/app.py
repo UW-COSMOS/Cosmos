@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from processing_session_types import Base, CosmosSessionJob
 from subprocess import Popen
 import time
+import asyncio
 
 import shutil
 
@@ -33,9 +34,22 @@ os.environ["PP_WEIGHTS_PTH"]="/weights/pp_model_weights.pth"
 os.environ["AGGREGATIONS"]="pdfs,sections,tables,figures,equations"
 os.environ["LD_LIBRARY_PATH"]="/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
 
+queue = asyncio.Queue()
+worker : asyncio.Task = None
+
+async def cosmos_worker(work_queue: asyncio.Queue):
+    print("cosmos task started")
+    while True:
+        (pdf_dir, job_id) = await work_queue.get()
+        print(f"{pdf_dir}, {job_id}")
+        proc = await asyncio.create_subprocess_exec('python3.8','process.py', pdf_dir, job_id)
+        await proc.wait()
+        queue.task_done()
+
+
 @app.post("/process/", status_code=202)
 async def process_document(pdf: UploadFile = File(...)):
-    job_id = uuid.uuid4()
+    job_id = str(uuid.uuid4())
     if not pdf.file or not pdf.filename:
         raise HTTPException(status_code=400, detail="Poorly constructed form upload")
 
@@ -49,7 +63,7 @@ async def process_document(pdf: UploadFile = File(...)):
     finally:
         pdf.file.close()
 
-    Popen(['python3.8','process.py', pdf_dir, job_id])
+    await queue.put((pdf_dir, job_id))
     
     return {
         "message": "PDF Processing in Background", 
@@ -84,11 +98,13 @@ def read_root():
 
 @app.on_event("startup")
 async def startup_event():
+    global worker
     """
     Initialize FastAPI and add variables
     """
     import torch
     logger.info(torch.cuda.is_available())
+    worker = asyncio.create_task(cosmos_worker(queue))
 
 #    # Initialize the pytorch model
 #    model = Model()
@@ -101,3 +117,9 @@ async def startup_event():
 #        "scaler": load(CONFIG['SCALAR_PATH']),  # joblib.load
 #        "model": model
 #    }
+
+
+# @app.on_event("shutdown")
+# async def shutdown_event():
+#     worker.cancel()
+#     await queue.join()
