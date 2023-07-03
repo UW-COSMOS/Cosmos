@@ -55,9 +55,8 @@ def process_document_subprocess(pdf_dir: str, job_id: uuid.UUID):
 
         with SessionLocal() as session:
             job = session.get(CosmosSessionJob, str(job_id))
-            if cosmos_error is None:
-                job.is_completed = True
-            else:
+            job.is_completed = True
+            if cosmos_error is not None:
                 job.error = str(cosmos_error)
             session.commit()
 

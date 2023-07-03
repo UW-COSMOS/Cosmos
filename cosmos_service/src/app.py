@@ -97,7 +97,8 @@ def get_processing_status(job_id: str):
             "job_started": job.is_started,
             "job_completed": job.is_completed,
             "time_in_queue": job.time_in_queue,
-            "time_processing": job.time_processing
+            "time_processing": job.time_processing,
+            "error": job.error
         }
 
 @app.get("/process/{job_id}/result")
