@@ -25,7 +25,7 @@ services:
       - ${OUTPUT_DIR}:/input
       - ${TMP_DIR}:/mytmp
       - ${OUTPUT_DIR}:/output
-    command: "dask-worker tcp://scheduler:8786 --nprocs ${WORKER_PROCS} --nthreads 1 --memory-limit 0 --resources 'linking=1' --preload ingest.preload_plugins.linking_setup"
+    command: "dask-worker tcp://scheduler:8786 --nworkers ${WORKER_PROCS} --nthreads 1 --memory-limit 0 --resources 'linking=1' --preload ingest.preload_plugins.linking_setup"
     networks:
       swarm_network:
     depends_on:
