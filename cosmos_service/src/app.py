@@ -12,7 +12,8 @@ from sqlalchemy.orm import sessionmaker
 from processing_session_types import Base, CosmosSessionJob
 from subprocess import Popen
 from typing import List
-import time
+from datetime import datetime
+import torch
 import asyncio
 
 import shutil
@@ -38,8 +39,9 @@ os.environ["LD_LIBRARY_PATH"]="/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
 queue = asyncio.Queue()
 workers : List[asyncio.Task] = None
 
-# number of cosmos pipeline work queues to run in parallel
-WORKER_COUNT = 5
+# Approximate memory consumed by a single cosmos pipeline, used to calculate available
+# concurrency
+GPU_MEM_PER_WORKER = 4e9 # 4GB
 COSMOS_SCRIPT = 'process.py'
 
 async def cosmos_worker(work_queue: asyncio.Queue):
@@ -50,7 +52,7 @@ async def cosmos_worker(work_queue: asyncio.Queue):
     """
     while True:
         (pdf_dir, job_id) = await work_queue.get()
-        proc = await asyncio.create_subprocess_exec(sys.argv[0], COSMOS_SCRIPT, pdf_dir, job_id)
+        proc = await asyncio.create_subprocess_exec('python3.8', COSMOS_SCRIPT, pdf_dir, job_id)
         await proc.wait()
         queue.task_done()
 
@@ -71,6 +73,11 @@ async def process_document(pdf: UploadFile = File(...)):
     finally:
         pdf.file.close()
 
+    # populate the job in its default state (not started)
+    with SessionLocal() as session:
+        session.add(CosmosSessionJob(job_id, '', '', ''))
+        session.commit()
+
     await queue.put((pdf_dir, job_id))
     
     return {
@@ -86,7 +93,10 @@ def get_processing_status(job_id: str):
         job = session.get(CosmosSessionJob, job_id)
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
-        return { "job_complete": job.completed }
+        return { 
+            "job_started": job.is_started,
+            "job_completed": job.is_completed
+        }
 
 @app.get("/process/{job_id}/result")
 def get_processing_result(job_id: str):
@@ -94,15 +104,24 @@ def get_processing_result(job_id: str):
         job = session.get(CosmosSessionJob, job_id)
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
-        elif not job.completed:
+        elif not job.is_completed:
             raise HTTPException(status_code=400, detail="Job not finished")
-    output_file = f"{job.output_dir}/{job.filename}_cosmos_output.zip"
+    output_file = f"{job.output_dir}/cosmos_output.zip"
     return FileResponse(output_file)
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+def get_max_processes_per_gpu():
+    """
+    (Crudely) calculate the amount of cosmos pipelines that can be run in parallel based on
+    the amount of memory available per CPU, and a
+    """
+
+    if not torch.cuda.is_available:
+        return 1
+    
+    max_mem = torch.cuda.get_device_properties(0).total_memory
+
+    return max_mem // GPU_MEM_PER_WORKER
 
 @app.on_event("startup")
 async def startup_event():
@@ -110,9 +129,9 @@ async def startup_event():
     """
     Initialize FastAPI and add variables
     """
-    import torch
-    logger.info(torch.cuda.is_available())
-    workers = [asyncio.create_task(cosmos_worker(queue)) for _ in range(WORKER_COUNT)]
+    max_worker_count = get_max_processes_per_gpu()
+    logger.info(f"{torch.cuda.is_available()}, {max_worker_count}")
+    workers = [asyncio.create_task(cosmos_worker(queue)) for _ in range(max_worker_count)]
 
 #    # Initialize the pytorch model
 #    model = Model()

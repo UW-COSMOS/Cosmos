@@ -6,7 +6,6 @@ from sqlalchemy import Column, Integer, String, TIMESTAMP
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
 from uuid import UUID
-import pickle
 
 class Base(DeclarativeBase):
     pass
@@ -20,18 +19,34 @@ class CosmosSessionJob(Base):
     """
     __tablename__ = "processing_jobs"
     id = Column(String, primary_key = True)
-    filename = Column(String)
-    started = Column(TIMESTAMP, default = func.now())
-    work_dir = Column(String)
+    created = Column(TIMESTAMP, default=func.now())
+    started = Column(TIMESTAMP)
+    completed = Column(TIMESTAMP)
     output_dir = Column(String)
-    completed = Column(Integer, default = 0)
-    total_pages = Column(Integer, default = 0)
-    processed_pages = Column(Integer, default = 0)
 
 
-    def __init__(self, id: UUID, filename: str, work_dir: str, output_dir: str):
+    def __init__(self, id: UUID):
         self.id = str(id)
-        self.filename = filename
-        self.work_dir = work_dir
-        self.output_dir = output_dir
 
+
+    @property
+    def is_started(self):
+        return self.started is not None
+
+    @is_started.setter
+    def is_started(self, value):
+        if value:
+            self.started = func.now()
+        else:
+            self.started = None
+
+    @property
+    def is_completed(self):
+        return self.completed is not None
+
+    @is_completed.setter
+    def is_started(self, value):
+        if value:
+            self.completed = func.now()
+        else:
+            self.completed = None

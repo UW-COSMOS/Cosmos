@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from processing_session_types import Base, CosmosSessionJob
 import time
 from sys import argv
+from app import engine, SessionLocal
 
 import shutil
 
@@ -38,7 +39,9 @@ def process_document_subprocess(pdf_dir: str, job_id: uuid.UUID):
     os.mkdir(zip_dir)
     with tempfile.TemporaryDirectory() as page_info_dir, tempfile.TemporaryDirectory() as out_dir:
         with SessionLocal() as session:
-            session.add(CosmosSessionJob(job_id, '', page_info_dir, out_dir))
+            job = session.get(CosmosSessionJob, str(job_id))
+            job.output_dir = zip_dir
+            job.is_started = True
             session.commit()
 
         results = mp.main_process(pdf_dir, page_info_dir, out_dir)
@@ -51,7 +54,7 @@ def process_document_subprocess(pdf_dir: str, job_id: uuid.UUID):
 
         with SessionLocal() as session:
             job = session.get(CosmosSessionJob, str(job_id))
-            job.completed = 1
+            job.is_completed = True
             session.commit()
 
 

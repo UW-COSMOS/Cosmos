@@ -509,6 +509,10 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
     # return a list of temprary files to be returned or deleted
     return (True, objs, infofiles)
 
+def prepare_model():
+    """
+    """
+
 """
     main processing loop for PDF files, called by main after command line parsing.
 
@@ -527,7 +531,6 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
 
 """
 def main_process(pdf_dir, page_info_dir, out_dir):
-
     resume_mode = False # True if may be resuming from an previous run
     # counts of stuff we do or failed to do
     stats = {'gs':0, 'gs_error':0,
