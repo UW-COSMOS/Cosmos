@@ -115,13 +115,10 @@ def get_max_processes_per_gpu():
     (Crudely) calculate the amount of cosmos pipelines that can be run in parallel based on
     the amount of memory available per CPU, and a
     """
-
     if not torch.cuda.is_available:
         return 1
-    
     max_mem = torch.cuda.get_device_properties(0).total_memory
-
-    return max_mem // GPU_MEM_PER_WORKER
+    return int(max_mem / GPU_MEM_PER_WORKER)
 
 @app.on_event("startup")
 async def startup_event():
