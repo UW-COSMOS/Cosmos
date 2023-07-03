@@ -49,7 +49,11 @@ async def cosmos_worker(work_queue: asyncio.Queue):
     """
     while True:
         (pdf_dir, job_id) = await work_queue.get()
-        process_document_subprocess(pdf_dir, job_id)
+        try:
+            process_document_subprocess(pdf_dir, job_id)
+        except Exception as e:
+            print("Something went wrong!", flush=True)
+            print(e, flush=True)
         queue.task_done()
 
 

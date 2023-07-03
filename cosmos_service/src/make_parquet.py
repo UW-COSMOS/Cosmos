@@ -744,17 +744,20 @@ def main_process(pdf_dir, page_info_dir, out_dir):
                 stats['aggregate_error'] += 1
                 tlog_flush(f'failed to aggregate {pdf_name}')
 
+        tlog_flush('Cleaning Up')
         # remove the infofiles created by processing that we have not been told to keep
         for file,typ in infofiles.items():
             if typ in keep:
-                tlog(f'   keep_info {typ} {file}')
+                tlog_flush(f'   keep_info {typ} {file}')
             else:
-                tlog(f'          rm {typ} {file}')
+                tlog_flush(f'          rm {typ} {file}')
                 os.remove(file)
 
+        tlog_flush('Cleaned Up')
         if success:
             stats['succeeded'] += 1
 
+    tlog_flush('Returning')
     return stats
 
 
