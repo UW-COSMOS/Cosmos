@@ -75,7 +75,7 @@ async def process_document(pdf: UploadFile = File(...)):
 
     # populate the job in its default state (not started)
     with SessionLocal() as session:
-        session.add(CosmosSessionJob(job_id, '', '', ''))
+        session.add(CosmosSessionJob(job_id))
         session.commit()
 
     await queue.put((pdf_dir, job_id))

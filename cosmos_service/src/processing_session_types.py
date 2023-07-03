@@ -20,8 +20,8 @@ class CosmosSessionJob(Base):
     __tablename__ = "processing_jobs"
     id = Column(String, primary_key = True)
     created = Column(TIMESTAMP, default=func.now())
-    started = Column(TIMESTAMP)
-    completed = Column(TIMESTAMP)
+    started = Column(TIMESTAMP, default=None)
+    completed = Column(TIMESTAMP, default=None)
     output_dir = Column(String)
 
 
@@ -45,7 +45,7 @@ class CosmosSessionJob(Base):
         return self.completed is not None
 
     @is_completed.setter
-    def is_started(self, value):
+    def is_completed(self, value):
         if value:
             self.completed = func.now()
         else:
