@@ -13,7 +13,6 @@ from processing_session_types import Base, CosmosSessionJob
 from subprocess import Popen
 from typing import List
 import time
-from process import process_document_subprocess
 import asyncio
 
 import shutil
@@ -42,6 +41,30 @@ workers : List[asyncio.Task] = None
 # number of cosmos pipeline work queues to run in parallel
 WORKER_COUNT = 1
 
+def run_cosmos_processing(pdf_dir: str, job_id: uuid.UUID):
+    # We cannot delete the zip directory until after the result has been retrieved. Use a directory in /tmp,
+    # rather than a true temporary directory, to store it block is a crude way to accomplish this
+    zip_dir = f"{tempfile.gettempdir()}/{job_id}"
+    os.mkdir(zip_dir)
+    with tempfile.TemporaryDirectory() as page_info_dir, tempfile.TemporaryDirectory() as out_dir:
+        with SessionLocal() as session:
+            session.add(CosmosSessionJob(job_id, '', page_info_dir, out_dir))
+            session.commit()
+
+        results = mp.main_process(pdf_dir, page_info_dir, out_dir)
+        mp.resize_files(out_dir)
+        zip_file_name = f"{zip_dir}/cosmos_output"
+        shutil.make_archive(zip_file_name, "zip", out_dir)
+        print(f"zip created at {zip_file_name}")
+        print(f"{pdf_dir} for pdfs; {page_info_dir} for page info; {out_dir} for output")
+        print(os.path.exists(zip_file_name + ".zip"))
+
+        with SessionLocal() as session:
+            job = session.get(CosmosSessionJob, str(job_id))
+            job.completed = 1
+            session.commit()
+
+
 async def cosmos_worker(work_queue: asyncio.Queue):
     """
     Cosmos worker process. Continually poll from the work queue for new parameters to the pipeline,
@@ -50,7 +73,7 @@ async def cosmos_worker(work_queue: asyncio.Queue):
     while True:
         (pdf_dir, job_id) = await work_queue.get()
         try:
-            process_document_subprocess(pdf_dir, job_id)
+            run_cosmos_processing(pdf_dir, job_id)
         except Exception as e:
             print("Something went wrong!", flush=True)
             print(e, flush=True)
