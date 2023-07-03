@@ -39,44 +39,19 @@ queue = asyncio.Queue()
 workers : List[asyncio.Task] = None
 
 # number of cosmos pipeline work queues to run in parallel
-WORKER_COUNT = 1
-
-def run_cosmos_processing(pdf_dir: str, job_id: uuid.UUID):
-    # We cannot delete the zip directory until after the result has been retrieved. Use a directory in /tmp,
-    # rather than a true temporary directory, to store it block is a crude way to accomplish this
-    zip_dir = f"{tempfile.gettempdir()}/{job_id}"
-    os.mkdir(zip_dir)
-    with tempfile.TemporaryDirectory() as page_info_dir, tempfile.TemporaryDirectory() as out_dir:
-        with SessionLocal() as session:
-            session.add(CosmosSessionJob(job_id, '', page_info_dir, out_dir))
-            session.commit()
-
-        results = mp.main_process(pdf_dir, page_info_dir, out_dir)
-        mp.resize_files(out_dir)
-        zip_file_name = f"{zip_dir}/cosmos_output"
-        shutil.make_archive(zip_file_name, "zip", out_dir)
-        print(f"zip created at {zip_file_name}")
-        print(f"{pdf_dir} for pdfs; {page_info_dir} for page info; {out_dir} for output")
-        print(os.path.exists(zip_file_name + ".zip"))
-
-        with SessionLocal() as session:
-            job = session.get(CosmosSessionJob, str(job_id))
-            job.completed = 1
-            session.commit()
-
+WORKER_COUNT = 5
+COSMOS_SCRIPT = 'process.py'
 
 async def cosmos_worker(work_queue: asyncio.Queue):
     """
     Cosmos worker process. Continually poll from the work queue for new parameters to the pipeline,
-    and run the process
+    and run the cosmos pipeline in a separate process. A separate process is necessary to avoid I/O 
+    blocking issues in Python's async framework
     """
     while True:
         (pdf_dir, job_id) = await work_queue.get()
-        try:
-            run_cosmos_processing(pdf_dir, job_id)
-        except Exception as e:
-            print("Something went wrong!", flush=True)
-            print(e, flush=True)
+        proc = await asyncio.create_subprocess_exec(sys.argv[0], COSMOS_SCRIPT, pdf_dir, job_id)
+        await proc.wait()
         queue.task_done()
 
 
