@@ -59,7 +59,7 @@ def process_document(pdf_dir: str, job_id: uuid.UUID):
         with SessionLocal() as session:
             job = session.get(CosmosSessionJob, str(job_id))
             job.is_completed = not OOM_ERROR # retry jobs that failed due to an OOM error
-            job.error = None if cosmos_error is None else str(cosmos_error)
+            job.error = None if OOM_ERROR or cosmos_error is None else str(cosmos_error)
             session.commit()
 
         if OOM_ERROR:
