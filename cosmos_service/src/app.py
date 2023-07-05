@@ -11,7 +11,6 @@ import torch
 import asyncio
 from db import SessionLocal
 from scheduler import scheduler
-from process import OOM_ERROR_EXIT_CODE
 
 import shutil
 
@@ -30,6 +29,8 @@ COSMOS_SCRIPT = 'process.py'
 
 # if a task fails due to the GPU being out of memory, wait for a while and then try again
 OOM_SLEEP_TIME = 30
+OOM_ERROR_EXIT_CODE = 2
+
 
 
 async def cosmos_worker(work_queue: asyncio.Queue):

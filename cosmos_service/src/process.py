@@ -11,6 +11,7 @@ import uuid
 from processing_session_types import CosmosSessionJob
 from db import SessionLocal
 import torch
+from app import OOM_ERROR_EXIT_CODE
 
 import shutil
 
@@ -20,9 +21,6 @@ os.environ["WEIGHTS_PTH"]="/weights/model_weights.pth"
 os.environ["PP_WEIGHTS_PTH"]="/weights/pp_model_weights.pth"
 os.environ["AGGREGATIONS"]="pdfs,sections,tables,figures,equations"
 os.environ["LD_LIBRARY_PATH"]="/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
-
-
-OOM_ERROR_EXIT_CODE = 2
 
 def process_document(pdf_dir: str, job_id: uuid.UUID):
     """
