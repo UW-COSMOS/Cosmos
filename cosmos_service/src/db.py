@@ -1,5 +1,5 @@
 """
-Manage a simple Sqlite DB for storing cosmos session information
+Simple Sqlite DB for storing cosmos session information
 """
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

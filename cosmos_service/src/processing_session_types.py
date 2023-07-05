@@ -1,5 +1,5 @@
 """
-Place holder for Sql Alchemy mappings
+SQLAlchemy ORM mappings for the db entity(s) that track COSMOS document processing sessions
 """
 from sqlalchemy import Column, String, TIMESTAMP
 from sqlalchemy.orm import DeclarativeBase, relationship
