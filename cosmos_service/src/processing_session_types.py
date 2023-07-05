@@ -45,7 +45,7 @@ class CosmosSessionJob(Base):
 
     @property
     def is_completed(self):
-        return self.completed is not None
+        return self.completed is not None and self.error is None
 
     @is_completed.setter
     def is_completed(self, value):

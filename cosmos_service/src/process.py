@@ -22,6 +22,15 @@ os.environ["PP_WEIGHTS_PTH"]="/weights/pp_model_weights.pth"
 os.environ["AGGREGATIONS"]="pdfs,sections,tables,figures,equations"
 os.environ["LD_LIBRARY_PATH"]="/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
 
+# list of observed messages related to insufficient GPU memory
+# used to support retrying a job when there is not sufficient memory
+# this list is non-exhaustive
+OOM_ERROR_MESSAGES = [
+    'CUDA out of memory',
+    'CUDNN_STATUS_ALLOC_FAILED',
+    'CUDNN_STATUS_NOT_INITIALIZED'
+]
+
 def process_document(pdf_dir: str, job_id: uuid.UUID):
     """
     Run a single document through the COSMOS pipeline.
@@ -45,7 +54,7 @@ def process_document(pdf_dir: str, job_id: uuid.UUID):
             print("Cosmos processing failed:\n", cosmos_error, flush=True)
 
 
-        OOM_ERROR = cosmos_error and 'CUDA out of memory' in cosmos_error
+        OOM_ERROR = cosmos_error and any([e in str(cosmos_error) for e in OOM_ERROR_MESSAGES])
 
         with SessionLocal() as session:
             job = session.get(CosmosSessionJob, str(job_id))
