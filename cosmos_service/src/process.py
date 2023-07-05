@@ -25,17 +25,19 @@ def process_document(pdf_dir: str, job_id: uuid.UUID):
     Run a single document through the COSMOS pipeline.
     TODO: This adds the significant overhead of loading the model into memory with each run
     """
-    with tempfile.TemporaryDirectory() as page_info_dir, tempfile.TemporaryDirectory() as out_dir:
+    with tempfile.TemporaryDirectory() as page_info_dir, tempfile.TemporaryDirectory() as cosmos_out_dir:
         with SessionLocal() as session:
             job = session.get(CosmosSessionJob, str(job_id))
+            archive_out_dir = job.output_dir
             job.is_started = True
+            
             session.commit()
 
         cosmos_error : Exception = None
         try: 
-            mp.main_process(pdf_dir, page_info_dir, out_dir)
-            mp.resize_files(out_dir)
-            shutil.make_archive(f"{job.output_dir}/cosmos_output", "zip", out_dir)
+            mp.main_process(pdf_dir, page_info_dir, cosmos_out_dir)
+            mp.resize_files(cosmos_out_dir)
+            shutil.make_archive(f"{archive_out_dir}/cosmos_output", "zip", cosmos_out_dir)
         except Exception as e:
             cosmos_error = e
             print("Cosmos processing failed", cosmos_error, flush=True)
