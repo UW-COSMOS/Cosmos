@@ -11,6 +11,7 @@ import torch
 import asyncio
 from db import SessionLocal
 from scheduler import scheduler
+from process import OOM_ERROR_EXIT_CODE
 
 import shutil
 
@@ -21,8 +22,15 @@ workers : List[asyncio.Task] = None
 
 # Approximate memory consumed by a single cosmos pipeline, used to calculate available
 # concurrency
+
+# TODO this only works assuming the cosmos api is the only process using the GPU, which
+# is usually not the case
 GPU_MEM_PER_WORKER = 4e9 # 4GB
 COSMOS_SCRIPT = 'process.py'
+
+# if a task fails due to the GPU being out of memory, wait for a while and then try again
+OOM_SLEEP_TIME = 30
+
 
 async def cosmos_worker(work_queue: asyncio.Queue):
     """
@@ -33,9 +41,12 @@ async def cosmos_worker(work_queue: asyncio.Queue):
     while True:
         (job_output_dir, job_id) = await work_queue.get()
         proc = await asyncio.create_subprocess_exec(sys.executable, COSMOS_SCRIPT, job_output_dir, job_id)
-        await proc.wait()
+        result = await proc.wait()
         queue.task_done()
-
+        
+        if result == OOM_ERROR_EXIT_CODE:
+            await asyncio.sleep(OOM_SLEEP_TIME)
+            await queue.put((job_output_dir, job_id))
 
 @app.post("/process/", status_code=202)
 async def process_document(pdf: UploadFile = File(...)):

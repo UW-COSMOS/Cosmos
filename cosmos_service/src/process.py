@@ -10,6 +10,7 @@ from fastapi.logger import logger
 import uuid
 from processing_session_types import CosmosSessionJob
 from db import SessionLocal
+import torch
 
 import shutil
 
@@ -19,6 +20,9 @@ os.environ["WEIGHTS_PTH"]="/weights/model_weights.pth"
 os.environ["PP_WEIGHTS_PTH"]="/weights/pp_model_weights.pth"
 os.environ["AGGREGATIONS"]="pdfs,sections,tables,figures,equations"
 os.environ["LD_LIBRARY_PATH"]="/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
+
+
+OOM_ERROR_EXIT_CODE = 2
 
 def process_document(pdf_dir: str, job_id: uuid.UUID):
     """
@@ -42,15 +46,19 @@ def process_document(pdf_dir: str, job_id: uuid.UUID):
             cosmos_error = e
             print("Cosmos processing failed:\n", cosmos_error, flush=True)
 
+
+        OOM_ERROR = cosmos_error and 'CUDA out of memory' in cosmos_error
+
         with SessionLocal() as session:
             job = session.get(CosmosSessionJob, str(job_id))
-            job.is_completed = True
-            if cosmos_error is not None:
-                job.error = str(cosmos_error)
+            job.is_completed = not OOM_ERROR # retry jobs that failed due to an OOM error
+            job.error = None if cosmos_error is None else str(cosmos_error)
             session.commit()
+
+        if OOM_ERROR:
+            exit(OOM_ERROR_EXIT_CODE)
 
 
 if __name__ == '__main__':
-    import torch
     logger.info(torch.cuda.is_available())
     process_document(sys.argv[1], sys.argv[2])
