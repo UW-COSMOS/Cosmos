@@ -25,17 +25,6 @@ SessionLocal = sessionmaker(bind=engine)
 
 app = FastAPI()
 
-#os.environ["KEEP_INFO"] = "True"
-#os.environ["JUST_PROPOSE"] = "True"
-#os.environ["SKIP_AGGREGATION"]  = "True"
-#os.environ["JUST_AGGREGATION"] = "True"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-os.environ['MODEL_CONFIG']="/configs/model_config.yaml"
-os.environ["WEIGHTS_PTH"]="/weights/model_weights.pth"
-os.environ["PP_WEIGHTS_PTH"]="/weights/pp_model_weights.pth"
-os.environ["AGGREGATIONS"]="pdfs,sections,tables,figures,equations"
-os.environ["LD_LIBRARY_PATH"]="/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
-
 queue = asyncio.Queue()
 workers : List[asyncio.Task] = None
 
@@ -51,22 +40,28 @@ async def cosmos_worker(work_queue: asyncio.Queue):
     blocking issues in Python's async framework
     """
     while True:
-        (pdf_dir, job_id) = await work_queue.get()
-        proc = await asyncio.create_subprocess_exec('python3.8', COSMOS_SCRIPT, pdf_dir, job_id)
+        (job_output_dir, job_id) = await work_queue.get()
+        proc = await asyncio.create_subprocess_exec(sys.executable, COSMOS_SCRIPT, job_output_dir, job_id)
         await proc.wait()
         queue.task_done()
 
 
 @app.post("/process/", status_code=202)
 async def process_document(pdf: UploadFile = File(...)):
+    """
+    Accept a new PDF document for COSMOS processing. Saves the PDF to disk, 
+    then adds it to a queue for subsequent processing
+    """
     job_id = str(uuid.uuid4())
     if not pdf.file or not pdf.filename:
         raise HTTPException(status_code=400, detail="Poorly constructed form upload")
 
-    pdf_dir = f"{tempfile.gettempdir()}/{job_id}-pdf"
-    os.mkdir(pdf_dir)
+    # Need to make a non-temporary directory to store PDF and job output due to
+    # asynchronous processing and retrieval, must be cleaned up in separate job
+    job_output_dir = f"{tempfile.gettempdir()}/{job_id}"
+    os.mkdir(job_output_dir)
     try:
-        with open(f"{pdf_dir}/{pdf.filename}", "wb") as f:
+        with open(f"{job_output_dir}/{pdf.filename}", "wb") as f:
             shutil.copyfileobj(pdf.file, f)
     except Exception:
         return {"message": ":("}
@@ -75,22 +70,26 @@ async def process_document(pdf: UploadFile = File(...)):
 
     # populate the job in its default state (not started)
     with SessionLocal() as session:
-        session.add(CosmosSessionJob(job_id))
+        session.add(CosmosSessionJob(job_id, job_output_dir))
         session.commit()
 
-    await queue.put((pdf_dir, job_id))
+    await queue.put((job_output_dir, job_id))
     
     return {
         "message": "PDF Processing in Background", 
         "job_id": job_id, 
         "status_endpoint": f"/process/{job_id}/status",
-        "result_endpoint": f"/process/{job_id}/result",
+        "result_endpoint": f"/process/{job_id}/result"
     }
 
 @app.get("/process/{job_id}/status")
 def get_processing_status(job_id: str):
+    """
+    Return the current status of a given pdf in the COSMOS processing queue. If `job.is_completed`,
+    then the results of the processing can be retrieved from `/process/{job_id}/result`
+    """
     with SessionLocal() as session:
-        job = session.get(CosmosSessionJob, job_id)
+        job : CosmosSessionJob = session.get(CosmosSessionJob, job_id)
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
         return { 
@@ -103,6 +102,10 @@ def get_processing_status(job_id: str):
 
 @app.get("/process/{job_id}/result")
 def get_processing_result(job_id: str):
+    """
+    Return the zip file containing the results of a completed COSMOS pipeline. Return status 400 if the 
+    job is in a not-complete state
+    """
     with SessionLocal() as session:
         job = session.get(CosmosSessionJob, job_id)
         if not job:
@@ -115,8 +118,10 @@ def get_processing_result(job_id: str):
 
 def get_max_processes_per_gpu():
     """
-    (Crudely) calculate the amount of cosmos pipelines that can be run in parallel based on
-    the amount of memory available per CPU, and a
+    Approximately calculate the amount of cosmos pipelines that can be run in parallel based on
+    the amount of memory available per GPU.
+    TODO This assumes the COSMOS pipeline will be the only thing running on the GPU, which is
+    not necessarily the case
     """
     if not torch.cuda.is_available:
         return 1
@@ -132,15 +137,3 @@ async def startup_event():
     max_worker_count = get_max_processes_per_gpu()
     logger.info(f"{torch.cuda.is_available()}, {max_worker_count}")
     workers = [asyncio.create_task(cosmos_worker(queue)) for _ in range(max_worker_count)]
-
-#    # Initialize the pytorch model
-#    model = Model()
-#    model.load_state_dict(torch.load(
-#        CONFIG['MODEL_PATH'], map_location=torch.device(CONFIG['DEVICE'])))
-#    model.eval()
-#
-#    # add model and other preprocess tools too app state
-#    app.package = {
-#        "scaler": load(CONFIG['SCALAR_PATH']),  # joblib.load
-#        "model": model
-#    }

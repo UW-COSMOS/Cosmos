@@ -26,8 +26,9 @@ class CosmosSessionJob(Base):
     error = Column(String, default=None)
 
 
-    def __init__(self, id: UUID):
+    def __init__(self, id: UUID, output_dir: str):
         self.id = str(id)
+        self.output_dir = output_dir
         self.created = datetime.now()
 
 
@@ -63,4 +64,3 @@ class CosmosSessionJob(Base):
         if not self.is_started:
             return None
         return (self.completed - self.started if self.is_completed else datetime.now() - self.started).total_seconds()
-

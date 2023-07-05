@@ -509,10 +509,6 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
     # return a list of temprary files to be returned or deleted
     return (True, objs, infofiles)
 
-def prepare_model():
-    """
-    """
-
 """
     main processing loop for PDF files, called by main after command line parsing.
 
@@ -747,7 +743,6 @@ def main_process(pdf_dir, page_info_dir, out_dir):
                 stats['aggregate_error'] += 1
                 tlog_flush(f'failed to aggregate {pdf_name}')
 
-        tlog_flush('Cleaning Up')
         # remove the infofiles created by processing that we have not been told to keep
         for file,typ in infofiles.items():
             if typ in keep:
@@ -756,11 +751,10 @@ def main_process(pdf_dir, page_info_dir, out_dir):
                 tlog_flush(f'          rm {typ} {file}')
                 os.remove(file)
 
-        tlog_flush('Cleaned Up')
         if success:
             stats['succeeded'] += 1
 
-    tlog_flush('Returning')
+    tlog_flush(f'Succeeded in processing {stats["succeeded"]} documents')
     return stats
 
 
