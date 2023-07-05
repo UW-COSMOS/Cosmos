@@ -1,27 +1,18 @@
 import os, sys
 import tempfile
 sys.path.append("..")
-import make_parquet as mp
-from pydantic import BaseModel
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.logger import logger
 from fastapi.responses import FileResponse
 import uuid
-from sqlalchemy import create_engine, update, select
-from sqlalchemy.orm import sessionmaker
 from processing_session_types import Base, CosmosSessionJob
-from subprocess import Popen
 from typing import List
-from datetime import datetime
 import torch
 import asyncio
+from db import SessionLocal
+from scheduler import scheduler
 
 import shutil
-
-# creating an in-memory DB appears to create issues with session lifetime, use a flat file instead
-engine = create_engine('sqlite:///sessions.db', echo=False)
-Base.metadata.create_all(engine)
-SessionLocal = sessionmaker(bind=engine)
 
 app = FastAPI()
 
@@ -123,7 +114,7 @@ def get_max_processes_per_gpu():
     TODO This assumes the COSMOS pipeline will be the only thing running on the GPU, which is
     not necessarily the case
     """
-    if not torch.cuda.is_available:
+    if not torch.cuda.is_available():
         return 1
     max_mem = torch.cuda.get_device_properties(0).total_memory
     return int(max_mem / GPU_MEM_PER_WORKER)
@@ -135,5 +126,8 @@ async def startup_event():
     Initialize FastAPI and add variables
     """
     max_worker_count = get_max_processes_per_gpu()
-    logger.info(f"{torch.cuda.is_available()}, {max_worker_count}")
+    logger.info(f"Creating {max_worker_count} work queues for COSMOS processing")
     workers = [asyncio.create_task(cosmos_worker(queue)) for _ in range(max_worker_count)]
+
+    asyncio.create_task(scheduler.serve())
+

@@ -9,7 +9,7 @@ import make_parquet as mp
 from fastapi.logger import logger
 import uuid
 from processing_session_types import CosmosSessionJob
-from app import SessionLocal
+from db import SessionLocal
 
 import shutil
 
@@ -40,7 +40,7 @@ def process_document(pdf_dir: str, job_id: uuid.UUID):
             shutil.make_archive(f"{archive_out_dir}/cosmos_output", "zip", cosmos_out_dir)
         except Exception as e:
             cosmos_error = e
-            print("Cosmos processing failed", cosmos_error, flush=True)
+            print("Cosmos processing failed:\n", cosmos_error, flush=True)
 
         with SessionLocal() as session:
             job = session.get(CosmosSessionJob, str(job_id))
