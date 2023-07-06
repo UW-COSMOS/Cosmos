@@ -73,7 +73,7 @@ async def process_document(pdf: UploadFile = File(...)):
 
     # populate the job in its default state (not started)
     with SessionLocal() as session:
-        session.add(CosmosSessionJob(job_id, job_output_dir))
+        session.add(CosmosSessionJob(job_id, pdf.filename.replace('.pdf', ''), job_output_dir))
         session.commit()
 
     await queue.put((job_output_dir, job_id))
@@ -115,8 +115,8 @@ def get_processing_result(job_id: str):
             raise HTTPException(status_code=404, detail="Job not found")
         elif not job.is_completed:
             raise HTTPException(status_code=400, detail="Job not finished")
-    output_file = f"{job.output_dir}/cosmos_output.zip"
-    return FileResponse(output_file)
+    output_file = f"{job.pdf_name}_cosmos_output.zip"
+    return FileResponse(f"{job.output_dir}/{output_file}", filename=output_file)
 
 
 def get_max_processes_per_gpu():

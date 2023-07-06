@@ -7,7 +7,6 @@ import os, sys
 import tempfile
 import make_parquet as mp
 from fastapi.logger import logger
-import uuid
 from processing_session_types import CosmosSessionJob
 from db import SessionLocal
 import torch
@@ -31,15 +30,15 @@ OOM_ERROR_MESSAGES = [
     'CUDNN_STATUS_NOT_INITIALIZED'
 ]
 
-def process_document(pdf_dir: str, job_id: uuid.UUID):
+def process_document(pdf_dir: str, job_id: str):
     """
     Run a single document through the COSMOS pipeline.
     TODO: This adds the significant overhead of loading the model into memory with each run
     """
     with tempfile.TemporaryDirectory() as page_info_dir, tempfile.TemporaryDirectory() as cosmos_out_dir:
         with SessionLocal() as session:
-            job = session.get(CosmosSessionJob, str(job_id))
-            archive_out_dir = job.output_dir
+            job = session.get(CosmosSessionJob, job_id)
+            archive_out_dir = f'{job.output_dir}/{job.pdf_name}_cosmos_output'
             job.is_started = True
             
             session.commit()
@@ -48,21 +47,20 @@ def process_document(pdf_dir: str, job_id: uuid.UUID):
         try: 
             mp.main_process(pdf_dir, page_info_dir, cosmos_out_dir)
             mp.resize_files(cosmos_out_dir)
-            shutil.make_archive(f"{archive_out_dir}/cosmos_output", "zip", cosmos_out_dir)
+            shutil.make_archive(archive_out_dir, "zip", cosmos_out_dir)
         except Exception as e:
             cosmos_error = e
             print("Cosmos processing failed:\n", cosmos_error, flush=True)
 
-
-        OOM_ERROR = cosmos_error and any([e in str(cosmos_error) for e in OOM_ERROR_MESSAGES])
+        is_oom_error = cosmos_error and any([e in str(cosmos_error) for e in OOM_ERROR_MESSAGES])
 
         with SessionLocal() as session:
-            job = session.get(CosmosSessionJob, str(job_id))
-            job.is_completed = not OOM_ERROR # retry jobs that failed due to an OOM error
-            job.error = None if OOM_ERROR or cosmos_error is None else str(cosmos_error)
+            job = session.get(CosmosSessionJob, job_id)
+            job.is_completed = not is_oom_error # retry jobs that failed due to an OOM error
+            job.error = None if is_oom_error or cosmos_error is None else str(cosmos_error)
             session.commit()
 
-        if OOM_ERROR:
+        if is_oom_error:
             exit(OOM_ERROR_EXIT_CODE)
 
 

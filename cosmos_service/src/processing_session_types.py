@@ -2,8 +2,7 @@
 SQLAlchemy ORM mappings for the db entity(s) that track COSMOS document processing sessions
 """
 from sqlalchemy import Column, String, TIMESTAMP
-from sqlalchemy.orm import DeclarativeBase, relationship
-from sqlalchemy.sql import func
+from sqlalchemy.orm import DeclarativeBase
 from uuid import UUID
 from datetime import datetime
 
@@ -19,15 +18,17 @@ class CosmosSessionJob(Base):
     """
     __tablename__ = "processing_jobs"
     id = Column(String, primary_key = True)
+    pdf_name = Column(String)
+    output_dir = Column(String)
     created = Column(TIMESTAMP, default=None)
     started = Column(TIMESTAMP, default=None)
     completed = Column(TIMESTAMP, default=None)
-    output_dir = Column(String)
     error = Column(String, default=None)
 
 
-    def __init__(self, id: UUID, output_dir: str):
+    def __init__(self, id: UUID, pdf_name: str, output_dir: str):
         self.id = str(id)
+        self.pdf_name = pdf_name
         self.output_dir = output_dir
         self.created = datetime.now()
 

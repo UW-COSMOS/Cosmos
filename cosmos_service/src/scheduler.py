@@ -12,7 +12,7 @@ scheduler = Rocketry(config={"task_execution": "async"})
 
 
 CLEAN_JOB_FREQUENCY = "1 hour"
-SESSION_EXPIRATION = timedelta(hours = 3)
+SESSION_EXPIRATION = timedelta(hours = 24)
 
 
 @scheduler.task(every(CLEAN_JOB_FREQUENCY))
