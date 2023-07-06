@@ -1,8 +1,9 @@
 
-To build the image and run it, exposing port 8089:
+To build the image and run it (from the root of the project), exposing port 8089:
 
 ```
-docker build -t cs .; docker run -p 8089:8089 cs
+[you@host ~/Cosmos]$ docker build -t cs -f deployment/cosmos-service.Dockerfile .
+[you@host ~/Cosmos]$ docker run -p 8089:8089 cs
 ```
 
 Exposes 3 endpoints:
