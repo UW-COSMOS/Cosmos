@@ -3,13 +3,12 @@ import functools
 from PIL import Image
 import uuid
 import os
-
+from .reaggregate_equations import split_equation_system
 
 def check_y_overlap(bb1, bb2):
     _, x1, _, x2 = bb1
     _, y1, _, y2 = bb2
     return y2 >= x1 and x2 >= x1
-
 
 def aggregate_equations(page_group, write_images_pth):
     targets = []
@@ -22,19 +21,23 @@ def aggregate_equations(page_group, write_images_pth):
     page_content = ' '.join([p['content'] for p in objs])
     final_objs = []
     for t in targets:
-        img = Image.open(t['img_pth']).convert('RGB').crop(t['bounding_box'])
-        imgid = uuid.uuid4()
-        pth = os.path.join(write_images_pth, f'{imgid}.png')
-        img.save(pth)
-        eq_obj = {'pdf_name': t['pdf_name'],
-                  'dataset_id': t['dataset_id'],
-                  'detect_score': t['detect_score'],
-                  'postprocess_score': t['postprocess_score'],
-                  'equation_bb': t['bounding_box'],
-                  'equation_page': t['page_num'],
-                  'content': page_content,
-                  'img_pth': pth}
-        final_objs.append(eq_obj)
+        img, padded_bounds, sub_regions = split_equation_system(t)
+        left, top, *_ = padded_bounds
+        for region in sub_regions:
+            sub_img = img.crop(region)
+            full_page_bounds = (region.left + left, region.top + top, region.right + left, region.bottom + top)
+            imgid = uuid.uuid4()
+            pth = os.path.join(write_images_pth, f'{imgid}.png')
+            sub_img.save(pth)
+            eq_obj = {'pdf_name': t['pdf_name'],
+                    'dataset_id': t['dataset_id'],
+                    'detect_score': t['detect_score'],
+                    'postprocess_score': t['postprocess_score'],
+                    'equation_bb': full_page_bounds,
+                    'equation_page': t['page_num'],
+                    'content': page_content,
+                    'img_pth': pth}
+            final_objs.append(eq_obj)
     return final_objs
 
 
