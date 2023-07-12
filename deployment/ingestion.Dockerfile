@@ -9,6 +9,8 @@ RUN chmod +x /cli/ingest_documents.sh
 
 COPY cosmos/ingestion /ingestion
 WORKDIR /ingestion
+# TODO this should probably go in cosmos-base, but there are some additional dependency issues to untangle there
+RUN apt-get update && apt-get install -y pkg-config && python3.8 -m pip install pdfplumber
 RUN python3.8 -m pip install .
 ENV PYTHONPATH ".:${PYTHONPATH}"
 
