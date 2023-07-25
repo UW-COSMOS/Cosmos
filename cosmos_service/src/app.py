@@ -41,13 +41,13 @@ async def cosmos_worker(work_queue: asyncio.Queue):
     """
     while True:
         (job_output_dir, job_id, compress_images) = await work_queue.get()
-        proc = await asyncio.create_subprocess_exec(sys.executable, COSMOS_SCRIPT, job_output_dir, job_id, compress_images)
+        proc = await asyncio.create_subprocess_exec(sys.executable, COSMOS_SCRIPT, job_output_dir, job_id, str(compress_images))
         result = await proc.wait()
         queue.task_done()
         
         if result == OOM_ERROR_EXIT_CODE:
             await asyncio.sleep(OOM_SLEEP_TIME)
-            await queue.put((job_output_dir, job_id))
+            await queue.put((job_output_dir, job_id, compress_images))
 
 @app.post("/process/", status_code=202)
 async def process_document(pdf: UploadFile = File(...), compress_images: bool = Form(True)):
