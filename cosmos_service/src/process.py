@@ -13,6 +13,7 @@ import torch
 from app import OOM_ERROR_EXIT_CODE
 
 import shutil
+import argparse
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ['MODEL_CONFIG']="/configs/model_config.yaml"
@@ -67,4 +68,9 @@ def process_document(pdf_dir: str, job_id: str, compress_images: bool = True):
 
 if __name__ == '__main__':
     logger.info(torch.cuda.is_available())
-    process_document(sys.argv[1], sys.argv[2], bool(sys.argv[3]))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("pdf_dir")
+    parser.add_argument("job_id")
+    parser.add_argument("compress_images", type=bool, default=True)
+    args = parser.parse_args()
+    process_document(args.pdf_dir, args.job_id, args.compress_images)
