@@ -46,7 +46,6 @@ def process_document(pdf_dir: str, job_id: str):
         cosmos_error : Exception = None
         try: 
             mp.main_process(pdf_dir, page_info_dir, cosmos_out_dir)
-            mp.resize_files(cosmos_out_dir)
             shutil.make_archive(archive_out_dir, "zip", cosmos_out_dir)
         except Exception as e:
             cosmos_error = e
