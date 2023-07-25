@@ -71,6 +71,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("pdf_dir")
     parser.add_argument("job_id")
-    parser.add_argument("compress_images", type=bool, default=True)
+    parser.add_argument("compress_images", type=lambda v: v.lower() == 'true', default=True)
     args = parser.parse_args()
     process_document(args.pdf_dir, args.job_id, args.compress_images)
