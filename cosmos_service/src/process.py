@@ -30,7 +30,7 @@ OOM_ERROR_MESSAGES = [
     'CUDNN_STATUS_NOT_INITIALIZED'
 ]
 
-def process_document(pdf_dir: str, job_id: str):
+def process_document(pdf_dir: str, job_id: str, compress_images: bool = True):
     """
     Run a single document through the COSMOS pipeline.
     TODO: This adds the significant overhead of loading the model into memory with each run
@@ -46,6 +46,8 @@ def process_document(pdf_dir: str, job_id: str):
         cosmos_error : Exception = None
         try: 
             mp.main_process(pdf_dir, page_info_dir, cosmos_out_dir)
+            if compress_images:
+                mp.resize_files(cosmos_out_dir)
             shutil.make_archive(archive_out_dir, "zip", cosmos_out_dir)
         except Exception as e:
             cosmos_error = e
@@ -65,4 +67,4 @@ def process_document(pdf_dir: str, job_id: str):
 
 if __name__ == '__main__':
     logger.info(torch.cuda.is_available())
-    process_document(sys.argv[1], sys.argv[2])
+    process_document(sys.argv[1], sys.argv[2], bool(sys.argv[3]))
