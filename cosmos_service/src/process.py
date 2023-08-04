@@ -52,7 +52,7 @@ def process_document(pdf_dir: str, job_id: str, compress_images: bool = True):
             shutil.make_archive(archive_out_dir, "zip", cosmos_out_dir)
         except Exception as e:
             cosmos_error = e
-            print("Cosmos processing failed:\n", cosmos_error, flush=True)
+            logger.exception("Cosmos processing failed", flush=True)
 
         is_oom_error = cosmos_error and any([e in str(cosmos_error) for e in OOM_ERROR_MESSAGES])
 

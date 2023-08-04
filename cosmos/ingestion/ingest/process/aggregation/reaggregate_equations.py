@@ -56,6 +56,11 @@ def group_equations_by_nearest_label(img_width: int, segments: List[Bounds]):
     if len(label_segments) == 0:
         label_segments.append(Bounds(0, 0, 0, 0))
 
+    # If the whole image was flagged as a label for some reason, treat the labels as non-labels
+    if len(non_label_segments) == 0:
+        non_label_segments = label_segments
+
+
     label_groups : Dict[Bounds, List[Bounds]] = {s: [] for s in label_segments}
 
     for segment in non_label_segments:
@@ -70,7 +75,7 @@ def group_equations_by_nearest_label(img_width: int, segments: List[Bounds]):
             max([s.right for s in sg]),
             max([s.bottom for s in sg])
         )
-        for sg in label_groups.values()
+        for sg in label_groups.values() if len(sg)
     ]
 
     padded_bounds = [pad(b) for b in grouped_bounds]
