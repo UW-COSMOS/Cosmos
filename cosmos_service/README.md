@@ -1,3 +1,4 @@
+# Running the service
 
 To build the image and run it (from the root of the project), exposing port 8089:
 
@@ -15,7 +16,8 @@ Exposes 3 endpoints:
 
 * `GET /process/{job_id}/result` : Get the results of a completed COSMOS extraction as a zip file.
 
-Example usage:
+# Example usage
+
 ```
 URL=https://xdd.wisc.edu/cosmos_service
 $ curl --form 'pdf=@"/path/to/sample.pdf"' "$URL/process/"
