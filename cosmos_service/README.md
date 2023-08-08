@@ -17,7 +17,7 @@ Exposes 3 endpoints:
 
 Example usage:
 ```
-URL=http://xdd.wisc.edu/cosmos_service
+URL=https://xdd.wisc.edu/cosmos_service
 $ curl --form 'pdf=@"/path/to/sample.pdf"' "$URL/process/"
 {
   "message": "PDF Processing in Background",
