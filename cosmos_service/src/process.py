@@ -13,6 +13,7 @@ import torch
 from app import OOM_ERROR_EXIT_CODE
 
 import shutil
+import argparse
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ['MODEL_CONFIG']="/configs/model_config.yaml"
@@ -30,7 +31,7 @@ OOM_ERROR_MESSAGES = [
     'CUDNN_STATUS_NOT_INITIALIZED'
 ]
 
-def process_document(pdf_dir: str, job_id: str):
+def process_document(pdf_dir: str, job_id: str, compress_images: bool = True):
     """
     Run a single document through the COSMOS pipeline.
     TODO: This adds the significant overhead of loading the model into memory with each run
@@ -46,11 +47,12 @@ def process_document(pdf_dir: str, job_id: str):
         cosmos_error : Exception = None
         try: 
             mp.main_process(pdf_dir, page_info_dir, cosmos_out_dir)
-            mp.resize_files(cosmos_out_dir)
+            if compress_images:
+                mp.resize_files(cosmos_out_dir)
             shutil.make_archive(archive_out_dir, "zip", cosmos_out_dir)
         except Exception as e:
             cosmos_error = e
-            print("Cosmos processing failed:\n", cosmos_error, flush=True)
+            logger.exception("Cosmos processing failed", flush=True)
 
         is_oom_error = cosmos_error and any([e in str(cosmos_error) for e in OOM_ERROR_MESSAGES])
 
@@ -66,4 +68,9 @@ def process_document(pdf_dir: str, job_id: str):
 
 if __name__ == '__main__':
     logger.info(torch.cuda.is_available())
-    process_document(sys.argv[1], sys.argv[2])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("pdf_dir")
+    parser.add_argument("job_id")
+    parser.add_argument("compress_images", type=lambda v: v.lower() == 'true', default=True)
+    args = parser.parse_args()
+    process_document(args.pdf_dir, args.job_id, args.compress_images)

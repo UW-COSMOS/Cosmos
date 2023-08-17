@@ -1,7 +1,7 @@
 import os, sys
 import tempfile
 sys.path.append("..")
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.logger import logger
 from fastapi.responses import FileResponse
 import uuid
@@ -40,17 +40,17 @@ async def cosmos_worker(work_queue: asyncio.Queue):
     blocking issues in Python's async framework
     """
     while True:
-        (job_output_dir, job_id) = await work_queue.get()
-        proc = await asyncio.create_subprocess_exec(sys.executable, COSMOS_SCRIPT, job_output_dir, job_id)
+        (job_output_dir, job_id, compress_images) = await work_queue.get()
+        proc = await asyncio.create_subprocess_exec(sys.executable, COSMOS_SCRIPT, job_output_dir, job_id, str(compress_images))
         result = await proc.wait()
         queue.task_done()
         
         if result == OOM_ERROR_EXIT_CODE:
             await asyncio.sleep(OOM_SLEEP_TIME)
-            await queue.put((job_output_dir, job_id))
+            await queue.put((job_output_dir, job_id, compress_images))
 
 @app.post("/process/", status_code=202)
-async def process_document(pdf: UploadFile = File(...)):
+async def process_document(pdf: UploadFile = File(...), compress_images: bool = Form(True)):
     """
     Accept a new PDF document for COSMOS processing. Saves the PDF to disk, 
     then adds it to a queue for subsequent processing
@@ -76,7 +76,7 @@ async def process_document(pdf: UploadFile = File(...)):
         session.add(CosmosSessionJob(job_id, pdf.filename.replace('.pdf', ''), job_output_dir))
         session.commit()
 
-    await queue.put((job_output_dir, job_id))
+    await queue.put((job_output_dir, job_id, compress_images))
     
     return {
         "message": "PDF Processing in Background", 
