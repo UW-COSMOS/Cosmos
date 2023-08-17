@@ -58,7 +58,7 @@ def resize_png(path, size=1920):
     w, h = im.size
     if w >= size or h >= size:
         maxsize = (1920, 1920)
-        im.thumbnail(maxsize, Image.ANTIALIAS)
+        im.thumbnail(maxsize, Image.LANCZOS)
     else:
         im = resize_image(im, size)
     return path,im
