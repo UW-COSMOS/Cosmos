@@ -6,7 +6,22 @@ import numpy as np
 import math
 import os
 from PIL import Image
+import layoutparser as lp
+import cv2
 
+import detectron2
+from detectron2.utils.logger import setup_logger
+from detectron2 import model_zoo
+from detectron2.engine import DefaultPredictor
+from detectron2.config import get_cfg
+from detectron2.utils.visualizer import Visualizer
+from detectron2.data import MetadataCatalog
+
+from pdf2image import convert_from_path, convert_from_bytes
+from IPython.display import display, Image
+
+import torchvision.ops.boxes as bops
+import torch
 
 def balance_margins(bmap, img):
     """
@@ -190,6 +205,53 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
     return block_coords
 
 
+def get_lp_proposals(img):
+    """
+    Function that generates object proposals with layoutparser
+    """
+
+    model = lp.Detectron2LayoutModel('/content/drive/MyDrive/layoutparser_genseg_improvement/config.yaml',
+                                    '/content/drive/MyDrive/layoutparser_genseg_improvement/model_final.pth',
+                                    extra_config=["MODEL.ROI_HEADS.SCORE_THRESH_TEST", 0.65],
+                                    label_map={0: "text", 1: "title", 2: "list", 3: "table", 4: "figure", 5: "Equation"})
+    color_map_publaynet = {
+	'text': 'red',
+	'title': 'blue',
+	'list': 'green',
+	'table': 'purple',
+	'figure': 'pink',
+	'Equation': 'orange',
+	}
+
+    color_map_mfd = {
+	'equation': 'blue',
+	}
+
+    img_list = segment_pdf(img)
+
+def segment_pdf(pdf_str):
+    images = convert_from_bytes(open(pdf_str, 'rb').read(), size=800)
+    # blocks = generate_bounding_boxes(images[4])
+    # layout_predicted = lp.elements.layout.Layout(blocks=blocks)
+    # img = lp.draw_box(images[4], layout_predicted,
+    #             box_width=3, 
+    #             show_element_id=True)
+    # display(img)
+    # print(len(images))
+    img_list = []
+    for i in range(len(images)):
+      layout_predicted = model.detect(images[i])
+      # blocks = lp.Layout([b for b in layout_predicted])
+      # for block in blocks:
+      #   block = block.pad(left=5, right=5, top=5, bottom=5).crop_image(images[i])
+      # layout_predicted = lp.elements.layout.Layout(blocks=blocks)
+      img = lp.draw_box(images[i],[b.set(id=f'{b.type}/{b.score:.2f}') for b in layout_predicted], box_width = 1, color_map=color_map_publaynet,
+      		show_element_id=False, id_font_size=10, id_text_background_color='grey',
+           	id_text_color='white')
+      #display(img)
+      img_list.append(img)
+    return img_list
+
 def get_columns_for_row(row):
     """
     Detect number of columns in a row
@@ -238,5 +300,3 @@ def divide_row_into_columns(row, n_columns):
     coords.append((final_col, row.shape[1]))
     col_idx.append(n_columns)
     return splits, coords, col_idx
-
-
