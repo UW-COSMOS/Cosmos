@@ -176,7 +176,7 @@ def aggregate_sections(pdf):
     pdf = pdf[pdf['postprocess_cls'].isin(['Body Text', 'Section Header'])]
     grouped = pdf.groupby('page_num').apply(order_page)
     final_ordering = []
-    for ind, order in grouped.iteritems():
+    for ind, order in grouped.items():
         final_ordering.extend(order)
     sections = [[]]
     for item in final_ordering:
@@ -193,7 +193,7 @@ def aggregate_tables(pdf, write_images_pth):
     tc_associate = functools.partial(caption_associate, caption_class='Table Caption', write_images_pth=write_images_pth)
     grouped = pdf.groupby('page_num').apply(tc_associate)
     final_ordering = []
-    for ind, order in grouped.iteritems():
+    for ind, order in grouped.items():
         final_ordering.extend(order)
     return final_ordering
 
@@ -203,7 +203,7 @@ def aggregate_figures(pdf, write_images_pth):
     tc_associate = functools.partial(caption_associate, caption_class='Figure Caption', write_images_pth=write_images_pth)
     grouped = pdf.groupby('page_num').apply(tc_associate)
     final_ordering = []
-    for ind, order in grouped.iteritems():
+    for ind, order in grouped.items():
         final_ordering.extend(order)
     return final_ordering
 
@@ -248,7 +248,7 @@ def full_page_aggregate(ddf, aggregate_type, write_images_pth):
         ae = functools.partial(aggregate_equations, write_images_pth=write_images_pth)
         result = ddf.groupby('pdf_name').apply(ae)
         results = []
-        for pdf_name, sections in result.iteritems():
+        for pdf_name, sections in result.items():
             for section in sections:
                 results.append(section)
         results_df = pd.DataFrame(results)
@@ -259,7 +259,7 @@ def stream_aggregate(ddf, aggregate_type):
     if aggregate_type == 'sections':
         result = ddf.groupby('pdf_name').apply(aggregate_sections)
         results = []
-        for pdf_name, sections in result.iteritems():
+        for pdf_name, sections in result.items():
             for section in sections:
                 results.append(section)
         results_df = pd.DataFrame(results)
@@ -267,7 +267,7 @@ def stream_aggregate(ddf, aggregate_type):
     if aggregate_type == 'pdfs':
         result = ddf.groupby('pdf_name').apply(aggregate_pdf)
         results = []
-        for pdf_name, item in result.iteritems():
+        for pdf_name, item in result.items():
             results.append(item)
         result_df = pd.DataFrame(results)
         return result_df
@@ -278,7 +278,7 @@ def association_aggregate(ddf, aggregate_type, write_images_pth):
         atab = functools.partial(aggregate_tables, write_images_pth=write_images_pth)
         result = ddf.groupby('pdf_name').apply(atab)
         results = []
-        for pdf_name, tables in result.iteritems():
+        for pdf_name, tables in result.items():
             for table in tables:
                 results.append(table)
         results_df = pd.DataFrame(results)
@@ -287,7 +287,7 @@ def association_aggregate(ddf, aggregate_type, write_images_pth):
         afig = functools.partial(aggregate_figures, write_images_pth=write_images_pth)
         result = ddf.groupby('pdf_name').apply(afig)
         results = []
-        for pdf_name, tables in result.iteritems():
+        for pdf_name, tables in result.items():
             for table in tables:
                 results.append(table)
         results_df = pd.DataFrame(results)
