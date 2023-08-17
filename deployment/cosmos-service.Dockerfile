@@ -3,7 +3,7 @@ FROM uwcosmos/cosmos-ingestion:$VERSION
 
 WORKDIR /src/
 RUN apt install -y git
-RUN pip3.8 install fastapi[all]kk
+RUN pip3.8 install fastapi[all]
 RUN pip3.8 install layoutparser
 RUN pip3.8 install 'git+https://github.com/facebookresearch/detectron2.git@v0.4#egg=detectron2'
 RUN pip3.8 install rocketry pydantic==1.10.10
