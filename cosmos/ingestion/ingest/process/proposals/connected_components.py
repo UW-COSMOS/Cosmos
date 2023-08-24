@@ -226,31 +226,20 @@ def get_lp_proposals(img):
     color_map_mfd = {
 	'equation': 'blue',
 	}
-
-    img_list = segment_pdf(img)
-
-def segment_pdf(pdf_str):
-    images = convert_from_bytes(open(pdf_str, 'rb').read(), size=800)
-    # blocks = generate_bounding_boxes(images[4])
-    # layout_predicted = lp.elements.layout.Layout(blocks=blocks)
-    # img = lp.draw_box(images[4], layout_predicted,
-    #             box_width=3, 
-    #             show_element_id=True)
-    # display(img)
-    # print(len(images))
-    img_list = []
-    for i in range(len(images)):
-      layout_predicted = model.detect(images[i])
-      # blocks = lp.Layout([b for b in layout_predicted])
-      # for block in blocks:
-      #   block = block.pad(left=5, right=5, top=5, bottom=5).crop_image(images[i])
-      # layout_predicted = lp.elements.layout.Layout(blocks=blocks)
-      img = lp.draw_box(images[i],[b.set(id=f'{b.type}/{b.score:.2f}') for b in layout_predicted], box_width = 1, color_map=color_map_publaynet,
-      		show_element_id=False, id_font_size=10, id_text_background_color='grey',
-           	id_text_color='white')
-      #display(img)
-      img_list.append(img)
-    return img_list
+    
+    layout_predicted = model.detect(img)
+    
+    coord_list = []
+    for bbox in layout_predicted._blocks:
+	coord_set = []
+        coord_set.append(bbox.block.x_1)
+        coord_set.append(bbox.block.y_1)
+        coord_set.append(bbox.block.x_2)
+        coord_set.append(bbox.block.y_2)
+        
+        coord_list.append(coord_set)
+        
+    return coord_list
 
 def get_columns_for_row(row):
     """
