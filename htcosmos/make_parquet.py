@@ -811,4 +811,3 @@ if __name__ == '__main__':
     if failed > 0:
         tlog(f'Failed to process {failed} pdf files.')
         sys.exit(1)
-
