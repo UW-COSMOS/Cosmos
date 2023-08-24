@@ -269,8 +269,8 @@ MODEL:
     NAME: SemSegFPNHead
     NORM: GN
     NUM_CLASSES: 54
-  WEIGHTS: /content/drive/MyDrive/layoutparser_genseg_improvement/model_0074999.pth
-OUTPUT_DIR: /content/drive/MyDrive/layoutparser_genseg_improvement
+  WEIGHTS: /hdd/kbalaji3/Cosmos/deployment/weights/lp_genseg_improvement_model_final.pth
+OUTPUT_DIR: /hdd/kbalaji3/Cosmos/deployment/configs/
 SEED: -1
 SOLVER:
   AMP:
@@ -323,3 +323,10 @@ TEST:
     NUM_ITER: 200
 VERSION: 2
 VIS_PERIOD: 0
+CLASSES: ["text",
+    "title",
+    "list",
+    "table",
+    "figure",
+    "Equation"]
+
