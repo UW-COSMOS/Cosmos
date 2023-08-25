@@ -210,8 +210,8 @@ def get_lp_proposals(img):
     Function that generates object proposals with layoutparser
     """
 
-    model = lp.Detectron2LayoutModel('/hdd/kbalaji3/Cosmos/deployment/configs/lp_genseg_improvement_config.yaml',
-                                    '/hdd/kbalaji3/Cosmos/deployment/weights/lp_genseg_improvement_model_final.pth',
+    model = lp.Detectron2LayoutModel('/configs/lp_genseg_improvement_config.yaml',
+                                    '/weights/lp_genseg_improvement_model_final.pth',
                                     extra_config=["MODEL.ROI_HEADS.SCORE_THRESH_TEST", 0.65],
                                     label_map={0: "text", 1: "title", 2: "list", 3: "table", 4: "figure", 5: "Equation"})
     color_map_publaynet = {
@@ -226,17 +226,16 @@ def get_lp_proposals(img):
     color_map_mfd = {
 	'equation': 'blue',
 	}
-    
+
     layout_predicted = model.detect(img)
-    
+
     coord_list = []
     for bbox in layout_predicted._blocks:
-	coord_set = []
+        coord_set = []
         coord_set.append(bbox.block.x_1)
         coord_set.append(bbox.block.y_1)
         coord_set.append(bbox.block.x_2)
         coord_set.append(bbox.block.y_2)
-        
         coord_list.append(coord_set)
         
     return coord_list
