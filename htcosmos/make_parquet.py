@@ -29,7 +29,7 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
 from ingest.utils.visualize import write_regions
-from ingest.process.proposals.connected_components import get_proposals
+from ingest.process.proposals.connected_components import get_proposals, get_lp_proposals
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.utils.preprocess import resize_png
 from ingest.utils.table_extraction import TableLocationProcessor
@@ -289,6 +289,11 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         if make_proposals:
             tlog(f'{page_name} get proposals')
             proposals = get_proposals(img)
+            tlog(f'Cosmos proposals:')
+            tlog(proposals)
+            lp_proposals = get_lp_proposals(img)
+            tlog(f'LayoutParser proposals:')
+            tlog(lp_proposals)
             obj['proposals'] = proposals
             if just_propose:
                 pkl_path = f'{page_info_dir}/{image_name}.pkl'
