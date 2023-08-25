@@ -323,10 +323,3 @@ TEST:
     NUM_ITER: 200
 VERSION: 2
 VIS_PERIOD: 0
-CLASSES: ["text",
-    "title",
-    "list",
-    "table",
-    "figure",
-    "Equation"]
-
