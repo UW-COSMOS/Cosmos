@@ -15,6 +15,8 @@ RUN apt install -y nano
 ENV MODEL_CONFIG=/configs/model_config.yaml
 ENV WEIGHTS_PTH=/weights/model_weights.pth
 ENV PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
+COPY deployment/configs/lp_genseg_improvement_config.yaml /configs/
+COPY deployment/weights/lp_genseg_improvement_model_final.pth /weights/
 ENV AGGREGATIONS=pdfs,sections,tables,figures,equations
 COPY htcosmos/make_parquet.py /src/
 RUN mkdir /pdfs
