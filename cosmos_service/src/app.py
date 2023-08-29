@@ -1,9 +1,10 @@
 import os, sys
 import tempfile
 sys.path.append("..")
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.logger import logger
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from fastapi.middleware.gzip import GZipMiddleware
 import uuid
 from processing_session_types import Base, CosmosSessionJob
 from typing import List
@@ -11,12 +12,12 @@ import torch
 import asyncio
 from db import SessionLocal, get_job_details
 from scheduler import scheduler
-from util.cosmos_output_utils import extract_file_from_job
-from util.parquet_to_json import parquet_to_json
+from util.cosmos_output_utils import extract_file_from_job, convert_parquet_to_json
 
 import shutil
 
 app = FastAPI()
+app.add_middleware(GZipMiddleware)
 
 queue = asyncio.Queue()
 workers : List[asyncio.Task] = None
@@ -116,13 +117,32 @@ def get_processing_result(job_id: str):
     return FileResponse(f"{job.output_dir}/{output_file}", filename=output_file)
 
 @app.get("/process/{job_id}/result/text")
-def get_processing_result_text_segments(job_id: str):
+def get_processing_result_text_segments(job_id: str, request: Request):
     """
     Return the text segments extracted by COSMOS and their bounding boxes as a list of JSON objects
     """
     job = get_job_details(job_id)
-    with extract_file_from_job(job, f'{job.pdf_name}.parquet') as parquet:
-        return parquet_to_json(parquet)
+    return convert_parquet_to_json(job, f'{job.pdf_name}.parquet', request)
+
+@app.get("/process/{job_id}/result/extractions/{extraction_type}")
+def get_processing_result_text_segments(job_id: str, extraction_type: str, request: Request):
+    """
+    Return the text segments extracted by COSMOS and their bounding boxes as a list of JSON objects
+    """
+    job = get_job_details(job_id)
+    return convert_parquet_to_json(job, f'{job.pdf_name}_{extraction_type}.parquet', request)
+
+
+@app.get("/process/{job_id}/result/images/{image_path}")
+def get_processing_result_image(job_id: str, image_path: str):
+    """
+    Extract a single image from the zip output of the given job and return it with the appropriate mimetype
+    """
+    job = get_job_details(job_id)
+    mime_type = 'image/png' if image_path.endswith('.png') else 'image/jpeg'
+    with extract_file_from_job(job, image_path) as image:
+        return Response(content=image, media_type=mime_type)
+
 
 
 def get_max_processes_per_gpu():
