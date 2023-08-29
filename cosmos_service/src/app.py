@@ -10,7 +10,7 @@ from processing_session_types import Base, CosmosSessionJob
 from typing import List
 import torch
 import asyncio
-from db import SessionLocal, get_job_details
+from db import SessionLocal, get_job_details, get_cached_job_for_pdf
 from scheduler import scheduler
 from util.cosmos_output_utils import extract_file_from_job, convert_parquet_to_json
 
@@ -53,30 +53,40 @@ async def cosmos_worker(work_queue: asyncio.Queue):
             await queue.put((job_output_dir, job_id, compress_images))
 
 @app.post("/process/", status_code=202)
-async def process_document(pdf: UploadFile = File(...), compress_images: bool = Form(True)):
+async def process_document(pdf: UploadFile = File(...), compress_images: bool = Form(True), use_cache: bool = Form(True)):
     """
     Accept a new PDF document for COSMOS processing. Saves the PDF to disk, 
     then adds it to a queue for subsequent processing
     """
-    job_id = str(uuid.uuid4())
     if not pdf.file or not pdf.filename:
         raise HTTPException(status_code=400, detail="Poorly constructed form upload")
 
+    # Check for whether a copy of the cached PDF already exists
+    pdf_hash, pdf_len, existing_job = get_cached_job_for_pdf(pdf.file)
+    if use_cache and existing_job is not None:
+        return {
+            "message": "PDF Processing in Background", 
+            "job_id": existing_job.id, 
+            "status_endpoint": f"/process/{existing_job.id}/status",
+            "result_endpoint": f"/process/{existing_job.id}/result"
+        }
+
     # Need to make a non-temporary directory to store PDF and job output due to
     # asynchronous processing and retrieval, must be cleaned up in separate job
+    job_id = str(uuid.uuid4())
     job_output_dir = f"{tempfile.gettempdir()}/{job_id}"
     os.mkdir(job_output_dir)
     try:
         with open(f"{job_output_dir}/{pdf.filename}", "wb") as f:
             shutil.copyfileobj(pdf.file, f)
     except Exception:
-        return {"message": ":("}
+        return {"message": "Unable to store PDF for processing"}
     finally:
         pdf.file.close()
 
     # populate the job in its default state (not started)
     with SessionLocal() as session:
-        session.add(CosmosSessionJob(job_id, pdf.filename.replace('.pdf', ''), job_output_dir))
+        session.add(CosmosSessionJob(job_id, pdf.filename.replace('.pdf', ''), pdf_hash, pdf_len, job_output_dir))
         session.commit()
 
     await queue.put((job_output_dir, job_id, compress_images))

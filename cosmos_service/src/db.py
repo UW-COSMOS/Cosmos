@@ -1,10 +1,13 @@
 """
 Simple Sqlite DB for storing cosmos session information
 """
-from sqlalchemy import create_engine
+from typing import BinaryIO
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from fastapi import HTTPException
 from processing_session_types import Base, CosmosSessionJob
+import hashlib
+
 
 engine = create_engine('sqlite:///sessions.db', echo=False)
 Base.metadata.create_all(engine)
@@ -18,3 +21,13 @@ def get_job_details(job_id: str) -> CosmosSessionJob:
         elif not job.is_completed:
             raise HTTPException(status_code=400, detail="Job not finished")
         return job
+
+def get_cached_job_for_pdf(pdf_data: BinaryIO) -> CosmosSessionJob:
+    pdf_length = len(pdf_data)
+    pdf_sha1 = hashlib.sha1(pdf_data).hexdigest()
+    pdf_data.seek(0)
+    with SessionLocal() as session:
+        result = session.execute(select(CosmosSessionJob).where(
+            CosmosSessionJob.pdf_hash == pdf_sha1 and CosmosSessionJob.pdf_length == pdf_length
+        )).first()
+        return pdf_sha1, pdf_length, result

@@ -20,15 +20,19 @@ class CosmosSessionJob(Base):
     id = Column(String, primary_key = True)
     pdf_name = Column(String)
     output_dir = Column(String)
+    pdf_hash = Column(String)
+    pdf_length =Column(String)
     created = Column(TIMESTAMP, default=None)
     started = Column(TIMESTAMP, default=None)
     completed = Column(TIMESTAMP, default=None)
     error = Column(String, default=None)
 
 
-    def __init__(self, id: UUID, pdf_name: str, output_dir: str):
+    def __init__(self, id: UUID, pdf_name: str, pdf_hash: str, pdf_length: int, output_dir: str):
         self.id = str(id)
         self.pdf_name = pdf_name
+        self.pdf_hash = pdf_hash,
+        self.pdf_length = pdf_length
         self.output_dir = output_dir
         self.created = datetime.now()
 
