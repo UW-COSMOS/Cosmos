@@ -141,7 +141,7 @@ def get_processing_result_image(job_id: str, image_path: str):
     job = get_job_details(job_id)
     mime_type = 'image/png' if image_path.endswith('.png') else 'image/jpeg'
     with extract_file_from_job(job, image_path) as image:
-        return Response(content=image, media_type=mime_type)
+        return Response(content=image.read(), media_type=mime_type)
 
 
 
