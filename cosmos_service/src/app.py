@@ -9,8 +9,10 @@ from processing_session_types import Base, CosmosSessionJob
 from typing import List
 import torch
 import asyncio
-from db import SessionLocal
+from db import SessionLocal, get_job_details
 from scheduler import scheduler
+from util.cosmos_output_utils import extract_file_from_job
+from util.parquet_to_json import parquet_to_json
 
 import shutil
 
@@ -109,14 +111,18 @@ def get_processing_result(job_id: str):
     Return the zip file containing the results of a completed COSMOS pipeline. Return status 400 if the 
     job is in a not-complete state
     """
-    with SessionLocal() as session:
-        job = session.get(CosmosSessionJob, job_id)
-        if not job:
-            raise HTTPException(status_code=404, detail="Job not found")
-        elif not job.is_completed:
-            raise HTTPException(status_code=400, detail="Job not finished")
+    job = get_job_details(job_id)
     output_file = f"{job.pdf_name}_cosmos_output.zip"
     return FileResponse(f"{job.output_dir}/{output_file}", filename=output_file)
+
+@app.get("/process/{job_id}/result/text")
+def get_processing_result_text_segments(job_id: str):
+    """
+    Return the text segments extracted by COSMOS and their bounding boxes as a list of JSON objects
+    """
+    job = get_job_details(job_id)
+    with extract_file_from_job(job, f'{job.pdf_name}.parquet') as parquet:
+        return parquet_to_json(parquet)
 
 
 def get_max_processes_per_gpu():
