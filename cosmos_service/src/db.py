@@ -6,7 +6,8 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from fastapi import HTTPException
 from processing_session_types import Base, CosmosSessionJob
-from util import hash_file
+from util.hash_file import hash_file
+import io
 import hashlib
 
 
@@ -25,11 +26,12 @@ def get_job_details(job_id: str) -> CosmosSessionJob:
 
 
 def get_cached_job_for_pdf(pdf_data: BinaryIO) -> CosmosSessionJob:
+    pdf_data.seek(0, io.SEEK_END)
     pdf_length = pdf_data.tell()
-    pdf_data.seek(0)
 
+    pdf_data.seek(0, io.SEEK_SET)
     pdf_sha1 = hash_file(pdf_data)
-    pdf_data.seek(0)
+    pdf_data.seek(0, io.SEEK_SET)
 
     with SessionLocal() as session:
         result = session.execute(select(CosmosSessionJob).where(
