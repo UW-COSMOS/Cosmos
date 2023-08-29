@@ -17,7 +17,7 @@ DEFAULT_PARQUET_COLUMN_NAMES = ("bounding_box", "page_num", [])
 
 def extract_file_from_job(job, file_path: str):
     with ZipFile(f'{job.output_dir}/{job.pdf_name}_cosmos_output.zip') as zipf:
-        return zipf.open(file_path, 'rb')
+        return zipf.open(file_path, 'r')
 
 
 
@@ -35,7 +35,7 @@ def convert_parquet_to_json(job, parquet_path: str, request: Request):
     image paths to match the full request URL
     """
 
-    image_base_url = re.sub("/process/.*", f"/process/{job.id}/result/image", f"{request.url}")
+    image_base_url = re.sub("/process/.*", f"/process/{job.id}/result/images", f"{request.url}")
 
     (bb_column, page_column, exclude) = ([
         vals for key, vals in PARQUET_COLUMN_NAMES.items() if parquet_path.endswith(f"{key}.parquet")
