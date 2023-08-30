@@ -31,7 +31,7 @@ class CosmosSessionJob(Base):
     def __init__(self, id: UUID, pdf_name: str, pdf_hash: str, pdf_length: int, output_dir: str):
         self.id = str(id)
         self.pdf_name = pdf_name
-        self.pdf_hash = pdf_hash,
+        self.pdf_hash = pdf_hash
         self.pdf_length = pdf_length
         self.output_dir = output_dir
         self.created = datetime.now()

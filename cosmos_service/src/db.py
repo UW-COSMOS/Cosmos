@@ -37,4 +37,4 @@ def get_cached_job_for_pdf(pdf_data: BinaryIO) -> CosmosSessionJob:
         result = session.execute(select(CosmosSessionJob).where(
             CosmosSessionJob.pdf_hash == pdf_sha1 and CosmosSessionJob.pdf_length == pdf_length
         )).first()
-        return pdf_sha1, pdf_length, result
+        return pdf_sha1, pdf_length, result.id if result else None

@@ -62,13 +62,13 @@ async def process_document(pdf: UploadFile = File(...), compress_images: bool = 
         raise HTTPException(status_code=400, detail="Poorly constructed form upload")
 
     # Check for whether a copy of the cached PDF already exists
-    pdf_hash, pdf_len, existing_job = get_cached_job_for_pdf(pdf.file)
-    if use_cache and existing_job is not None:
+    pdf_hash, pdf_len, existing_job_id = get_cached_job_for_pdf(pdf.file)
+    if use_cache and existing_job_id is not None:
         return {
             "message": "PDF Processing in Background", 
-            "job_id": existing_job.id, 
-            "status_endpoint": f"/process/{existing_job.id}/status",
-            "result_endpoint": f"/process/{existing_job.id}/result"
+            "job_id": existing_job_id, 
+            "status_endpoint": f"/process/{existing_job_id}/status",
+            "result_endpoint": f"/process/{existing_job_id}/result"
         }
 
     # Need to make a non-temporary directory to store PDF and job output due to
