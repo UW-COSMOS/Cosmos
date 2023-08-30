@@ -74,6 +74,8 @@ def _save_request_pdf(job_id: str, pdf: UploadFile):
         raise HTTPException("Unable to save PDF for processing")
     finally:
         pdf.file.close()
+    
+    return job_output_dir
 
 @app.post("/process/", status_code=202)
 async def process_document(
