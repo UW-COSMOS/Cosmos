@@ -14,8 +14,8 @@ import re
 
 PARQUET_COLUMN_NAMES = {
     "equations": ("equation_bb", "equation_page", ["content"]),
-    "figures": ("objs_bb", "objs_page", ["content"]),
-    "tables": ("objs_bb", "objs_page", ["content"]),
+    "figures": ("obj_bbs", "obj_page", ["content"]),
+    "tables": ("obj_bbs", "obj_page", ["content"]),
 }
 
 DEFAULT_PARQUET_COLUMN_NAMES = ("bounding_box", "page_num", [])
