@@ -1,9 +1,9 @@
 from rocketry import Rocketry
 from rocketry.conds import every
-from processing_session_types import CosmosSessionJob
+from cosmos_service.src.db.processing_session_types import CosmosSessionJob
 import shutil
 from datetime import datetime, timedelta
-from db import SessionLocal
+from db.db import SessionLocal
 from sqlalchemy import select, delete, ScalarResult
 from fastapi.logger import logger
 

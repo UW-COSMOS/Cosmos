@@ -5,7 +5,7 @@ from typing import BinaryIO
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from fastapi import HTTPException
-from processing_session_types import Base, CosmosSessionJob
+from .processing_session_types import Base, CosmosSessionJob
 from util.hash_file import hash_file
 import io
 import hashlib
@@ -37,4 +37,4 @@ def get_cached_job_for_pdf(pdf_data: BinaryIO) -> CosmosSessionJob:
         result = session.execute(select(CosmosSessionJob).where(
             CosmosSessionJob.pdf_hash == pdf_sha1 and CosmosSessionJob.pdf_length == pdf_length
         )).first()
-        return pdf_sha1, pdf_length, result.id if result else None
+        return pdf_sha1, pdf_length, result[0].id if result else None

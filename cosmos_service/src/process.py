@@ -5,10 +5,10 @@ which leads to issues with locking the main thread.
 """
 import os, sys
 import tempfile
-import make_parquet as mp
+import util.make_parquet as mp
 from fastapi.logger import logger
-from processing_session_types import CosmosSessionJob
-from db import SessionLocal
+from db.processing_session_types import CosmosSessionJob
+from db.db import SessionLocal
 import torch
 from app import OOM_ERROR_EXIT_CODE
 

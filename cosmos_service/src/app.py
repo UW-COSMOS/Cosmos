@@ -1,18 +1,18 @@
 import os, sys
 import tempfile
-sys.path.append("..")
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.logger import logger
 from fastapi.responses import FileResponse, Response
 from fastapi.middleware.gzip import GZipMiddleware
 import uuid
-from processing_session_types import Base, CosmosSessionJob
 from typing import List
 import torch
 import asyncio
-from db import SessionLocal, get_job_details, get_cached_job_for_pdf
+import re
+from db.processing_session_types import CosmosSessionJob
+from db.db import SessionLocal, get_job_details, get_cached_job_for_pdf
 from scheduler import scheduler
-from util.cosmos_output_utils import extract_file_from_job, convert_parquet_to_json
+from util.cosmos_output_utils import extract_file_from_job, convert_parquet_to_json, replace_url_suffix
 
 import shutil
 
@@ -36,7 +36,7 @@ OOM_ERROR_EXIT_CODE = 2
 
 
 
-async def cosmos_worker(work_queue: asyncio.Queue):
+async def _cosmos_worker(work_queue: asyncio.Queue):
     """
     Cosmos worker process. Continually poll from the work queue for new parameters to the pipeline,
     and run the cosmos pipeline in a separate process. A separate process is necessary to avoid I/O 
@@ -52,8 +52,35 @@ async def cosmos_worker(work_queue: asyncio.Queue):
             await asyncio.sleep(OOM_SLEEP_TIME)
             await queue.put((job_output_dir, job_id, compress_images))
 
+def _build_process_response(message, job_id, request_url):
+    """Return the ID of a created job alongside the URLs that a client can use to query that job's status"""
+    return {
+        "message": message,
+        "job_id": job_id,
+        "status_endpoint": replace_url_suffix(request_url, f"{job_id}/status"),
+        "result_endpoint": replace_url_suffix(request_url, f"{job_id}/result"),
+    }
+
+def _save_request_pdf(job_id: str, pdf: UploadFile):
+    """Make a non-temporary directory to store the request PDF and job output.
+    Must be cleaned up in a separate job due to asynchronous processing and retrieval
+    """
+    job_output_dir = f"{tempfile.gettempdir()}/{job_id}"
+    os.mkdir(job_output_dir)
+    try:
+        with open(f"{job_output_dir}/{pdf.filename}", "wb") as f:
+            shutil.copyfileobj(pdf.file, f)
+    except Exception:
+        raise HTTPException("Unable to save PDF for processing")
+    finally:
+        pdf.file.close()
+
 @app.post("/process/", status_code=202)
-async def process_document(pdf: UploadFile = File(...), compress_images: bool = Form(True), use_cache: bool = Form(True)):
+async def process_document(
+    request: Request,
+    pdf: UploadFile = File(...), 
+    compress_images: bool = Form(True), 
+    use_cache: bool = Form(True)):
     """
     Accept a new PDF document for COSMOS processing. Saves the PDF to disk, 
     then adds it to a queue for subsequent processing
@@ -64,25 +91,11 @@ async def process_document(pdf: UploadFile = File(...), compress_images: bool = 
     # Check for whether a copy of the cached PDF already exists
     pdf_hash, pdf_len, existing_job_id = get_cached_job_for_pdf(pdf.file)
     if use_cache and existing_job_id is not None:
-        return {
-            "message": "PDF Processing in Background", 
-            "job_id": existing_job_id, 
-            "status_endpoint": f"/process/{existing_job_id}/status",
-            "result_endpoint": f"/process/{existing_job_id}/result"
-        }
+        return _build_process_response("Existing PDF Processing Job Found", request.url, existing_job_id)
 
-    # Need to make a non-temporary directory to store PDF and job output due to
-    # asynchronous processing and retrieval, must be cleaned up in separate job
     job_id = str(uuid.uuid4())
-    job_output_dir = f"{tempfile.gettempdir()}/{job_id}"
-    os.mkdir(job_output_dir)
-    try:
-        with open(f"{job_output_dir}/{pdf.filename}", "wb") as f:
-            shutil.copyfileobj(pdf.file, f)
-    except Exception:
-        return {"message": "Unable to store PDF for processing"}
-    finally:
-        pdf.file.close()
+
+    job_output_dir = _save_request_pdf(job_id, pdf)
 
     # populate the job in its default state (not started)
     with SessionLocal() as session:
@@ -90,13 +103,8 @@ async def process_document(pdf: UploadFile = File(...), compress_images: bool = 
         session.commit()
 
     await queue.put((job_output_dir, job_id, compress_images))
-    
-    return {
-        "message": "PDF Processing in Background", 
-        "job_id": job_id, 
-        "status_endpoint": f"/process/{job_id}/status",
-        "result_endpoint": f"/process/{job_id}/result"
-    }
+
+    return _build_process_response("PDF Processing in Background", request.url, job_id)
 
 @app.get("/process/{job_id}/status")
 def get_processing_status(job_id: str):
@@ -175,7 +183,7 @@ async def startup_event():
     """
     max_worker_count = get_max_processes_per_gpu()
     logger.info(f"Creating {max_worker_count} work queues for COSMOS processing")
-    workers = [asyncio.create_task(cosmos_worker(queue)) for _ in range(max_worker_count)]
+    workers = [asyncio.create_task(_cosmos_worker(queue)) for _ in range(max_worker_count)]
 
     asyncio.create_task(scheduler.serve())
 

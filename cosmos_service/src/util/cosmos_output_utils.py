@@ -27,6 +27,10 @@ def extract_file_from_job(job, file_path: str):
     with ZipFile(f'{job.output_dir}/{job.pdf_name}_cosmos_output.zip') as zipf:
         return zipf.open(file_path, 'r')
 
+def replace_url_suffix(request_url, suffix):
+    """Replace the given request_url after /process/ with the given suffix"""
+    return re.sub("/process/.*", f"/process/{suffix}", f"{request_url}")
+
 def _update_json_entry(json_entry: dict, request_path:str , exclude: List[str]):
     """
     Re-map the img_pth field in parquet output from the local filesystem path to a full URL,
@@ -56,7 +60,7 @@ def convert_parquet_to_json(job, parquet_path: str, request: Request):
     image paths to match the full request URL
     """
     
-    image_base_url = re.sub("/process/.*", f"/process/{job.id}/result/images", f"{request.url}")
+    image_base_url = replace_url_suffix(request.url, f"{job.id}/result/images")
     (bb_column, page_column, exclude) = _get_parquet_read_parameters(parquet_path)
     
     with extract_file_from_job(job, parquet_path) as parquet:
