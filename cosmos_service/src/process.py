@@ -3,13 +3,15 @@ Helper script to run a single document through the COSMOS pipeline and then exit
 This is a workaround for running the pipeline within the main web-server process,
 which leads to issues with locking the main thread.
 """
-import os, sys
+import os
 import tempfile
 import util.make_parquet as mp
+from util.cosmos_output_utils import convert_parquet_to_json_file, PARQUET_SUFFIXES
 from fastapi.logger import logger
 from db.processing_session_types import CosmosSessionJob
 from db.db import SessionLocal
 import torch
+import glob
 from app import OOM_ERROR_EXIT_CODE
 
 import shutil
@@ -31,6 +33,9 @@ OOM_ERROR_MESSAGES = [
     'CUDNN_STATUS_NOT_INITIALIZED'
 ]
 
+def _get_parquet_files_to_convert(cosmos_out_dir, pdf_name):
+    return [f'{cosmos_out_dir}/{pdf_name}{suffix}.parquet' for suffix in PARQUET_SUFFIXES]
+
 def process_document(pdf_dir: str, job_id: str, compress_images: bool = True):
     """
     Run a single document through the COSMOS pipeline.
@@ -40,6 +45,7 @@ def process_document(pdf_dir: str, job_id: str, compress_images: bool = True):
         with SessionLocal() as session:
             job = session.get(CosmosSessionJob, job_id)
             archive_out_dir = f'{job.output_dir}/{job.pdf_name}_cosmos_output'
+            pdf_name = job.pdf_name
             job.is_started = True
             
             session.commit()
@@ -49,10 +55,12 @@ def process_document(pdf_dir: str, job_id: str, compress_images: bool = True):
             mp.main_process(pdf_dir, page_info_dir, cosmos_out_dir)
             if compress_images:
                 mp.resize_files(cosmos_out_dir)
+            for parquet_path in _get_parquet_files_to_convert(cosmos_out_dir, pdf_name):
+                convert_parquet_to_json_file(parquet_path)
             shutil.make_archive(archive_out_dir, "zip", cosmos_out_dir)
         except Exception as e:
             cosmos_error = e
-            logger.exception("Cosmos processing failed", flush=True)
+            logger.exception("Cosmos processing failed")
 
         is_oom_error = cosmos_error and any([e in str(cosmos_error) for e in OOM_ERROR_MESSAGES])
 

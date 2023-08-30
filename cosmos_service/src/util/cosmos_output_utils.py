@@ -6,10 +6,9 @@ Used to serve various /results endpoints
 from zipfile import ZipFile
 from .parquet_to_json import parquet_to_json
 from fastapi import Request
-import pandas as pd
+import json
 from os import path
 from typing import List
-from io import BytesIO
 import re
 
 PARQUET_COLUMN_NAMES = {
@@ -18,7 +17,9 @@ PARQUET_COLUMN_NAMES = {
     "tables": ("obj_bbs", "obj_page", ["content"]),
 }
 
-DEFAULT_PARQUET_COLUMN_NAMES = ("bounding_box", "page_num", [])
+PARQUET_SUFFIXES = ['', *[f'_{suffix}' for suffix in PARQUET_COLUMN_NAMES.keys()]]
+
+DEFAULT_PARQUET_COLUMN_NAMES = ("bounding_box", "page_num", ["img_pth"])
 
 def extract_file_from_job(job, file_path: str):
     """
@@ -38,7 +39,8 @@ def _update_json_entry(json_entry: dict, request_path:str , exclude: List[str]):
     """
     for e in exclude:
         json_entry.pop(e)
-    json_entry["img_pth"] = path.join(request_path, path.split(json_entry["img_pth"])[1])
+    if "img_pth" in json_entry:
+        json_entry["img_pth"] = path.join(request_path, path.split(json_entry["img_pth"])[1])
     
     return json_entry
 
@@ -65,8 +67,18 @@ def convert_parquet_to_json(job, parquet_path: str, request: Request):
     
     with extract_file_from_job(job, parquet_path) as parquet:
         json_data = parquet_to_json(parquet, bb_column, page_column)
-    print(request.base_url)
 
     return [_update_json_entry(e, image_base_url, exclude) for e in json_data]
 
 
+def convert_parquet_to_json_file(parquet_path: str):
+    """
+    Convert a parquet file to JSON using the SKEMA bounding box method, prior to 
+    archiving it as a zip file
+    """
+
+    (bb_column, page_column, exclude) = _get_parquet_read_parameters(parquet_path)
+    json_data = parquet_to_json(parquet_path, bb_column, page_column) or []
+    updated_data = [_update_json_entry(e, '', exclude) for e in json_data]
+    with open(parquet_path.replace('.parquet','.json'), 'w') as output_json:
+        output_json.write(json.dumps(updated_data, indent=2))

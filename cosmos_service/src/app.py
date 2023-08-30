@@ -8,7 +8,6 @@ import uuid
 from typing import List
 import torch
 import asyncio
-import re
 from db.processing_session_types import CosmosSessionJob
 from db.db import SessionLocal, get_job_details, get_cached_job_for_pdf
 from scheduler import scheduler
@@ -145,7 +144,7 @@ def get_processing_result_text_segments(job_id: str, request: Request):
     return convert_parquet_to_json(job, f'{job.pdf_name}.parquet', request)
 
 @app.get("/process/{job_id}/result/extractions/{extraction_type}")
-def get_processing_result_text_segments(job_id: str, extraction_type: str, request: Request):
+def get_processing_result_extraction(job_id: str, extraction_type: str, request: Request):
     """
     Return COSMOS figure/table/equation extractions and their bounding boxes as a list of JSON objects, 
     as well as links to their images
