@@ -16,6 +16,10 @@ Base.metadata.create_all(engine)
 SessionLocal = sessionmaker(bind=engine)
 
 def get_job_details(job_id: str) -> CosmosSessionJob:
+    """
+    Utility for results-reading endpoints. Read a job from the database, 
+    throwing http errors depending on its status if it's not complete
+    """
     with SessionLocal() as session:
         job = session.get(CosmosSessionJob, job_id)
         if not job:
@@ -26,6 +30,10 @@ def get_job_details(job_id: str) -> CosmosSessionJob:
 
 
 def get_cached_job_for_pdf(pdf_data: BinaryIO) -> CosmosSessionJob:
+    """
+    Compute the checksum and length of a PDF file, then check the database to see if 
+    it is currently cached in the database.
+    """
     pdf_data.seek(0, io.SEEK_END)
     pdf_length = pdf_data.tell()
 

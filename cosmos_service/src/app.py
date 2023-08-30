@@ -147,7 +147,8 @@ def get_processing_result_text_segments(job_id: str, request: Request):
 @app.get("/process/{job_id}/result/extractions/{extraction_type}")
 def get_processing_result_text_segments(job_id: str, extraction_type: str, request: Request):
     """
-    Return the text segments extracted by COSMOS and their bounding boxes as a list of JSON objects
+    Return COSMOS figure/table/equation extractions and their bounding boxes as a list of JSON objects, 
+    as well as links to their images
     """
     job = get_job_details(job_id)
     return convert_parquet_to_json(job, f'{job.pdf_name}_{extraction_type}.parquet', request)
