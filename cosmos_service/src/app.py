@@ -91,7 +91,7 @@ async def process_document(
     # Check for whether a copy of the cached PDF already exists
     pdf_hash, pdf_len, existing_job_id = get_cached_job_for_pdf(pdf.file)
     if use_cache and existing_job_id is not None:
-        return _build_process_response("Existing PDF Processing Job Found", request.url, existing_job_id)
+        return _build_process_response("Existing PDF Processing Job Found", existing_job_id, request.url)
 
     job_id = str(uuid.uuid4())
 
@@ -104,7 +104,7 @@ async def process_document(
 
     await queue.put((job_output_dir, job_id, compress_images))
 
-    return _build_process_response("PDF Processing in Background", request.url, job_id)
+    return _build_process_response("PDF Processing in Background", job_id, request.url)
 
 @app.get("/process/{job_id}/status")
 def get_processing_status(job_id: str):
