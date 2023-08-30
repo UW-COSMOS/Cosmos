@@ -1,20 +1,22 @@
 import os, sys
 import tempfile
-sys.path.append("..")
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.logger import logger
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from fastapi.middleware.gzip import GZipMiddleware
 import uuid
-from processing_session_types import Base, CosmosSessionJob
 from typing import List
 import torch
 import asyncio
-from db import SessionLocal
+from db.processing_session_types import CosmosSessionJob
+from db.db import SessionLocal, get_job_details, get_cached_job_for_pdf
 from scheduler import scheduler
+from util.cosmos_output_utils import extract_file_from_job, convert_parquet_to_json, replace_url_suffix
 
 import shutil
 
 app = FastAPI()
+app.add_middleware(GZipMiddleware)
 
 queue = asyncio.Queue()
 workers : List[asyncio.Task] = None
@@ -33,7 +35,7 @@ OOM_ERROR_EXIT_CODE = 2
 
 
 
-async def cosmos_worker(work_queue: asyncio.Queue):
+async def _cosmos_worker(work_queue: asyncio.Queue):
     """
     Cosmos worker process. Continually poll from the work queue for new parameters to the pipeline,
     and run the cosmos pipeline in a separate process. A separate process is necessary to avoid I/O 
@@ -49,41 +51,61 @@ async def cosmos_worker(work_queue: asyncio.Queue):
             await asyncio.sleep(OOM_SLEEP_TIME)
             await queue.put((job_output_dir, job_id, compress_images))
 
-@app.post("/process/", status_code=202)
-async def process_document(pdf: UploadFile = File(...), compress_images: bool = Form(True)):
-    """
-    Accept a new PDF document for COSMOS processing. Saves the PDF to disk, 
-    then adds it to a queue for subsequent processing
-    """
-    job_id = str(uuid.uuid4())
-    if not pdf.file or not pdf.filename:
-        raise HTTPException(status_code=400, detail="Poorly constructed form upload")
+def _build_process_response(message, job_id, request_url):
+    """Return the ID of a created job alongside the URLs that a client can use to query that job's status"""
+    return {
+        "message": message,
+        "job_id": job_id,
+        "status_endpoint": replace_url_suffix(request_url, f"{job_id}/status"),
+        "result_endpoint": replace_url_suffix(request_url, f"{job_id}/result"),
+    }
 
-    # Need to make a non-temporary directory to store PDF and job output due to
-    # asynchronous processing and retrieval, must be cleaned up in separate job
+def _save_request_pdf(job_id: str, pdf: UploadFile):
+    """Make a non-temporary directory to store the request PDF and job output.
+    Must be cleaned up in a separate job due to asynchronous processing and retrieval
+    """
     job_output_dir = f"{tempfile.gettempdir()}/{job_id}"
     os.mkdir(job_output_dir)
     try:
         with open(f"{job_output_dir}/{pdf.filename}", "wb") as f:
             shutil.copyfileobj(pdf.file, f)
     except Exception:
-        return {"message": ":("}
+        raise HTTPException("Unable to save PDF for processing")
     finally:
         pdf.file.close()
+    
+    return job_output_dir
+
+@app.post("/process/", status_code=202)
+async def process_document(
+    request: Request,
+    pdf: UploadFile = File(...), 
+    compress_images: bool = Form(True), 
+    use_cache: bool = Form(True)):
+    """
+    Accept a new PDF document for COSMOS processing. Saves the PDF to disk, 
+    then adds it to a queue for subsequent processing
+    """
+    if not pdf.file or not pdf.filename:
+        raise HTTPException(status_code=400, detail="Poorly constructed form upload")
+
+    # Check for whether a copy of the cached PDF already exists
+    pdf_hash, pdf_len, existing_job_id = get_cached_job_for_pdf(pdf.file)
+    if use_cache and existing_job_id is not None:
+        return _build_process_response("Existing PDF Processing Job Found", existing_job_id, request.url)
+
+    job_id = str(uuid.uuid4())
+
+    job_output_dir = _save_request_pdf(job_id, pdf)
 
     # populate the job in its default state (not started)
     with SessionLocal() as session:
-        session.add(CosmosSessionJob(job_id, pdf.filename.replace('.pdf', ''), job_output_dir))
+        session.add(CosmosSessionJob(job_id, pdf.filename.replace('.pdf', ''), pdf_hash, pdf_len, job_output_dir))
         session.commit()
 
     await queue.put((job_output_dir, job_id, compress_images))
-    
-    return {
-        "message": "PDF Processing in Background", 
-        "job_id": job_id, 
-        "status_endpoint": f"/process/{job_id}/status",
-        "result_endpoint": f"/process/{job_id}/result"
-    }
+
+    return _build_process_response("PDF Processing in Background", job_id, request.url)
 
 @app.get("/process/{job_id}/status")
 def get_processing_status(job_id: str):
@@ -109,14 +131,38 @@ def get_processing_result(job_id: str):
     Return the zip file containing the results of a completed COSMOS pipeline. Return status 400 if the 
     job is in a not-complete state
     """
-    with SessionLocal() as session:
-        job = session.get(CosmosSessionJob, job_id)
-        if not job:
-            raise HTTPException(status_code=404, detail="Job not found")
-        elif not job.is_completed:
-            raise HTTPException(status_code=400, detail="Job not finished")
+    job = get_job_details(job_id)
     output_file = f"{job.pdf_name}_cosmos_output.zip"
     return FileResponse(f"{job.output_dir}/{output_file}", filename=output_file)
+
+@app.get("/process/{job_id}/result/text")
+def get_processing_result_text_segments(job_id: str, request: Request):
+    """
+    Return the text segments extracted by COSMOS and their bounding boxes as a list of JSON objects
+    """
+    job = get_job_details(job_id)
+    return convert_parquet_to_json(job, f'{job.pdf_name}.parquet', request)
+
+@app.get("/process/{job_id}/result/extractions/{extraction_type}")
+def get_processing_result_extraction(job_id: str, extraction_type: str, request: Request):
+    """
+    Return COSMOS figure/table/equation extractions and their bounding boxes as a list of JSON objects, 
+    as well as links to their images
+    """
+    job = get_job_details(job_id)
+    return convert_parquet_to_json(job, f'{job.pdf_name}_{extraction_type}.parquet', request)
+
+
+@app.get("/process/{job_id}/result/images/{image_path}")
+def get_processing_result_image(job_id: str, image_path: str):
+    """
+    Extract a single image from the zip output of the given job and return it with the appropriate mimetype
+    """
+    job = get_job_details(job_id)
+    mime_type = 'image/png' if image_path.endswith('.png') else 'image/jpeg'
+    with extract_file_from_job(job, image_path) as image:
+        return Response(content=image.read(), media_type=mime_type)
+
 
 
 def get_max_processes_per_gpu():
@@ -139,7 +185,7 @@ async def startup_event():
     """
     max_worker_count = get_max_processes_per_gpu()
     logger.info(f"Creating {max_worker_count} work queues for COSMOS processing")
-    workers = [asyncio.create_task(cosmos_worker(queue)) for _ in range(max_worker_count)]
+    workers = [asyncio.create_task(_cosmos_worker(queue)) for _ in range(max_worker_count)]
 
     asyncio.create_task(scheduler.serve())
 
