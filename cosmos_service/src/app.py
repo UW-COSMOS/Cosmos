@@ -1,6 +1,6 @@
 import os, sys
 import tempfile
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request, APIRouter
 from fastapi.logger import logger
 from fastapi.responses import FileResponse, Response
 from fastapi.middleware.gzip import GZipMiddleware
@@ -16,6 +16,8 @@ from util.cosmos_output_utils import extract_file_from_job, convert_parquet_to_j
 import shutil
 
 app = FastAPI()
+
+prefix_router = APIRouter(prefix=os.environ.get('API_PREFIX',''))
 app.add_middleware(GZipMiddleware)
 
 queue = asyncio.Queue()
@@ -76,7 +78,7 @@ def _save_request_pdf(job_id: str, pdf: UploadFile):
     
     return job_output_dir
 
-@app.post("/process/", status_code=202)
+@prefix_router.post("/process/", status_code=202)
 async def process_document(
     request: Request,
     pdf: UploadFile = File(...), 
@@ -107,7 +109,7 @@ async def process_document(
 
     return _build_process_response("PDF Processing in Background", job_id, request.url)
 
-@app.get("/process/{job_id}/status")
+@prefix_router.get("/process/{job_id}/status")
 def get_processing_status(job_id: str):
     """
     Return the current status of a given pdf in the COSMOS processing queue. If `job.is_completed`,
@@ -125,7 +127,7 @@ def get_processing_status(job_id: str):
             "error": job.error
         }
 
-@app.get("/process/{job_id}/result")
+@prefix_router.get("/process/{job_id}/result")
 def get_processing_result(job_id: str):
     """
     Return the zip file containing the results of a completed COSMOS pipeline. Return status 400 if the 
@@ -135,7 +137,7 @@ def get_processing_result(job_id: str):
     output_file = f"{job.pdf_name}_cosmos_output.zip"
     return FileResponse(f"{job.output_dir}/{output_file}", filename=output_file)
 
-@app.get("/process/{job_id}/result/text")
+@prefix_router.get("/process/{job_id}/result/text")
 def get_processing_result_text_segments(job_id: str, request: Request):
     """
     Return the text segments extracted by COSMOS and their bounding boxes as a list of JSON objects
@@ -143,7 +145,7 @@ def get_processing_result_text_segments(job_id: str, request: Request):
     job = get_job_details(job_id)
     return convert_parquet_to_json(job, f'{job.pdf_name}.parquet', request)
 
-@app.get("/process/{job_id}/result/extractions/{extraction_type}")
+@prefix_router.get("/process/{job_id}/result/extractions/{extraction_type}")
 def get_processing_result_extraction(job_id: str, extraction_type: str, request: Request):
     """
     Return COSMOS figure/table/equation extractions and their bounding boxes as a list of JSON objects, 
@@ -153,7 +155,7 @@ def get_processing_result_extraction(job_id: str, extraction_type: str, request:
     return convert_parquet_to_json(job, f'{job.pdf_name}_{extraction_type}.parquet', request)
 
 
-@app.get("/process/{job_id}/result/images/{image_path}")
+@prefix_router.get("/process/{job_id}/result/images/{image_path}")
 def get_processing_result_image(job_id: str, image_path: str):
     """
     Extract a single image from the zip output of the given job and return it with the appropriate mimetype
@@ -164,6 +166,7 @@ def get_processing_result_image(job_id: str, image_path: str):
         return Response(content=image.read(), media_type=mime_type)
 
 
+app.include_router(prefix_router)
 
 def get_max_processes_per_gpu():
     """
