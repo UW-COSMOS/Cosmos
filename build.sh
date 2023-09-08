@@ -22,5 +22,4 @@ esac
 
 
 echo "Creating image $IMAGE tagged with $VERSION"
-docker build -t uwcosmos/cosmos-base:$VERSION -f deployment/cosmos.Dockerfile .
-docker build --build-arg VERSION=$VERSION --build-arg GIT_HASH=$GIT_HASH -t uwcosmos/$IMAGE:$VERSION -f deployment/$DOCKERFILE.Dockerfile .
+docker build --build-arg="VERSION=$VERSION" --build-arg="GIT_HASH=$GIT_HASH" -t uwcosmos/$IMAGE:$VERSION -f deployment/$DOCKERFILE.Dockerfile .
