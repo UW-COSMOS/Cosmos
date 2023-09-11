@@ -37,6 +37,14 @@ OOM_ERROR_EXIT_CODE = 2
 
 
 
+@prefix_router.get("/version_info")
+def get_version_info():
+    """Return the API version and git hash of the running API"""
+    return {
+        "version": os.environ.get("API_VERSION"),
+        "git_hash": os.environ.get("GIT_HASH"),
+    }
+
 async def _cosmos_worker(work_queue: asyncio.Queue):
     """
     Cosmos worker process. Continually poll from the work queue for new parameters to the pipeline,

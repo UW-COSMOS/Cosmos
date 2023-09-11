@@ -1,18 +1,25 @@
+IMAGE=$1
+VERSION=$2
+
+GIT_HASH=$(git rev-parse HEAD)
+
 export DOCKER_BUILDKIT=1
-if [ -z "$1" ]
+if [ -z "$VERSION" ]
 then
-    export VERSION=latest
+    export VERSION=$GIT_HASH
 else 
-    export VERSION=$1
+    export VERSION=$VERSION
 fi
-echo "Creating images tagged with $VERSION"
-docker build -t uwcosmos/cosmos-base:$VERSION -f deployment/cosmos.Dockerfile .
-docker build --build-arg VERSION=latest -t uwcosmos/cosmos-ingestion:$VERSION -f deployment/ingestion.Dockerfile .
-#docker build --build-arg VERSION=latest -t uwcosmos/cosmos-api:$VERSION -f deployment/api.Dockerfile .
-#docker build --build-arg VERSION=latest -t uwcosmos/cosmos-retrieval:$VERSION -f deployment/retrieval.Dockerfile .
-#docker build --build-arg VERSION=latest -t uwcosmos/cosmos-linking:$VERSION -f deployment/linking.Dockerfile .
 
-#docker build --build-arg VERSION=latest -t uwcosmos/cosmos-base-cpu:$VERSION -f deployment/cosmos-cpu.Dockerfile .
-#docker build --build-arg VERSION=latest -t uwcosmos/cosmos-ingestion-cpu:$VERSION -f deployment/ingestion-cpu.Dockerfile .
+case $IMAGE in
+    cosmos-base ) DOCKERFILE=cosmos ;;
+    cosmos-ingestion ) DOCKERFILE=ingestion ;;
+    cosmos-service ) DOCKERFILE=cosmos-service ;;
+    cosmos-api ) DOCKERFILE=api ;;
+    * ) echo "$IMAGE is not a supported cosmos image."
+        exit 1 ;;
+esac
 
-#docker build -t iaross/cosmos-api:dev_doifix -f deployment/api.Dockerfile .
+
+echo "Creating image $IMAGE tagged with $VERSION"
+docker build --build-arg="VERSION=$VERSION" --build-arg="GIT_HASH=$GIT_HASH" -t uwcosmos/$IMAGE:$VERSION -f deployment/$DOCKERFILE.Dockerfile .

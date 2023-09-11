@@ -1,4 +1,10 @@
-FROM uwcosmos/cosmos-ingestion:latest
+ARG VERSION=latest
+FROM uwcosmos/cosmos-ingestion:$VERSION
+
+ARG VERSION
+ARG GIT_HASH
+ENV API_VERSION=$VERSION
+ENV GIT_HASH=$GIT_HASH
 
 WORKDIR /src/
 RUN pip3.8 install fastapi[all]==0.99.0 rocketry
