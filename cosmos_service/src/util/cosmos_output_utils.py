@@ -32,7 +32,7 @@ def replace_url_suffix(request_url, suffix):
     """Replace the given request_url after /process/ with the given suffix"""
     return re.sub("/process/.*", f"/process/{suffix}", f"{request_url}")
 
-def _update_json_entry(json_entry: dict, request_path:str , exclude: List[str]):
+def _update_json_entry(json_entry: dict, request_path:str , bb_column: str, page_column: str, exclude: List[str]):
     """
     Re-map the img_pth field in parquet output from the local filesystem path to a full URL,
     and clear out any specified fields that should be excluded from the final output
@@ -41,6 +41,10 @@ def _update_json_entry(json_entry: dict, request_path:str , exclude: List[str]):
         json_entry.pop(e)
     if "img_pth" in json_entry:
         json_entry["img_pth"] = path.join(request_path, path.split(json_entry["img_pth"])[1])
+
+    # Each parquet file has a different column name for bounding box and page, standardize them
+    json_entry["bounding_box"] = json_entry.pop(bb_column)
+    json_entry["page_num"] = json_entry.pop(page_column)
     
     return json_entry
 
@@ -68,7 +72,7 @@ def convert_parquet_to_json(job, parquet_path: str, request: Request):
     with extract_file_from_job(job, parquet_path) as parquet:
         json_data = parquet_to_json(parquet, bb_column, page_column)
 
-    return [_update_json_entry(e, image_base_url, exclude) for e in json_data]
+    return [_update_json_entry(e, image_base_url, bb_column, page_column, exclude) for e in json_data]
 
 
 def convert_parquet_to_json_file(parquet_path: str):
@@ -79,6 +83,6 @@ def convert_parquet_to_json_file(parquet_path: str):
 
     (bb_column, page_column, exclude) = _get_parquet_read_parameters(parquet_path)
     json_data = parquet_to_json(parquet_path, bb_column, page_column) or []
-    updated_data = [_update_json_entry(e, '', exclude) for e in json_data]
+    updated_data = [_update_json_entry(e, '', bb_column, page_column, exclude) for e in json_data]
     with open(parquet_path.replace('.parquet','.json'), 'w') as output_json:
         output_json.write(json.dumps(updated_data, indent=2))

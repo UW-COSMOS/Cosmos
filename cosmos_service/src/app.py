@@ -12,12 +12,14 @@ from db.processing_session_types import CosmosSessionJob
 from db.db import SessionLocal, get_job_details, get_cached_job_for_pdf
 from scheduler import scheduler
 from util.cosmos_output_utils import extract_file_from_job, convert_parquet_to_json, replace_url_suffix
-
+from model.models import *
 import shutil
 
-app = FastAPI()
+prefix_url = os.environ.get('API_PREFIX','/')
 
-prefix_router = APIRouter(prefix=os.environ.get('API_PREFIX',''))
+app = FastAPI(title="COSMOS Service", docs_url=f"{prefix_url}/docs")
+
+prefix_router = APIRouter(prefix=prefix_url)
 app.add_middleware(GZipMiddleware)
 
 queue = asyncio.Queue()
@@ -55,12 +57,12 @@ async def _cosmos_worker(work_queue: asyncio.Queue):
 
 def _build_process_response(message, job_id, request_url):
     """Return the ID of a created job alongside the URLs that a client can use to query that job's status"""
-    return {
-        "message": message,
-        "job_id": job_id,
-        "status_endpoint": replace_url_suffix(request_url, f"{job_id}/status"),
-        "result_endpoint": replace_url_suffix(request_url, f"{job_id}/result"),
-    }
+    return JobCreationResponse(
+        message=message,
+        job_id=job_id,
+        status_endpoint=replace_url_suffix(request_url, f"{job_id}/status"),
+        results_endpoint=replace_url_suffix(request_url, f"{job_id}/result")
+    )
 
 def _save_request_pdf(job_id: str, pdf: UploadFile):
     """Make a non-temporary directory to store the request PDF and job output.
@@ -79,33 +81,29 @@ def _save_request_pdf(job_id: str, pdf: UploadFile):
     return job_output_dir
 
 @prefix_router.post("/process/", status_code=202)
-async def process_document(
-    request: Request,
-    pdf: UploadFile = File(...), 
-    compress_images: bool = Form(True), 
-    use_cache: bool = Form(True)):
+async def process_document( request: Request, form: JobCreationRequest = Depends(JobCreationRequest)):
     """
     Accept a new PDF document for COSMOS processing. Saves the PDF to disk, 
     then adds it to a queue for subsequent processing
     """
-    if not pdf.file or not pdf.filename:
+    if not form.pdf.file or not form.pdf.filename:
         raise HTTPException(status_code=400, detail="Poorly constructed form upload")
 
     # Check for whether a copy of the cached PDF already exists
-    pdf_hash, pdf_len, existing_job_id = get_cached_job_for_pdf(pdf.file)
-    if use_cache and existing_job_id is not None:
+    pdf_hash, pdf_len, existing_job_id = get_cached_job_for_pdf(form.pdf.file)
+    if form.use_cache and existing_job_id is not None:
         return _build_process_response("Existing PDF Processing Job Found", existing_job_id, request.url)
 
     job_id = str(uuid.uuid4())
 
-    job_output_dir = _save_request_pdf(job_id, pdf)
+    job_output_dir = _save_request_pdf(job_id, form.pdf)
 
     # populate the job in its default state (not started)
     with SessionLocal() as session:
-        session.add(CosmosSessionJob(job_id, pdf.filename.replace('.pdf', ''), pdf_hash, pdf_len, job_output_dir))
+        session.add(CosmosSessionJob(job_id, form.pdf.filename.replace('.pdf', ''), pdf_hash, pdf_len, job_output_dir))
         session.commit()
 
-    await queue.put((job_output_dir, job_id, compress_images))
+    await queue.put((job_output_dir, job_id, form.compress_images))
 
     return _build_process_response("PDF Processing in Background", job_id, request.url)
 
@@ -119,16 +117,17 @@ def get_processing_status(job_id: str):
         job : CosmosSessionJob = session.get(CosmosSessionJob, job_id)
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
-        return { 
-            "job_started": job.is_started,
-            "job_completed": job.is_completed,
-            "time_in_queue": job.time_in_queue,
-            "time_processing": job.time_processing,
-            "error": job.error
-        }
+        
+        return JobStatus(
+            job_started=job.is_started,
+            job_completed=job.is_completed,
+            time_in_queue=job.time_in_queue,
+            time_processing=job.time_processing,
+            error=job.error
+        )
 
 @prefix_router.get("/process/{job_id}/result")
-def get_processing_result(job_id: str):
+def get_processing_result(job_id: str) -> FileResponse:
     """
     Return the zip file containing the results of a completed COSMOS pipeline. Return status 400 if the 
     job is in a not-complete state
@@ -138,7 +137,7 @@ def get_processing_result(job_id: str):
     return FileResponse(f"{job.output_dir}/{output_file}", filename=output_file)
 
 @prefix_router.get("/process/{job_id}/result/text")
-def get_processing_result_text_segments(job_id: str, request: Request):
+def get_processing_result_text_segments(job_id: str, request: Request) -> CosmosJSONTextResponse:
     """
     Return the text segments extracted by COSMOS and their bounding boxes as a list of JSON objects
     """
@@ -146,7 +145,7 @@ def get_processing_result_text_segments(job_id: str, request: Request):
     return convert_parquet_to_json(job, f'{job.pdf_name}.parquet', request)
 
 @prefix_router.get("/process/{job_id}/result/extractions/{extraction_type}")
-def get_processing_result_extraction(job_id: str, extraction_type: str, request: Request):
+def get_processing_result_extraction(job_id: str, extraction_type: ExtractionType, request: Request) -> CosmosJSONImageResponse:
     """
     Return COSMOS figure/table/equation extractions and their bounding boxes as a list of JSON objects, 
     as well as links to their images
@@ -156,7 +155,7 @@ def get_processing_result_extraction(job_id: str, extraction_type: str, request:
 
 
 @prefix_router.get("/process/{job_id}/result/images/{image_path}")
-def get_processing_result_image(job_id: str, image_path: str):
+def get_processing_result_image(job_id: str, image_path: str) -> Response:
     """
     Extract a single image from the zip output of the given job and return it with the appropriate mimetype
     """
