@@ -81,34 +81,39 @@ def _save_request_pdf(job_id: str, pdf: UploadFile):
     return job_output_dir
 
 @prefix_router.post("/process/", status_code=202)
-async def process_document( request: Request, form: JobCreationRequest = Depends(JobCreationRequest)):
+async def process_document( 
+    request: Request, 
+    pdf: UploadFile = File(..., description="The document to process with COSMOS", media_type="application/pdf"), 
+    compress_images: bool = Form(True, description="Whether to generate compressed or full-resolution images of extractions"), 
+    use_cache: bool = Form(True, description="Whether to reuse cached results for the given PDF, if present")
+    ) -> JobCreationResponse:
     """
     Accept a new PDF document for COSMOS processing. Saves the PDF to disk, 
     then adds it to a queue for subsequent processing
     """
-    if not form.pdf.file or not form.pdf.filename:
+    if not pdf.file or not pdf.filename:
         raise HTTPException(status_code=400, detail="Poorly constructed form upload")
 
     # Check for whether a copy of the cached PDF already exists
-    pdf_hash, pdf_len, existing_job_id = get_cached_job_for_pdf(form.pdf.file)
-    if form.use_cache and existing_job_id is not None:
+    pdf_hash, pdf_len, existing_job_id = get_cached_job_for_pdf(pdf.file)
+    if use_cache and existing_job_id is not None:
         return _build_process_response("Existing PDF Processing Job Found", existing_job_id, request.url)
 
     job_id = str(uuid.uuid4())
 
-    job_output_dir = _save_request_pdf(job_id, form.pdf)
+    job_output_dir = _save_request_pdf(job_id, pdf)
 
     # populate the job in its default state (not started)
     with SessionLocal() as session:
-        session.add(CosmosSessionJob(job_id, form.pdf.filename.replace('.pdf', ''), pdf_hash, pdf_len, job_output_dir))
+        session.add(CosmosSessionJob(job_id, pdf.filename.replace('.pdf', ''), pdf_hash, pdf_len, job_output_dir))
         session.commit()
 
-    await queue.put((job_output_dir, job_id, form.compress_images))
+    await queue.put((job_output_dir, job_id, compress_images))
 
     return _build_process_response("PDF Processing in Background", job_id, request.url)
 
 @prefix_router.get("/process/{job_id}/status")
-def get_processing_status(job_id: str):
+def get_processing_status(job_id: str) -> JobStatus:
     """
     Return the current status of a given pdf in the COSMOS processing queue. If `job.is_completed`,
     then the results of the processing can be retrieved from `/process/{job_id}/result`

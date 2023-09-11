@@ -1,6 +1,4 @@
 from pydantic import BaseModel, Field, HttpUrl
-from dataclasses import dataclass
-from fastapi import File, UploadFile, Form
 from typing import Tuple
 from enum import Enum
 
@@ -42,9 +40,3 @@ class ExtractionType(Enum):
     Equations = "equations"
     Tables = "tables"
     Figures = "figures"
-
-@dataclass
-class JobCreationRequest:
-    pdf: UploadFile = File(..., description="The document to process with COSMOS", media_type="application/pdf"), 
-    compress_images: bool = Form(True, description="Whether to generate compressed or full-resolution images of extractions"), 
-    use_cache: bool = Form(True, description="Whether to reuse cached results for the given PDF")
