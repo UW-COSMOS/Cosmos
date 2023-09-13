@@ -15,7 +15,7 @@ from util.cosmos_output_utils import extract_file_from_job, convert_parquet_to_j
 from model.models import *
 import shutil
 
-prefix_url = os.environ.get('API_PREFIX','/')
+prefix_url = os.environ.get('API_PREFIX','/cosmos_service')
 
 app = FastAPI(title="COSMOS Service", docs_url=f"{prefix_url}/docs")
 
