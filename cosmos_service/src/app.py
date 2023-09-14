@@ -164,7 +164,7 @@ def get_processing_result_extraction(job_id: str, extraction_type: ExtractionTyp
     as well as links to their images
     """
     job = get_job_details(job_id)
-    return convert_parquet_to_json(job, f'{job.pdf_name}_{extraction_type}.parquet', request)
+    return convert_parquet_to_json(job, f'{job.pdf_name}_{extraction_type.value}.parquet', request)
 
 
 @prefix_router.get("/process/{job_id}/result/images/{image_path}")
