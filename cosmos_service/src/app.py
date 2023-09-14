@@ -69,7 +69,7 @@ def _build_process_response(message, job_id, request_url):
         message=message,
         job_id=job_id,
         status_endpoint=replace_url_suffix(request_url, f"{job_id}/status"),
-        results_endpoint=replace_url_suffix(request_url, f"{job_id}/result")
+        result_endpoint=replace_url_suffix(request_url, f"{job_id}/result")
     )
 
 def _save_request_pdf(job_id: str, pdf: UploadFile):
