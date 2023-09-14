@@ -13,8 +13,8 @@ import re
 
 PARQUET_COLUMN_NAMES = {
     "equations": ("equation_bb", "equation_page", ["content"]),
-    "figures": ("obj_bbs", "obj_page", ["content"]),
-    "tables": ("obj_bbs", "obj_page", ["content"]),
+    "figures": ("obj_bbs", "obj_page", []),
+    "tables": ("obj_bbs", "obj_page", []),
 }
 
 PARQUET_SUFFIXES = ['', *[f'_{suffix}' for suffix in PARQUET_COLUMN_NAMES.keys()]]
