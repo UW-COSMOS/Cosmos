@@ -229,12 +229,12 @@ def get_lp_proposals(img):
 
     layout_predicted = model.detect(img)
 
-    text_blocks = lp.Layout([b for b in layout_predicted_publaynet if b.type=='text'])
-    figure_blocks = lp.Layout([b for b in layout_predicted_publaynet if b.type=='figure'])
-    title_blocks = lp.Layout([b for b in layout_predicted_publaynet if b.type=='title'])
-    table_blocks = lp.Layout([b for b in layout_predicted_publaynet if b.type=='table'])
-    list_blocks = lp.Layout([b for b in layout_predicted_publaynet if b.type=='list'])
-    equation_blocks = lp.Layout([b for b in layout_predicted_mfd if b.type=='Equation'])
+    text_blocks = lp.Layout([b for b in layout_predicted if b.type=='text'])
+    figure_blocks = lp.Layout([b for b in layout_predicted if b.type=='figure'])
+    title_blocks = lp.Layout([b for b in layout_predicted if b.type=='title'])
+    table_blocks = lp.Layout([b for b in layout_predicted if b.type=='table'])
+    list_blocks = lp.Layout([b for b in layout_predicted if b.type=='list'])
+    equation_blocks = lp.Layout([b for b in layout_predicted if b.type=='Equation'])
 
     text_blocks = clean_text_blocks(image, text_blocks)
 
