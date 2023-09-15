@@ -1,0 +1,97 @@
+<annotation>
+  <folder>COSMOS_annotated</folder>
+  <page>2</page>
+  <filename>fad81608-fb03-4987-91c9-528eb9958bb0.png</filename>
+  <size>
+    <width>1445</width>
+    <height>1920</height>
+  </size>
+  <object>
+    <name>Body Text</name>
+    <tag_id>f0231024-c911-4791-83b9-968e56fb37a1</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>736.0</xmin>
+      <ymin>1385.0</ymin>
+      <xmax>1342.0</xmax>
+      <ymax>1817.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>6d4f548e-edfb-4038-99c9-2f19d4a5ec68</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>102.0</xmin>
+      <ymin>1384.0</ymin>
+      <xmax>709.0</xmax>
+      <ymax>1812.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Figure</name>
+    <tag_id>b9b07314-3ece-4230-a61b-f9c3950892aa</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>284.0</xmin>
+      <ymin>134.0</ymin>
+      <xmax>1161.0</xmax>
+      <ymax>731.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Figure Caption</name>
+    <tag_id>b214dd4d-d02d-4512-a38c-639c9bb98a0e</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>103.0</xmin>
+      <ymin>759.0</ymin>
+      <xmax>1302.0</xmax>
+      <ymax>855.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Table</name>
+    <tag_id>e73a8e7f-ac66-45e9-8ff1-76289f14b655</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>104.0</xmin>
+      <ymin>921.0</ymin>
+      <xmax>1342.0</xmax>
+      <ymax>1311.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Page Header</name>
+    <tag_id>3e3ee81e-d8be-412f-9c7b-d900e1ecb4d2</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>90.0</xmin>
+      <ymin>52.0</ymin>
+      <xmax>1355.0</xmax>
+      <ymax>106.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Page Footer</name>
+    <tag_id>4dc984a7-1e6e-4d2e-9624-9a4bfd0c987c</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>735.0</xmin>
+      <ymin>1840.0</ymin>
+      <xmax>1342.0</xmax>
+      <ymax>1861.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Page Footer</name>
+    <tag_id>1b03fec5-c810-4dfe-9b83-61221034e383</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>103.0</xmin>
+      <ymin>1847.0</ymin>
+      <xmax>132.0</xmax>
+      <ymax>1863.0</ymax>
+    </bndbox>
+  </object>
+</annotation>
