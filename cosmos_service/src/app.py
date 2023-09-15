@@ -150,21 +150,23 @@ def get_processing_result(job_id: str) -> FileResponse:
     return FileResponse(f"{job.output_dir}/{output_file}", filename=output_file)
 
 @prefix_router.get("/process/{job_id}/result/text")
-def get_processing_result_text_segments(job_id: str, request: Request) -> CosmosJSONTextResponse:
+def get_processing_result_text_segments(job_id: str, request: Request) -> List[CosmosJSONTextResponse]:
     """
     Return the text segments extracted by COSMOS and their bounding boxes as a list of JSON objects
     """
     job = get_job_details(job_id)
-    return convert_parquet_to_json(job, f'{job.pdf_name}.parquet', request)
+    response_json = convert_parquet_to_json(job, f'{job.pdf_name}.parquet', request)
+    return [ CosmosJSONTextResponse(**p) for p in response_json ]
 
 @prefix_router.get("/process/{job_id}/result/extractions/{extraction_type}")
-def get_processing_result_extraction(job_id: str, extraction_type: ExtractionType, request: Request) -> CosmosJSONImageResponse:
+def get_processing_result_extraction(job_id: str, extraction_type: ExtractionType, request: Request) -> List[CosmosJSONImageResponse]:
     """
     Return COSMOS figure/table/equation extractions and their bounding boxes as a list of JSON objects, 
     as well as links to their images
     """
     job = get_job_details(job_id)
-    return convert_parquet_to_json(job, f'{job.pdf_name}_{extraction_type.value}.parquet', request)
+    response_json = convert_parquet_to_json(job, f'{job.pdf_name}_{extraction_type.value}.parquet', request)
+    return [ CosmosJSONImageResponse(**p) for p in response_json ]
 
 
 @prefix_router.get("/process/{job_id}/result/images/{image_path}")

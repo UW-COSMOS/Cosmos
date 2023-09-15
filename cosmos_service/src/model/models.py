@@ -23,6 +23,7 @@ class CosmosJSONBaseResponse(BaseModel):
     page_num: str = Field(..., description="Page in the PDF the item was extracted from")
     bounding_box: Tuple[int, int, int, int] = Field(..., description="Coordinates of the extracted item on its page")
     detect_score: float = Field(..., description="Initial confidence in the label given to the extracted item")
+    content: Optional[str] = Field(...,description="The extracted text")
     postprocess_score: float = Field(..., description="Confidence in the label given to the extracted item after post-processing")
 
 
@@ -30,10 +31,8 @@ class CosmosJSONImageResponse(CosmosJSONBaseResponse):
     img_pth: HttpUrl = Field(..., description="Temporary URL from which the extracted image can be retrieved")
 
 class CosmosJSONTextResponse(CosmosJSONBaseResponse):
-    content: str = Field(...,description="The extracted text")
     detect_cls: str = Field(..., description="Initial label given to the extracted item")
-    postprocess_cls: float = Field(..., description="Label given to the extracted item after post-processing")
-
+    postprocess_cls: str = Field(..., description="Label given to the extracted item after post-processing")
 
 # Request Models
 
