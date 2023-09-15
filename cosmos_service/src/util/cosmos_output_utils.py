@@ -70,7 +70,7 @@ def convert_parquet_to_json(job, parquet_path: str, request: Request):
     (bb_column, page_column, exclude) = _get_parquet_read_parameters(parquet_path)
     
     with extract_file_from_job(job, parquet_path) as parquet:
-        json_data = parquet_to_json(parquet, bb_column, page_column)
+        json_data = parquet_to_json(parquet, bb_column, page_column) or []
 
     return [_update_json_entry(e, image_base_url, bb_column, page_column, exclude) for e in json_data]
 
