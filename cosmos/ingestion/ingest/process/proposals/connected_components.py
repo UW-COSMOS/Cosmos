@@ -229,16 +229,113 @@ def get_lp_proposals(img):
 
     layout_predicted = model.detect(img)
 
+    text_blocks = lp.Layout([b for b in layout_predicted_publaynet if b.type=='text'])
+    figure_blocks = lp.Layout([b for b in layout_predicted_publaynet if b.type=='figure'])
+    title_blocks = lp.Layout([b for b in layout_predicted_publaynet if b.type=='title'])
+    table_blocks = lp.Layout([b for b in layout_predicted_publaynet if b.type=='table'])
+    list_blocks = lp.Layout([b for b in layout_predicted_publaynet if b.type=='list'])
+    equation_blocks = lp.Layout([b for b in layout_predicted_mfd if b.type=='Equation'])
+
+    text_blocks = clean_text_blocks(image, text_blocks)
+
+    text_block_list = create_text_block_list(text_blocks)
+  
+    text_block_list = iterative_merge(text_block_list)
+
+    layout_predicted_text_blocks = lp.elements.layout.Layout(blocks=text_block_list)
+    text_blocks = lp.Layout([b for b in layout_predicted_text_blocks if b.type=='text'])
+
+    blocks = []
+    for i in range(len(text_blocks)):
+        blocks.append(text_blocks[i])
+
+    for i in range(len(title_blocks)):
+        blocks.append(title_blocks[i])
+
+    for i in range(len(list_blocks)):
+        blocks.append(list_blocks[i])
+
+    for i in range(len(table_blocks)):
+        blocks.append(table_blocks[i])
+
+    for i in range(len(figure_blocks)):
+        blocks.append(figure_blocks[i])
+
+    for i in range(len(equation_blocks)):
+        blocks.append(equation_blocks[i])
+
     coord_list = []
-    for bbox in layout_predicted._blocks:
-        coord_set = []
-        coord_set.append(bbox.block.x_1)
-        coord_set.append(bbox.block.y_1)
-        coord_set.append(bbox.block.x_2)
-        coord_set.append(bbox.block.y_2)
+    for bbox in blocks:
+        coord_set = (bbox.block.x_1, bbox.block.y_1, bbox.block.x_2, bbox.block.y_2)
         coord_list.append(coord_set)
-        
-    return coord_list
+
+    return coordlist
+
+    # coord_list = []
+    # for bbox in layout_predicted._blocks:
+    #     coord_set = (bbox.block.x_1, bbox.block.y_1, bbox.block.x_2, bbox.block.y_2)
+    #     coord_list.append(coord_set)
+    
+    # return coord_list
+
+def clean_text_blocks(image, text_blocks):
+    h, w = image.shape[:2]
+
+    left_interval = lp.Interval(0, w/2*1.05, axis='x').put_on_canvas(image)
+
+    left_blocks = text_blocks.filter_by(left_interval, center=True)
+    left_blocks.sort(key = lambda b:b.coordinates[1], inplace=True)
+    # The b.coordinates[1] corresponds to the y coordinate of the region
+    # sort based on that can simulate the top-to-bottom reading order 
+    right_blocks = lp.Layout([b for b in text_blocks if b not in left_blocks])
+    right_blocks.sort(key = lambda b:b.coordinates[1], inplace=True)
+
+    # And finally combine the two lists and add the index
+    text_blocks = lp.Layout([b.set(id = idx) for idx, b in enumerate(left_blocks + right_blocks)])
+
+    return text_blocks
+
+def create_text_block_list(text_blocks):
+    text_block_list = []
+    for i in range(len(text_blocks)):
+        text_block_list.append(text_blocks[i])
+    return text_block_list
+
+def iterative_merge(text_block_list):
+    i = 0
+    while i < len(text_block_list) - 1:
+        j = i+1
+        while j < len(text_block_list):
+        if check_proximity(text_block_list[i], text_block_list[j]):
+            merged_box = merge_boxes(text_block_list[i], text_block_list[j])
+            text_block_list.pop(i)
+            text_block_list.pop(i)
+            text_block_list.insert(i, merged_box)
+            j-=1
+        j += 1
+        i += 1
+    
+    return text_block_list
+
+# Checks if two boxes are close enough (distance < threshold) to merge together
+def check_proximity(box1, box2):
+    adjacent_box_threshold_x = 10
+    adjacent_box_threshold_y = 10
+    if box1.block.y_2 + adjacent_box_threshold_y >= box2.block.y_1:
+        if abs(box1.block.x_1 - box2.block.x_1) <= adjacent_box_threshold_x and abs(box1.block.x_2 - box2.block.x_2) <= adjacent_box_threshold_x:
+            return True
+    return False
+
+# Merges two boxes into one larger box
+def merge_boxes(box1, box2):
+    x_1_new = min(box1.block.x_1, box2.block.x_1)
+    y_1_new = min(box1.block.y_1, box2.block.y_1)
+    x_2_new = max(box1.block.x_2, box2.block.x_2)
+    y_2_new = max(box1.block.y_2, box2.block.y_2)
+    return lp.elements.layout_elements.TextBlock(block=lp.elements.layout_elements.Rectangle(x_1 = x_1_new, 
+                                                                                            y_1 = y_1_new,
+                                                                                            x_2 = x_2_new, 
+                                                                                            y_2 = y_2_new), type='text')
 
 def get_columns_for_row(row):
     """
