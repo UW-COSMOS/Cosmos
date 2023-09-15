@@ -289,15 +289,17 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         if make_proposals:
             tlog(f'{page_name} get proposals')
             proposals = get_proposals(img)
-            tlog(f'Cosmos proposals:')
-            tlog(proposals)
+            # tlog(f'Cosmos proposals:')
+            # tlog(proposals)
             lp_proposals = get_lp_proposals(img)
-            tlog(f'LayoutParser proposals:')
-            tlog(lp_proposals)
-            obj['proposals'] = proposals
+            # tlog(f'LayoutParser proposals:')
+            # tlog(lp_proposals)
+            #obj['proposals'] = proposals
+            obj['proposals'] = lp_proposals
             if just_propose:
                 pkl_path = f'{page_info_dir}/{image_name}.pkl'
-                tlog_flush(f'writing {page_name} proposals to {pkl_path}')
+                #tlog_flush(f'writing {page_name} proposals to {pkl_path}')
+                tlog_flush(f'writing {page_name} lp_proposals to {pkl_path}')
                 with open(pkl_path, 'wb') as wf:
                     pickle.dump(obj, wf)
                 # tj's debugging stuff - write proposals and meta also as json
@@ -309,7 +311,8 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         tlog(f'{page_name} invoke inference model')
         tlog(f'   proposals: {proposals}')
 
-        detect_obj = {'id': model_id, 'proposals': proposals, 'img': padded_img}
+        #detect_obj = {'id': model_id, 'proposals': proposals, 'img': padded_img}
+        detect_obj = {'id': model_id, 'proposals': lp_proposals, 'img': padded_img}
         detected_objs, softmax_detected_objs = run_inference(model, [detect_obj], model_config, device_str, session)
 
         tlog(f'{page_name} inference complete')
