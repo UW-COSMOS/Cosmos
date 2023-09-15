@@ -19,20 +19,20 @@ class JobStatus(BaseModel):
     time_processing: Optional[float] = Field(...,description="Time the job has spent running on a GPU")
 
 class CosmosJSONBaseResponse(BaseModel):
-    pdf_name: str = Field(..., description="Name of the PDF the item was extracted from")
-    page_num: str = Field(..., description="Page in the PDF the item was extracted from")
-    bounding_box: Tuple[int, int, int, int] = Field(..., description="Coordinates of the extracted item on its page")
-    detect_score: float = Field(..., description="Initial confidence in the label given to the extracted item")
-    content: Optional[str] = Field(...,description="The extracted text")
-    postprocess_score: float = Field(..., description="Confidence in the label given to the extracted item after post-processing")
+    pdf_name: Optional[str] = Field(description="Name of the PDF the item was extracted from")
+    page_num: Optional[str] = Field(description="Page in the PDF the item was extracted from")
+    bounding_box: Optional[Tuple[int, int, int, int]] = Field(description="Coordinates of the extracted item on its page")
+    detect_score: Optional[float] = Field(description="Initial confidence in the label given to the extracted item")
+    content: Optional[str] = Field(description="The extracted text")
+    postprocess_score: Optional[float] = Field(description="Confidence in the label given to the extracted item after post-processing")
 
 
 class CosmosJSONImageResponse(CosmosJSONBaseResponse):
-    img_pth: HttpUrl = Field(..., description="Temporary URL from which the extracted image can be retrieved")
+    img_pth: Optional[HttpUrl] = Field(description="Temporary URL from which the extracted image can be retrieved")
 
 class CosmosJSONTextResponse(CosmosJSONBaseResponse):
-    detect_cls: str = Field(..., description="Initial label given to the extracted item")
-    postprocess_cls: str = Field(..., description="Label given to the extracted item after post-processing")
+    detect_cls: Optional[str] = Field(description="Initial label given to the extracted item")
+    postprocess_cls: Optional[str] = Field(description="Label given to the extracted item after post-processing")
 
 # Request Models
 
