@@ -227,7 +227,8 @@ def get_lp_proposals(img):
 	'equation': 'blue',
 	}
 
-    layout_predicted = model.detect(img)
+    image = np.array(img)
+    layout_predicted = model.detect(image)
 
     text_blocks = lp.Layout([b for b in layout_predicted if b.type=='text'])
     figure_blocks = lp.Layout([b for b in layout_predicted if b.type=='figure'])
