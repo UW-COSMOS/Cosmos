@@ -33,3 +33,5 @@ docsrc/build/
 cosmos/scripts/allenai/specter/*
 !cosmos/scripts/allenai/specter/get_model.md
 
+cosmos_service/test/resources/cosmos_output
+cosmos_service/test/resources/pdfs
