@@ -205,14 +205,14 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
     return block_coords
 
 
-def get_lp_proposals(img):
+def get_lp_proposals(img, lp_threshold):
     """
     Function that generates object proposals with layoutparser
     """
 
     model = lp.Detectron2LayoutModel('/configs/lp_genseg_improvement_config.yaml',
                                     '/weights/lp_genseg_improvement_model_final.pth',
-                                    extra_config=["MODEL.ROI_HEADS.SCORE_THRESH_TEST", 0.65],
+                                    extra_config=["MODEL.ROI_HEADS.SCORE_THRESH_TEST", lp_threshold],
                                     label_map={0: "text", 1: "title", 2: "list", 3: "table", 4: "figure", 5: "Equation"})
     color_map_publaynet = {
 	'text': 'red',
@@ -307,14 +307,14 @@ def iterative_merge(text_block_list):
     while i < len(text_block_list) - 1:
         j = i+1
         while j < len(text_block_list):
-        if check_proximity(text_block_list[i], text_block_list[j]):
-            merged_box = merge_boxes(text_block_list[i], text_block_list[j])
-            text_block_list.pop(i)
-            text_block_list.pop(i)
-            text_block_list.insert(i, merged_box)
-            j-=1
-        j += 1
-        i += 1
+            if check_proximity(text_block_list[i], text_block_list[j]):
+                merged_box = merge_boxes(text_block_list[i], text_block_list[j])
+                text_block_list.pop(i)
+                text_block_list.pop(i)
+                text_block_list.insert(i, merged_box)
+                j-=1
+            j += 1
+            i += 1
     
     return text_block_list
 
