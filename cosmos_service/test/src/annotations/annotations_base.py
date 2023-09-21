@@ -75,7 +75,7 @@ class BaseAnnotationComparisonTest:
             return
         
         status_endpoint, results_endpoint = submit_pdf_to_cosmos(self._get_pdf_path())
-        poll_for_cosmos_output(status_endpoint, results_endpoint)
+        poll_for_cosmos_output(status_endpoint, results_endpoint, self._get_cosmos_path())
 
     def _cosmos_obj_from_manual_obj(self, page_num, obj):
         """Convert the extracted XML of a manual annotation to use the same keys/data types as 
