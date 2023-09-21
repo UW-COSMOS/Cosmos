@@ -19,8 +19,6 @@ class BaseAnnotationComparisonTest:
     config: configparser.ConfigParser
     manual_annotations: dict
     cosmos_annotations: dict
-    # TODO this special-casing for equations is a bit clunky
-    cosmos_equation_annotations: dict
 
     def _setup(self, pdf_name, pdf_remote_url = None):
         self.pdf_name = pdf_name
@@ -35,8 +33,7 @@ class BaseAnnotationComparisonTest:
         # Read in both the manually annotated xml files and cosmos generated annotations
         # as dictionaries with a common schema
         self.manual_annotations = self._load_annotation_xml()
-        self.cosmos_annotations = self._load_cosmos_parquet(f'{self.pdf_name}.parquet')
-        self.cosmos_equation_annotations = self._load_cosmos_parquet(f'{self.pdf_name}_equations.parquet')
+        self.cosmos_annotations = self._splice_equations_and_text_parquet()
 
     def _get_config(self):
         """ Read test behavior configuration parameters from a config file """
@@ -94,7 +91,6 @@ class BaseAnnotationComparisonTest:
             'bounding_box': bounds
         }
 
-
     def _load_annotation_xml(self):
         """ Read every annotation xml file from the directory corresponding to this test's pdf,
         assuming one xml file per article page
@@ -117,6 +113,25 @@ class BaseAnnotationComparisonTest:
             with zipf.open(parquet_file) as parquet_file:
                 df = pd.read_parquet(parquet_file)
                 return df.to_dict('records')
+    
+    def _load_equations_parquet(self, parquet_file):
+        equations_list = self._load_cosmos_parquet(parquet_file)
+        for equation_dict in equations_list:
+            equation_dict['postprocess_cls'] = 'Equation'
+            equation_dict['page_num'] = equation_dict.pop('equation_page')
+            equation_dict['bounding_box'] = equation_dict.pop('equation_bb')
+        
+        return equations_list
+
+    def _splice_equations_and_text_parquet(self):
+        # TODO this special-casing for equations is a bit clunky
+        cosmos_annotations = self._load_cosmos_parquet(f'{self.pdf_name}.parquet')
+        equation_annotations = self._load_equations_parquet(f'{self.pdf_name}_equations.parquet')
+
+        return [
+            *[c for c in cosmos_annotations if c['postprocess_cls'] != 'Equation'],
+            *equation_annotations
+        ]
 
 
     def _get_labeled_item_per_page(self, annotations, label_class, page):
@@ -127,7 +142,7 @@ class BaseAnnotationComparisonTest:
         cosmos_annotations = self._get_labeled_item_per_page(self.cosmos_annotations, label_class, page) 
         return PageAnnotationComparison.from_bounds(manual_annotations, cosmos_annotations)
 
-    def compare_pages_for_label(self, label_class, comparison_type="metric"):
+    def compare_pages_for_label(self, label_class):
         page_count = max(a['page_num'] for a in self.manual_annotations)
         page_comparisons = [
             self._compare_area_bounds_per_page(label_class, page_num)
