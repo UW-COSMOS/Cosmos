@@ -1,0 +1,141 @@
+<annotation>
+  <page>2</page>
+  <folder>COSMOS_annotated</folder>
+  <filename>9d3e38d1-9c82-4fd3-9a03-ba83900e939d.png</filename>
+  <size>
+    <width>1484</width>
+    <height>1920</height>
+  </size>
+  <object>
+    <name>Body Text</name>
+    <tag_id>b598af4c-5e72-4fcf-aa8b-455f1424b756</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>321.5</xmin>
+      <ymin>307.0</ymin>
+      <xmax>1161.5</xmax>
+      <ymax>450.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>6920c2c7-2b0d-4398-b07a-1f50ffbcf8f3</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>324.5</xmin>
+      <ymin>531.0</ymin>
+      <xmax>1161.5</xmax>
+      <ymax>759.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>2f6975d5-a926-40e4-8f81-dc19d7221829</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>362.5</xmin>
+      <ymin>781.0</ymin>
+      <xmax>1158.5</xmax>
+      <ymax>836.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>79d96a1c-9f78-4951-b291-c4fec605b45b</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>358.5</xmin>
+      <ymin>860.0</ymin>
+      <xmax>1159.5</xmax>
+      <ymax>914.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>e9bbe91c-3ad6-404b-bbd4-60c08af39ab3</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>359.5</xmin>
+      <ymin>937.0</ymin>
+      <xmax>1161.5</xmax>
+      <ymax>991.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>4204c0b9-6547-4a54-963d-456b4602cc7e</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>361.5</xmin>
+      <ymin>1012.0</ymin>
+      <xmax>1161.5</xmax>
+      <ymax>1066.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>778eaafc-6de5-4cb6-b183-1285d0372ebb</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>324.5</xmin>
+      <ymin>1091.0</ymin>
+      <xmax>1159.5</xmax>
+      <ymax>1145.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>054b9349-8d00-4475-a758-7eab82c0b429</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>361.5</xmin>
+      <ymin>1169.0</ymin>
+      <xmax>1160.5</xmax>
+      <ymax>1282.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>b1a2519e-cdb0-4868-a821-d5775bbd84dc</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>361.5</xmin>
+      <ymin>1305.0</ymin>
+      <xmax>1160.5</xmax>
+      <ymax>1359.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>ad651fbb-4072-44ad-b4a5-f1226a3bcc64</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>360.5</xmin>
+      <ymin>1381.0</ymin>
+      <xmax>1161.5</xmax>
+      <ymax>1436.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>7cee7090-c6f6-431f-9f8b-599fbd1b9a20</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>360.5</xmin>
+      <ymin>1458.0</ymin>
+      <xmax>1070.5</xmax>
+      <ymax>1481.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>622b41fc-a2f2-4b5d-af24-70e696e234fa</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>325.5</xmin>
+      <ymin>1507.0</ymin>
+      <xmax>1170.5</xmax>
+      <ymax>1562.0</ymax>
+    </bndbox>
+  </object>
+</annotation>

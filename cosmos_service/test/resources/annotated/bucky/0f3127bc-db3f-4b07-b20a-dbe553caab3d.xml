@@ -1,0 +1,64 @@
+<annotation>
+  <page>15</page>
+  <folder>COSMOS_annotated</folder>
+  <filename>0f3127bc-db3f-4b07-b20a-dbe553caab3d.png</filename>
+  <size>
+    <width>1484</width>
+    <height>1920</height>
+  </size>
+  <object>
+    <name>Body Text</name>
+    <tag_id>dcc7f22f-c69b-48ac-9eaf-9a4c2e8006d7</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>314.5</xmin>
+      <ymin>1528.0</ymin>
+      <xmax>1203.5</xmax>
+      <ymax>1616.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>60b68026-7c4b-43a4-be75-dff89b8d0624</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>320.5</xmin>
+      <ymin>786.0</ymin>
+      <xmax>1173.5</xmax>
+      <ymax>1011.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Figure</name>
+    <tag_id>d752d319-8824-4a28-a1a1-791453b40d3d</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>404.5</xmin>
+      <ymin>1033.0</ymin>
+      <xmax>1095.5</xmax>
+      <ymax>1471.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Figure</name>
+    <tag_id>3aa7558f-84e5-435b-a422-b87b9043366f</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>373.5</xmin>
+      <ymin>304.0</ymin>
+      <xmax>1081.5</xmax>
+      <ymax>701.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Section Header</name>
+    <tag_id>d74351b0-3111-43b0-af19-05ed7ae5b0d6</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>320.5</xmin>
+      <ymin>737.0</ymin>
+      <xmax>481.5</xmax>
+      <ymax>773.0</ymax>
+    </bndbox>
+  </object>
+</annotation>

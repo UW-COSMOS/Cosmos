@@ -1,0 +1,31 @@
+<annotation>
+  <page>6</page>
+  <folder>COSMOS_annotated</folder>
+  <filename>9ea472e8-85b0-4bb6-a2cd-c4b3d2fc9ef5.png</filename>
+  <size>
+    <width>1484</width>
+    <height>1920</height>
+  </size>
+  <object>
+    <name>Table</name>
+    <tag_id>bce6a310-cda4-429a-afb8-291563b2f973</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>322.5</xmin>
+      <ymin>302.0</ymin>
+      <xmax>1208.5</xmax>
+      <ymax>1149.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>ce842322-3718-428d-86b1-dd60ad8cc291</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>324.5</xmin>
+      <ymin>1191.0</ymin>
+      <xmax>1162.5</xmax>
+      <ymax>1623.0</ymax>
+    </bndbox>
+  </object>
+</annotation>
