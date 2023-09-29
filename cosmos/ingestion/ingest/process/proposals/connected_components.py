@@ -270,14 +270,7 @@ def get_lp_proposals(img, lp_threshold):
         coord_set = (bbox.block.x_1, bbox.block.y_1, bbox.block.x_2, bbox.block.y_2)
         coord_list.append(coord_set)
 
-    return coordlist
-
-    # coord_list = []
-    # for bbox in layout_predicted._blocks:
-    #     coord_set = (bbox.block.x_1, bbox.block.y_1, bbox.block.x_2, bbox.block.y_2)
-    #     coord_list.append(coord_set)
-    
-    # return coord_list
+    return coord_list
 
 def clean_text_blocks(image, text_blocks):
     h, w = image.shape[:2]
@@ -312,9 +305,13 @@ def iterative_merge(text_block_list):
                 text_block_list.pop(i)
                 text_block_list.pop(i)
                 text_block_list.insert(i, merged_box)
-                j-=1
+                j -= 1
             j += 1
-            i += 1
+            if (j >= len(text_block_list)):
+                break
+        i += 1
+        if (i >= len(text_block_list) - 1):
+            break
     
     return text_block_list
 
