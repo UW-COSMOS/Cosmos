@@ -22,7 +22,5 @@ COPY htcosmos/make_parquet.py /src/
 RUN mkdir /pdfs
 RUN mkdir /pages
 RUN mkdir /output
-COPY 600de240ea8bd372268905df.pdf /pdfs/
-COPY 616cf16267467f7269ccde6f.pdf /pdfs/
-
+COPY 616cf16267467f7269ccde6f_9.pdf /pdfs/  
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8089"]
