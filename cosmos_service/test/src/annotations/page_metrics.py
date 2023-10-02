@@ -136,4 +136,20 @@ class DocumentAnnotationComparison:
         failures = [PageExpectedValue(i+1,e,a) for i, (e,a) in enumerate(zip(expected, actual)) if not meets_cond(e,a)]
         return DocumentExpectedValues(failures, comparison_metric)
 
+    @property
+    def document_expected_count(self):
+        return sum(self.expected_counts)
 
+    @property
+    def document_cosmos_count(self):
+        return sum(self.cosmos_counts)
+
+    @property
+    def document_overlap_percent(self):
+
+        if sum(self.cosmos_area_per_page) == 0 and sum(self.expected_area_per_page) == 0:
+            return 1
+        elif sum(self.expected_area_per_page) == 0 and sum(self.cosmos_area_per_page) > 0:
+            return float('inf')
+        else:
+            return sum(self.overlap_area_per_page) / sum(self.expected_area_per_page)
