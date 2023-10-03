@@ -415,8 +415,9 @@ def search():
         return {'page': 0, 'objects': [], 'v': VERSION, 'license' : LICENSE}
     image_dir = '/data/images'
     bibjsons = get_bibjsons([i['pdf_name'].replace(".pdf", "")  for i in results])
+    results = [i for i in results if (i['pdf_name'].replace(".pdf", "") in bibjsons and bibjsons[i['pdf_name'].replace(".pdf", "")] != {})] # cleaned results list
     for result in results:
-        result['bibjson'] = bibjsons.get(result['pdf_name'].replace(".pdf", ""), {})
+        result['bibjson'] = bibjsons[result['pdf_name'].replace(".pdf", "")]
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
