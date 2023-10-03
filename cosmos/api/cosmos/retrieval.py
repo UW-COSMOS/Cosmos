@@ -416,7 +416,7 @@ def search():
     image_dir = '/data/images'
     bibjsons = get_bibjsons([i['pdf_name'].replace(".pdf", "")  for i in results])
     for result in results:
-        result['bibjson'] = bibjsons[result['pdf_name'].replace(".pdf", "")]
+        result['bibjson'] = bibjsons.get(result['pdf_name'].replace(".pdf", ""), {})
         for child in result['children']:
             if child['bytes'] is not None and not ignore_bytes:
                 img_pth = os.path.basename(child['bytes'])
