@@ -165,3 +165,14 @@ class BaseAnnotationComparisonTest:
             fc.overlap_percents, 
             in_bounds_comparator)
         assert failures.ok(), failures.error_message()
+
+    def check_document_count(self, label_class):
+        fc = self.compare_pages_for_label(label_class)
+        assert fc.document_expected_count == fc.document_cosmos_count, \
+            f"Incorrect {label_class} count: expected={fc.document_expected_count} actual={fc.document_cosmos_count}"
+
+    def check_document_overlap(self, label_class):
+        fc = self.compare_pages_for_label(label_class)
+        assert fc.document_overlap_percent >= AREA_BOUNDS[0] and fc.document_overlap_percent <= AREA_BOUNDS[1], \
+            f"Incorrect {label_class} bounds: expected={AREA_BOUNDS} actual={fc.document_overlap_percent}"
+
