@@ -242,6 +242,11 @@ def get_lp_proposals(img, lp_threshold):
     text_block_list = create_text_block_list(text_blocks)
   
     text_block_list = iterative_merge(text_block_list)
+    figure_blocks = iterative_merge(figure_blocks)
+    title_blocks = iterative_merge(title_blocks)
+    table_blocks = iterative_merge(table_blocks)
+    list_blocks = iterative_merge(list_blocks)
+    equation_blocks = iterative_merge(equation_blocks)
 
     layout_predicted_text_blocks = lp.elements.layout.Layout(blocks=text_block_list)
     text_blocks = lp.Layout([b for b in layout_predicted_text_blocks if b.type=='text'])
@@ -295,25 +300,21 @@ def create_text_block_list(text_blocks):
         text_block_list.append(text_blocks[i])
     return text_block_list
 
-def iterative_merge(text_block_list):
+def iterative_merge(block_list):
     i = 0
-    while i < len(text_block_list) - 1:
+    while i < len(block_list) - 1:
         j = i+1
-        while j < len(text_block_list):
-            if check_proximity(text_block_list[i], text_block_list[j]):
-                merged_box = merge_boxes(text_block_list[i], text_block_list[j])
-                text_block_list.pop(i)
-                text_block_list.pop(i)
-                text_block_list.insert(i, merged_box)
+        while j < len(block_list):
+            if check_proximity(block_list[i], block_list[j]):
+                merged_box = merge_boxes(block_list[i], block_list[j])
+                block_list.pop(i)
+                block_list.pop(i)
+                block_list.insert(i, merged_box)
                 j -= 1
             j += 1
-            if (j >= len(text_block_list)):
-                break
         i += 1
-        if (i >= len(text_block_list) - 1):
-            break
     
-    return text_block_list
+    return block_list
 
 # Checks if two boxes are close enough (distance < threshold) to merge together
 def check_proximity(box1, box2):
