@@ -21,11 +21,14 @@ PARQUET_SUFFIXES = ['', *[f'_{suffix}' for suffix in PARQUET_COLUMN_NAMES.keys()
 
 DEFAULT_PARQUET_COLUMN_NAMES = ("bounding_box", "page_num", ["img_pth"])
 
+
+def read_job_zip_file(job):
+    """ Read the output zip file of a job """
+    return ZipFile(f'{job.output_dir}/{job.pdf_name}_cosmos_output.zip')
+
 def extract_file_from_job(job, file_path: str):
-    """
-    Extract the specified file from the specified completed job
-    """
-    with ZipFile(f'{job.output_dir}/{job.pdf_name}_cosmos_output.zip') as zipf:
+    """ Extract the specified file from the specified completed job """
+    with read_job_zip_file(job) as zipf:
         return zipf.open(file_path, 'r')
 
 def replace_url_suffix(request_url, suffix):

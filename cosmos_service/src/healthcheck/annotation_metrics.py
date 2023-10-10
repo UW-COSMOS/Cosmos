@@ -2,7 +2,9 @@ from zipfile import ZipFile
 from .page_metrics import PageAnnotationComparison, DocumentAnnotationComparison, AnnotationBounds
 import pandas as pd
 
-LABEL_CLASSES = ["Figure", "Table", "Equation"]
+AREA_BOUNDS=(0.9,1.1)
+DEFAULT_REGION_TYPES = ["Figure", "Equation", "Table"]
+
 
 class AnnotationComparator:
     cosmos_output: ZipFile
@@ -10,9 +12,9 @@ class AnnotationComparator:
     cosmos_annotations: list[AnnotationBounds]
     manual_annotations: list[AnnotationBounds]
 
-    def __init__(self, pdf_name: str, cosmos_output : ZipFile, manual_annotations: list[AnnotationBounds]):
-        self.pdf_name = pdf_name
+    def __init__(self, cosmos_output : ZipFile, manual_annotations: list[AnnotationBounds]):
         self.cosmos_output = cosmos_output
+        self.pdf_name = self._get_pdf_name()
         self.manual_annotations = manual_annotations
         self.cosmos_annotations = self._splice_equations_and_text_parquet()
 
@@ -25,6 +27,12 @@ class AnnotationComparator:
                 {**data, 'bounding_box': [int(b) for b in data[bb_label]]}
                 for data in df.to_dict('records')
             ]
+
+    def _get_pdf_name(self):
+        # Hack to find the naming pattern for parquet files inside the zip file
+        equations_suffix = '_equations.parquet'
+        equations_file = [f.filename for f in self.cosmos_output.filelist if f.filename.endswith(equations_suffix)][0]
+        return equations_file.replace(equations_suffix, '')
     
     def _read_equations_parquet(self, parquet_file):
         equations_list = self._read_cosmos_parquet(parquet_file, 'equation_bb')
@@ -54,7 +62,7 @@ class AnnotationComparator:
         cosmos_annotations = self._get_labeled_item_per_page(self.cosmos_annotations, label_class, page) 
         return PageAnnotationComparison.from_bounds(page, manual_annotations, cosmos_annotations)
 
-    def compare_pages_for_label(self, label_class: str):
+    def compare_for_label(self, label_class: str):
         page_count = max(a.page_num for a in self.manual_annotations)
         page_comparisons = [
             self._compare_area_bounds_per_page(label_class, page_num)

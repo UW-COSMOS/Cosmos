@@ -11,8 +11,10 @@ import asyncio
 from db.processing_session_types import CosmosSessionJob
 from db.db import SessionLocal, get_job_details, get_cached_job_for_pdf
 from scheduler import scheduler
-from util.cosmos_output_utils import extract_file_from_job, convert_parquet_to_json, replace_url_suffix
+from util.cosmos_output_utils import extract_file_from_job, convert_parquet_to_json, replace_url_suffix, read_job_zip_file
 from model.models import *
+from healthcheck.annotation_metrics import *
+from zipfile import ZipFile
 import shutil
 
 prefix_url = os.environ.get('API_PREFIX','/cosmos_service')
@@ -178,6 +180,16 @@ def get_processing_result_image(job_id: str, image_path: str) -> Response:
     mime_type = 'image/png' if image_path.endswith('.png') else 'image/jpeg'
     with extract_file_from_job(job, image_path) as image:
         return Response(content=image.read(), media_type=mime_type)
+
+
+@prefix_router.post("healthcheck/evaluate/{job_id}")
+def evaluate_results(job_id: str, expected_bounds: list[AnnotationBounds]) -> List[DocumentAnnotationComparison]:
+    """
+    Evaluate the results of a COSMOS job against a list of expected region bounding boxes
+    """
+    job = get_job_details(job_id)
+    comparator = AnnotationComparator(read_job_zip_file(job), expected_bounds)
+    return [comparator.compare_for_label(l) for l in DEFAULT_REGION_TYPES]
 
 
 app.include_router(prefix_router)

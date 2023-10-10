@@ -1,13 +1,11 @@
 """ Classes for aggregating per-page an per-document comparisons """
 
-from dataclasses import dataclass
 from pydantic import BaseModel, Field
-from pydantic.schema import Optional
 
 class AnnotationBounds(BaseModel):
-    page_num: int
-    postprocess_cls: str
-    bounding_box: list[int]
+    page_num: int = Field(description="Page Number")
+    postprocess_cls: str = Field(description="The label assigned to the region by Cosmos")
+    bounding_box: list[int] = Field(description="Region bounds (x0, y0, x1, y1)")
 
     def area(self):
         """ Get the area of a bounding box"""

@@ -1,7 +1,7 @@
 """ Classes for aggregating per-page an per-document comparisons """
 
 from dataclasses import dataclass
-from ....src.healthcheck.page_metrics import PageAnnotationComparison
+from ....src.healthcheck.annotation_metrics import PageAnnotationComparison, AREA_BOUNDS
 
 @dataclass
 class PageExpectedValuePrinter:
@@ -16,7 +16,7 @@ class PageExpectedValuePrinter:
         return f"page {self.comparison.page}: expected={self.comparison.expected_count} actual={self.comparison.cosmos_count}"
 
     def print_overlap_mismatch(self) -> str:
-        return f"page {self.comparison.page}: expected=(0.9, 1.1) actual={self.comparison.overlap_percent}"
+        return f"page {self.comparison.page}: expected={AREA_BOUNDS} actual={self.comparison.overlap_percent}"
 
 class DocumentExpectedCountPrinter:
     """ Utility class for displaying all pages in a document for which the annotation count falls outside of the expected range """

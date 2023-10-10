@@ -7,12 +7,10 @@ import xmltodict
 import pandas as pd
 from zipfile import ZipFile
 from ..util.cosmos_client import submit_pdf_to_cosmos, poll_for_cosmos_output
-from ....src.healthcheck.annotation_metrics import AnnotationComparator, AnnotationBounds
+from ....src.healthcheck.annotation_metrics import AnnotationComparator, AnnotationBounds, AREA_BOUNDS
 from .error_printer import DocumentExpectedCountPrinter, DocumentExpectedOverlapPrinter
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),'../..'))
-
-AREA_BOUNDS=(0.9,1.1)
 
 class BaseAnnotationComparisonTest:
     pdf_name: str
@@ -110,22 +108,22 @@ class BaseAnnotationComparisonTest:
 
 
     def check_count_per_page(self, label_class):
-        comparison = self.comparator.compare_pages_for_label(label_class)
+        comparison = self.comparator.compare_for_label(label_class)
         failures = DocumentExpectedCountPrinter(f"{label_class} count", comparison.page_comparisons)
         assert failures.ok(), failures.error_message()
 
     def check_overlap_per_page(self, label_class):
-        comparison = self.comparator.compare_pages_for_label(label_class)
+        comparison = self.comparator.compare_for_label(label_class)
         failures = DocumentExpectedOverlapPrinter(f"{label_class} overlap percentage", comparison.page_comparisons)
         assert failures.ok(), failures.error_message()
 
     def check_document_count(self, label_class):
-        comparison = self.comparator.compare_pages_for_label(label_class)
+        comparison = self.comparator.compare_for_label(label_class)
         assert comparison.count_in_bounds, \
             f"Incorrect {label_class} count: expected={comparison.document_expected_count} actual={comparison.document_cosmos_count}"
 
     def check_document_overlap(self, label_class):
-        comparison = self.comparator.compare_pages_for_label(label_class)
+        comparison = self.comparator.compare_for_label(label_class)
         assert comparison.overlap_in_bounds, \
             f"Incorrect {label_class} bounds: expected={AREA_BOUNDS} actual={comparison.document_overlap_percent}"
 
