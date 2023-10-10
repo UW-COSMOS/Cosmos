@@ -1,11 +1,12 @@
 """ Classes for aggregating per-page an per-document comparisons """
 
 from pydantic import BaseModel, Field
+from typing import List
 
 class AnnotationBounds(BaseModel):
     page_num: int = Field(description="Page Number")
     postprocess_cls: str = Field(description="The label assigned to the region by Cosmos")
-    bounding_box: list[int] = Field(description="Region bounds (x0, y0, x1, y1)")
+    bounding_box: List[int] = Field(description="Region bounds (x0, y0, x1, y1)")
 
     def area(self):
         """ Get the area of a bounding box"""
@@ -56,7 +57,7 @@ class PageAnnotationComparison(BaseModel):
         return self.overlap_percent >= 0.9 and self.overlap_percent <= 1.1
 
     @staticmethod
-    def from_bounds(page:int, expected_bounds: list[AnnotationBounds], actual_bounds: list[AnnotationBounds]):
+    def from_bounds(page:int, expected_bounds: List[AnnotationBounds], actual_bounds: List[AnnotationBounds]):
         return PageAnnotationComparison(
             page=page,
             expected_count= len(expected_bounds), 
@@ -69,7 +70,7 @@ class PageAnnotationComparison(BaseModel):
 class DocumentAnnotationComparison(BaseModel):
 
     label_class: str
-    page_comparisons: list[PageAnnotationComparison]
+    page_comparisons: List[PageAnnotationComparison]
 
     @property
     def document_expected_count(self):

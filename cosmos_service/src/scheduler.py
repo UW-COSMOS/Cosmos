@@ -1,5 +1,4 @@
-from rocketry import Rocketry
-from rocketry.conds import every
+from apscheduler.schedulers.background import BackgroundScheduler
 import shutil
 from datetime import datetime, timedelta
 from db.processing_session_types import CosmosSessionJob
@@ -7,16 +6,9 @@ from db.db import SessionLocal
 from sqlalchemy import select, delete, ScalarResult
 from fastapi.logger import logger
 
-
-scheduler = Rocketry(config={"task_execution": "async"})
-
-
-CLEAN_JOB_FREQUENCY = "1 hour"
 SESSION_EXPIRATION = timedelta(hours = 24)
 
-
-@scheduler.task(every(CLEAN_JOB_FREQUENCY))
-async def clean_all_expired_jobs():
+def clean_all_expired_jobs():
     """Find every cosmos pipeline job that started over SESSION_EXPIRATION hours ago,
     clean up its working directory, and delete its entry from the database
     """
@@ -35,4 +27,10 @@ async def clean_all_expired_jobs():
 
     for dir in temporary_dirs:
         shutil.rmtree(dir)
+
+
+def init_scheduler():
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(clean_all_expired_jobs, 'cron', hour="*")
+    scheduler.start()
 

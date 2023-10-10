@@ -4,10 +4,10 @@ import shutil
 from fastapi import UploadFile, File, Form, HTTPException, Request, APIRouter
 from fastapi.responses import FileResponse, Response
 import uuid
-from ..util.cosmos_output_utils import *
-from ..model.models import JobCreationResponse, JobStatus, CosmosJSONTextResponse, CosmosJSONImageResponse, ExtractionType
-from ..db.db import SessionLocal, CosmosSessionJob, get_cached_job_for_pdf, get_job_details
-from ..work_queue import queue
+from util.cosmos_output_utils import *
+from model.models import JobCreationResponse, JobStatus, CosmosJSONTextResponse, CosmosJSONImageResponse, ExtractionType
+from db.db import SessionLocal, CosmosSessionJob, get_cached_job_for_pdf, get_job_details
+from work_queue import queue
 
 router = APIRouter(prefix="/process")
 

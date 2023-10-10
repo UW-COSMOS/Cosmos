@@ -1,6 +1,7 @@
 from zipfile import ZipFile
 from .page_metrics import PageAnnotationComparison, DocumentAnnotationComparison, AnnotationBounds
 import pandas as pd
+from typing import List
 
 AREA_BOUNDS=(0.9,1.1)
 DEFAULT_REGION_TYPES = ["Figure", "Equation", "Table"]
@@ -9,10 +10,10 @@ DEFAULT_REGION_TYPES = ["Figure", "Equation", "Table"]
 class AnnotationComparator:
     cosmos_output: ZipFile
     pdf_name: str
-    cosmos_annotations: list[AnnotationBounds]
-    manual_annotations: list[AnnotationBounds]
+    cosmos_annotations: List[AnnotationBounds]
+    manual_annotations: List[AnnotationBounds]
 
-    def __init__(self, cosmos_output : ZipFile, manual_annotations: list[AnnotationBounds]):
+    def __init__(self, cosmos_output : ZipFile, manual_annotations: List[AnnotationBounds]):
         self.cosmos_output = cosmos_output
         self.pdf_name = self._get_pdf_name()
         self.manual_annotations = manual_annotations
@@ -54,7 +55,7 @@ class AnnotationComparator:
         return [AnnotationBounds.parse_obj(sb) for sb in spliced_bounds]
 
 
-    def _get_labeled_item_per_page(self, annotations: list[AnnotationBounds], label_class: str, page: int):
+    def _get_labeled_item_per_page(self, annotations: List[AnnotationBounds], label_class: str, page: int):
         return [a for a in annotations if a.postprocess_cls == label_class and a.page_num == page]
 
     def _compare_area_bounds_per_page(self, label_class: str, page: int):

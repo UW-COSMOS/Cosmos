@@ -1,9 +1,10 @@
 from fastapi.logger import logger
+from typing import List
 import asyncio
 import sys
 
 queue = asyncio.Queue()
-workers : list[asyncio.Task] = None
+workers : List[asyncio.Task] = None
 
 COSMOS_SCRIPT = 'process.py'
 

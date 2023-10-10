@@ -1,11 +1,12 @@
 import os
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.logger import logger
 import torch
 import asyncio
-from scheduler import scheduler
+from scheduler import init_scheduler
 from work_queue import setup_workers
-from routers import process
+from routers import process, healthcheck
 
 prefix_url = os.environ.get('API_PREFIX','/cosmos_service')
 
@@ -13,6 +14,7 @@ app = FastAPI(title="COSMOS Service", docs_url=f"{prefix_url}/docs")
 
 prefix_router = APIRouter(prefix=prefix_url)
 prefix_router.include_router(process.router)
+prefix_router.include_router(healthcheck.router)
 app.add_middleware(GZipMiddleware)
 
 # Approximate memory consumed by a single cosmos pipeline, used to calculate available
@@ -21,7 +23,6 @@ app.add_middleware(GZipMiddleware)
 # is usually not the case
 GPU_MEM_PER_WORKER = 4e9 # 4GB
 
-
 @prefix_router.get("/version_info")
 def get_version_info():
     """Return the API version and git hash of the running API"""
@@ -29,7 +30,6 @@ def get_version_info():
         "version": os.environ.get("API_VERSION"),
         "git_hash": os.environ.get("GIT_HASH"),
     }
-
 
 app.include_router(prefix_router)
 
@@ -52,6 +52,4 @@ async def startup_event():
     """
     max_worker_count = get_max_processes_per_gpu()
     setup_workers(max_worker_count)
-
-    asyncio.create_task(scheduler.serve())
-
+    init_scheduler()

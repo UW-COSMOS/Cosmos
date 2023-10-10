@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field, HttpUrl
-from pydantic.schema import Optional
-from typing import Tuple
+from typing import Tuple, Optional
 from enum import Enum
 
 # Response Models

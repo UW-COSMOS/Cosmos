@@ -1,13 +1,13 @@
-from fastapi import UploadFile, File, Form, HTTPException, Request, APIRouter
-from ..util.cosmos_output_utils import *
-from ..db.db import get_job_details
-from ..work_queue import queue
-from ..healthcheck.annotation_metrics import *
+from fastapi import APIRouter
+from util.cosmos_output_utils import *
+from db.db import get_job_details
+from healthcheck.annotation_metrics import *
+from typing import List
 
-router = APIRouter(prefix="/process")
+router = APIRouter(prefix="/healthcheck")
 
-@router.post("healthcheck/evaluate/{job_id}")
-def evaluate_results(job_id: str, expected_bounds: list[AnnotationBounds]) -> List[DocumentAnnotationComparison]:
+@router.post("/evaluate/{job_id}")
+def evaluate_results(job_id: str, expected_bounds: List[AnnotationBounds]) -> List[DocumentAnnotationComparison]:
     """
     Evaluate the results of a COSMOS job against a list of expected region bounding boxes
     """
