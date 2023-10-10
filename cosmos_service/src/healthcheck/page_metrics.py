@@ -1,32 +1,32 @@
 """ Classes for aggregating per-page an per-document comparisons """
 
 from dataclasses import dataclass
-from model import AnnotationBounds
+from pydantic import BaseModel, Field
+from pydantic.schema import Optional
 
-def equals_comparator(expected, actual):
-    return expected == actual
+class AnnotationBounds(BaseModel):
+    page_num: int
+    postprocess_cls: str
+    bounding_box: list[int]
 
-def in_bounds_comparator(expected, actual):
-    return actual >= expected[0] and actual <= expected[1]
+    def area(self):
+        """ Get the area of a bounding box"""
+        (x0, y0, x1, y1) = self.bounding_box
+        return (x1 - x0) * (y1 - y0)
 
-Rectangle = tuple[int,int,int,int]
+    def overlap(self, other: 'AnnotationBounds'):
+        """ Get the intersecting area of two rectangles """
+        # via https://stackoverflow.com/a/27162334
 
-def rectangle_intersection(r1: Rectangle, r2: Rectangle):
-    """ Get the intersecting area of two rectangles """
-    # via https://stackoverflow.com/a/27162334
-    dx = min(r1[2], r2[2]) - max(r1[0],r2[0])
-    dy = min(r1[3], r2[3]) - max(r1[1],r2[1])
+        (my_x0, my_y0, my_x1, my_y1) = self.bounding_box
+        (their_x0, their_y0, their_x1, their_y1) = other.bounding_box
 
-    return dx * dy if dx > 0 and dy > 0 else 0
+        dx = min(my_x1, their_x1) - max(my_x0, their_x0)
+        dy = min(my_y1, their_y1) - max(my_y0, their_y0)
 
-def rectangle_area(r1: Rectangle):
-    """ Get the area of a rectangle """
-    length = r1[2] - r1[0]
-    width = r1[3] - r1[1]
-    return length * width
+        return dx * dy if dx > 0 and dy > 0 else 0
 
-@dataclass
-class PageAnnotationComparison:
+class PageAnnotationComparison(BaseModel):
 
     page: int
     expected_count: int
@@ -35,18 +35,6 @@ class PageAnnotationComparison:
     expected_area: int
     cosmos_area: int
     overlapping_area: int
-
-
-    @property
-    def area_ratio(self):
-        """ The total area marked by cosmos compared to the total expected area"""
-        # avoid dividing by zero
-        if self.expected_area == 0 and self.cosmos_area == 0:
-            return 1
-        elif self.expected_area == 0 and self.cosmos_area > 0:
-            return float('inf')
-        else:
-            return self.cosmos_area / float(self.expected_area)
 
     @property
     def overlap_percent(self):
@@ -61,6 +49,13 @@ class PageAnnotationComparison:
         else:
             return self.overlapping_area / float(self.expected_area)
 
+    @property
+    def count_in_bounds(self):
+        return self.expected_count == self.cosmos_count
+
+    @property
+    def overlap_in_bounds(self):
+        return self.overlap_percent >= 0.9 and self.overlap_percent <= 1.1
 
     @staticmethod
     def from_bounds(page:int, expected_bounds: list[AnnotationBounds], actual_bounds: list[AnnotationBounds]):
@@ -73,69 +68,36 @@ class PageAnnotationComparison:
             overlapping_area = sum(e.overlap(a) for e in expected_bounds for a in actual_bounds)
         )
 
-@dataclass
-class PageExpectedValue:
-    """ Utility class for recording the page on which some metric falls outside of the expected range """
-    page: int
-    expected: float
-    actual: float
-
-class DocumentAnnotationComparison:
+class DocumentAnnotationComparison(BaseModel):
 
     label_class: str
     page_comparisons: list[PageAnnotationComparison]
-    failed_pages: lst
-
-    def __init__(self, page_comparisons, label_class):
-        self.label_class = label_class
-        self.page_comparisons = page_comparisons
-
-    @property
-    def expected_counts(self):
-        return [p.expected_count for p in self.page_comparisons]
-
-    @property
-    def cosmos_counts(self):
-        return [p.cosmos_count for p in self.page_comparisons]
-
-    @property
-    def expected_area_per_page(self):
-        return [p.expected_area for p in self.page_comparisons]
-
-    @property
-    def cosmos_area_per_page(self):
-        return [p.cosmos_area for p in self.page_comparisons]
-
-    @property
-    def overlap_area_per_page(self):
-        return [p.overlapping_area for p in self.page_comparisons]
-
-    @property
-    def area_ratios(self):
-        return [p.area_ratio for p in self.page_comparisons]
-
-    @property
-    def overlap_percents(self):
-        return [p.overlap_percent for p in self.page_comparisons]
-
-    def get_failures_per_page(self, comparison_metric, expected, actual, meets_cond):
-        failures = [PageExpectedValue(i+1,e,a) for i, (e,a) in enumerate(zip(expected, actual)) if not meets_cond(e,a)]
-        return DocumentExpectedValues(failures, comparison_metric)
 
     @property
     def document_expected_count(self):
-        return sum(self.expected_counts)
+        return sum([p.expected_count for p in self.page_comparisons])
 
     @property
     def document_cosmos_count(self):
-        return sum(self.cosmos_counts)
+        return sum([p.cosmos_count for p in self.page_comparisons])
 
     @property
     def document_overlap_percent(self):
+        cosmos_area_per_page = [p.cosmos_area for p in self.page_comparisons]
+        expected_area_per_page = [p.expected_area for p in self.page_comparisons]
+        overlap_area_per_page = [p.overlapping_area for p in self.page_comparisons]
 
-        if sum(self.cosmos_area_per_page) == 0 and sum(self.expected_area_per_page) == 0:
+        if sum(cosmos_area_per_page) == 0 and sum(expected_area_per_page) == 0:
             return 1
-        elif sum(self.expected_area_per_page) == 0 and sum(self.cosmos_area_per_page) > 0:
+        elif sum(expected_area_per_page) == 0 and sum(cosmos_area_per_page) > 0:
             return float('inf')
         else:
-            return sum(self.overlap_area_per_page) / sum(self.expected_area_per_page)
+            return sum(overlap_area_per_page) / sum(expected_area_per_page)
+
+    @property
+    def count_in_bounds(self):
+        return self.document_expected_count == self.document_cosmos_count
+
+    @property
+    def overlap_in_bounds(self):
+        return self.document_overlap_percent >= 0.9 and self.document_overlap_percent <= 1.1

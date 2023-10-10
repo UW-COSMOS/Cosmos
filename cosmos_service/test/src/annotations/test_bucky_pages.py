@@ -1,4 +1,4 @@
-from .annotations_base import BaseAnnotationComparisonTest, equals_comparator, in_bounds_comparator
+from .annotations_base import BaseAnnotationComparisonTest
 import json
 
 PDF_NAME='bucky'
