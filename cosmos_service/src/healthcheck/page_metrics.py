@@ -37,7 +37,7 @@ class PageAnnotationComparison(BaseModel):
 
     @computed_field(description="Percentage of the expected area identified by COSMOS")
     @property
-    def overlap_percent(self):
+    def overlap_percent(self) -> float:
         """ The regions marked by cosmos that coincide with the expected regions, 
         compared to the total expected area 
         """
@@ -77,17 +77,17 @@ class DocumentAnnotationComparison(BaseModel):
 
     @computed_field(description="The expected count of regions with the given label in the whole document")
     @property
-    def document_expected_count(self):
+    def document_expected_count(self) -> int:
         return sum([p.expected_count for p in self.page_comparisons])
 
     @computed_field(description="The count of regions with the given label identified by COSMOS in the whole document")
     @property
-    def document_cosmos_count(self):
+    def document_cosmos_count(self) -> int:
         return sum([p.cosmos_count for p in self.page_comparisons])
 
     @computed_field(description="The percentage of the expected area of regions with the given label identified by COSMOS")
     @property
-    def document_overlap_percent(self):
+    def document_overlap_percent(self) -> float:
         cosmos_area_per_page = [p.cosmos_area for p in self.page_comparisons]
         expected_area_per_page = [p.expected_area for p in self.page_comparisons]
         overlap_area_per_page = [p.overlapping_area for p in self.page_comparisons]
@@ -101,10 +101,10 @@ class DocumentAnnotationComparison(BaseModel):
 
     @computed_field(description="Whether the correct count of regions was identified by COSMOS")
     @property
-    def count_in_bounds(self):
+    def count_in_bounds(self) -> bool:
         return self.document_expected_count == self.document_cosmos_count
 
     @computed_field(description=f"Whether over 90% of the expected area was identified by COSMOS")
     @property
-    def overlap_in_bounds(self):
+    def overlap_in_bounds(self) -> bool:
         return self.document_overlap_percent >= 0.9 and self.document_overlap_percent <= 1.1
