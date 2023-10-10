@@ -1,0 +1,1292 @@
+[
+  {
+    "page_num": 2,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      284,
+      134,
+      1161,
+      731
+    ]
+  },
+  {
+    "page_num": 2,
+    "postprocess_cls": "Table",
+    "bounding_box": [
+      104,
+      921,
+      1342,
+      1311
+    ]
+  },
+  {
+    "page_num": 3,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      191,
+      577,
+      723,
+      966
+    ]
+  },
+  {
+    "page_num": 3,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      742,
+      569,
+      1254,
+      967
+    ]
+  },
+  {
+    "page_num": 3,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      743,
+      136,
+      1247,
+      540
+    ]
+  },
+  {
+    "page_num": 3,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      189,
+      139,
+      710,
+      538
+    ]
+  },
+  {
+    "page_num": 4,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      186,
+      134,
+      723,
+      551
+    ]
+  },
+  {
+    "page_num": 4,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      741,
+      135,
+      1261,
+      547
+    ]
+  },
+  {
+    "page_num": 4,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      192,
+      582,
+      723,
+      978
+    ]
+  },
+  {
+    "page_num": 4,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      743,
+      578,
+      1261,
+      983
+    ]
+  },
+  {
+    "page_num": 5,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      191,
+      139,
+      717,
+      538
+    ]
+  },
+  {
+    "page_num": 5,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      746,
+      138,
+      1251,
+      537
+    ]
+  },
+  {
+    "page_num": 5,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      190,
+      570,
+      717,
+      964
+    ]
+  },
+  {
+    "page_num": 5,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      746,
+      565,
+      1254,
+      963
+    ]
+  },
+  {
+    "page_num": 7,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      843,
+      1772,
+      1236,
+      1801
+    ]
+  },
+  {
+    "page_num": 7,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      819,
+      1642,
+      1269,
+      1663
+    ]
+  },
+  {
+    "page_num": 7,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      237,
+      236,
+      574,
+      260
+    ]
+  },
+  {
+    "page_num": 7,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      177,
+      292,
+      632,
+      321
+    ]
+  },
+  {
+    "page_num": 7,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      305,
+      350,
+      507,
+      372
+    ]
+  },
+  {
+    "page_num": 7,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      290,
+      407,
+      519,
+      432
+    ]
+  },
+  {
+    "page_num": 7,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      274,
+      467,
+      538,
+      495
+    ]
+  },
+  {
+    "page_num": 7,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      273,
+      527,
+      539,
+      551
+    ]
+  },
+  {
+    "page_num": 7,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      230,
+      586,
+      582,
+      606
+    ]
+  },
+  {
+    "page_num": 7,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      357,
+      640,
+      451,
+      664
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      122,
+      544,
+      665,
+      682
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      258,
+      711,
+      553,
+      739
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      256,
+      768,
+      555,
+      797
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      256,
+      825,
+      553,
+      852
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      343,
+      886,
+      466,
+      908
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      341,
+      985,
+      472,
+      1012
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      355,
+      1044,
+      454,
+      1067
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      359,
+      1102,
+      453,
+      1127
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      215,
+      1264,
+      601,
+      1308
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      210,
+      1380,
+      598,
+      1557
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      331,
+      1662,
+      481,
+      1684
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      173,
+      1737,
+      640,
+      1804
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      828,
+      314,
+      1252,
+      358
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      873,
+      830,
+      1203,
+      852
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      876,
+      963,
+      1207,
+      1007
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      1011,
+      1057,
+      1067,
+      1079
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      1016,
+      1132,
+      1062,
+      1150
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      920,
+      1326,
+      1153,
+      1374
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      923,
+      1396,
+      1156,
+      1420
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      929,
+      1450,
+      1148,
+      1472
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      885,
+      1587,
+      1187,
+      1649
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      839,
+      1682,
+      1242,
+      1739
+    ]
+  },
+  {
+    "page_num": 8,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      910,
+      1748,
+      1163,
+      1807
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      169,
+      165,
+      640,
+      226
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      107,
+      283,
+      706,
+      336
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      286,
+      414,
+      518,
+      463
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      360,
+      600,
+      446,
+      624
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      213,
+      884,
+      599,
+      932
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      280,
+      968,
+      538,
+      1017
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      259,
+      1067,
+      553,
+      1127
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      334,
+      1182,
+      479,
+      1230
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      176,
+      1260,
+      639,
+      1317
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      353,
+      1372,
+      458,
+      1419
+    ]
+  },
+  {
+    "page_num": 9,
+    "postprocess_cls": "Equation",
+    "bounding_box": [
+      249,
+      1452,
+      560,
+      1508
+    ]
+  },
+  {
+    "page_num": 12,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      153,
+      135,
+      662,
+      501
+    ]
+  },
+  {
+    "page_num": 12,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      782,
+      135,
+      1294,
+      504
+    ]
+  },
+  {
+    "page_num": 12,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      151,
+      540,
+      662,
+      908
+    ]
+  },
+  {
+    "page_num": 12,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      782,
+      539,
+      1292,
+      906
+    ]
+  },
+  {
+    "page_num": 12,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      155,
+      944,
+      663,
+      1313
+    ]
+  },
+  {
+    "page_num": 12,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      789,
+      944,
+      1293,
+      1312
+    ]
+  },
+  {
+    "page_num": 12,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      163,
+      1350,
+      662,
+      1716
+    ]
+  },
+  {
+    "page_num": 12,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      789,
+      1350,
+      1300,
+      1717
+    ]
+  },
+  {
+    "page_num": 14,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      162,
+      133,
+      676,
+      515
+    ]
+  },
+  {
+    "page_num": 14,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      770,
+      134,
+      1284,
+      511
+    ]
+  },
+  {
+    "page_num": 14,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      161,
+      538,
+      676,
+      910
+    ]
+  },
+  {
+    "page_num": 14,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      778,
+      535,
+      1283,
+      911
+    ]
+  },
+  {
+    "page_num": 14,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      169,
+      938,
+      675,
+      1307
+    ]
+  },
+  {
+    "page_num": 14,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      779,
+      939,
+      1283,
+      1313
+    ]
+  },
+  {
+    "page_num": 14,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      170,
+      1344,
+      675,
+      1717
+    ]
+  },
+  {
+    "page_num": 14,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      780,
+      1343,
+      1282,
+      1727
+    ]
+  },
+  {
+    "page_num": 16,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      103,
+      137,
+      650,
+      549
+    ]
+  },
+  {
+    "page_num": 16,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      739,
+      135,
+      1286,
+      551
+    ]
+  },
+  {
+    "page_num": 16,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      103,
+      587,
+      649,
+      1005
+    ]
+  },
+  {
+    "page_num": 16,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      741,
+      589,
+      1292,
+      1010
+    ]
+  },
+  {
+    "page_num": 16,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      101,
+      1044,
+      649,
+      1459
+    ]
+  },
+  {
+    "page_num": 16,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      705,
+      1043,
+      1341,
+      1481
+    ]
+  },
+  {
+    "page_num": 17,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      164,
+      1328,
+      690,
+      1719
+    ]
+  },
+  {
+    "page_num": 17,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      780,
+      1337,
+      1287,
+      1726
+    ]
+  },
+  {
+    "page_num": 17,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      775,
+      936,
+      1280,
+      1320
+    ]
+  },
+  {
+    "page_num": 17,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      167,
+      937,
+      676,
+      1315
+    ]
+  },
+  {
+    "page_num": 17,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      153,
+      536,
+      676,
+      912
+    ]
+  },
+  {
+    "page_num": 17,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      777,
+      533,
+      1300,
+      911
+    ]
+  },
+  {
+    "page_num": 17,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      765,
+      129,
+      1287,
+      506
+    ]
+  },
+  {
+    "page_num": 17,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      156,
+      120,
+      676,
+      504
+    ]
+  },
+  {
+    "page_num": 19,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      152,
+      130,
+      670,
+      507
+    ]
+  },
+  {
+    "page_num": 19,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      765,
+      133,
+      1285,
+      508
+    ]
+  },
+  {
+    "page_num": 19,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      153,
+      542,
+      675,
+      912
+    ]
+  },
+  {
+    "page_num": 19,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      774,
+      538,
+      1289,
+      907
+    ]
+  },
+  {
+    "page_num": 19,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      168,
+      942,
+      676,
+      1310
+    ]
+  },
+  {
+    "page_num": 19,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      780,
+      942,
+      1285,
+      1314
+    ]
+  },
+  {
+    "page_num": 19,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      170,
+      1345,
+      675,
+      1717
+    ]
+  },
+  {
+    "page_num": 19,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      779,
+      1345,
+      1285,
+      1718
+    ]
+  },
+  {
+    "page_num": 21,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      167,
+      1345,
+      684,
+      1721
+    ]
+  },
+  {
+    "page_num": 21,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      772,
+      1348,
+      1291,
+      1722
+    ]
+  },
+  {
+    "page_num": 21,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      164,
+      939,
+      684,
+      1323
+    ]
+  },
+  {
+    "page_num": 21,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      769,
+      938,
+      1298,
+      1318
+    ]
+  },
+  {
+    "page_num": 21,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      764,
+      531,
+      1297,
+      910
+    ]
+  },
+  {
+    "page_num": 21,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      154,
+      533,
+      675,
+      909
+    ]
+  },
+  {
+    "page_num": 21,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      155,
+      130,
+      674,
+      504
+    ]
+  },
+  {
+    "page_num": 21,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      768,
+      125,
+      1284,
+      506
+    ]
+  },
+  {
+    "page_num": 23,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      171,
+      1349,
+      682,
+      1719
+    ]
+  },
+  {
+    "page_num": 23,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      775,
+      1343,
+      1287,
+      1719
+    ]
+  },
+  {
+    "page_num": 23,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      777,
+      943,
+      1287,
+      1316
+    ]
+  },
+  {
+    "page_num": 23,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      165,
+      942,
+      680,
+      1314
+    ]
+  },
+  {
+    "page_num": 23,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      155,
+      536,
+      677,
+      911
+    ]
+  },
+  {
+    "page_num": 23,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      778,
+      533,
+      1286,
+      908
+    ]
+  },
+  {
+    "page_num": 23,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      767,
+      131,
+      1283,
+      508
+    ]
+  },
+  {
+    "page_num": 23,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      151,
+      131,
+      673,
+      504
+    ]
+  },
+  {
+    "page_num": 25,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      170,
+      1344,
+      687,
+      1717
+    ]
+  },
+  {
+    "page_num": 25,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      776,
+      1341,
+      1287,
+      1725
+    ]
+  },
+  {
+    "page_num": 25,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      772,
+      931,
+      1290,
+      1312
+    ]
+  },
+  {
+    "page_num": 25,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      168,
+      936,
+      679,
+      1317
+    ]
+  },
+  {
+    "page_num": 25,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      155,
+      538,
+      672,
+      916
+    ]
+  },
+  {
+    "page_num": 25,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      769,
+      534,
+      1291,
+      910
+    ]
+  },
+  {
+    "page_num": 25,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      765,
+      129,
+      1289,
+      514
+    ]
+  },
+  {
+    "page_num": 25,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      156,
+      133,
+      677,
+      505
+    ]
+  },
+  {
+    "page_num": 27,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      155,
+      133,
+      673,
+      503
+    ]
+  },
+  {
+    "page_num": 27,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      769,
+      133,
+      1286,
+      506
+    ]
+  },
+  {
+    "page_num": 27,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      157,
+      540,
+      674,
+      907
+    ]
+  },
+  {
+    "page_num": 27,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      779,
+      538,
+      1284,
+      909
+    ]
+  },
+  {
+    "page_num": 27,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      165,
+      943,
+      674,
+      1318
+    ]
+  },
+  {
+    "page_num": 27,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      779,
+      941,
+      1284,
+      1316
+    ]
+  },
+  {
+    "page_num": 27,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      168,
+      1348,
+      675,
+      1718
+    ]
+  },
+  {
+    "page_num": 27,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      779,
+      1349,
+      1286,
+      1717
+    ]
+  },
+  {
+    "page_num": 29,
+    "postprocess_cls": "Figure",
+    "bounding_box": [
+      397,
+      132,
+      1040,
+      1725
+    ]
+  }
+]

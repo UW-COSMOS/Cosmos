@@ -3,11 +3,12 @@ import glob
 import configparser
 import requests
 import time
+import json
 import xmltodict
 import pandas as pd
 from zipfile import ZipFile
 from ..util.cosmos_client import submit_pdf_to_cosmos, poll_for_cosmos_output
-from ....src.healthcheck.annotation_metrics import AnnotationComparator, AnnotationBounds, AREA_BOUNDS
+from ....src.healthcheck.annotation_metrics import AnnotationComparator, AnnotationBounds, AREA_BOUNDS, DEFAULT_REGION_TYPES
 from .error_printer import DocumentExpectedCountPrinter, DocumentExpectedOverlapPrinter
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),'../..'))
@@ -31,8 +32,12 @@ class BaseAnnotationComparisonTest:
         # Read in both the manually annotated xml files and cosmos generated annotations
         # as dictionaries with a common schema
         manual_annotations = self._load_annotation_xml()
+        with open(self.pdf_path+'.json','w') as json_out:
+            data = [a.model_dump() for a in manual_annotations if a.postprocess_cls in DEFAULT_REGION_TYPES]
+            data.sort(key=lambda x: x['page_num'])
+            json_out.write(json.dumps(data, indent=2))
         
-        self.comparator = AnnotationComparator(pdf_name, ZipFile(self.cosmos_path), manual_annotations)
+        self.comparator = AnnotationComparator(ZipFile(self.cosmos_path), manual_annotations)
 
     def _get_config(self):
         """ Read test behavior configuration parameters from a config file """
