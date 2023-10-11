@@ -96,7 +96,7 @@ class BaseAnnotationComparisonTest:
             bounding_box= bounds
         )
 
-    def _load_annotation_xml(self):
+    def _load_annotation_xml(self) -> list[AnnotationBounds]:
         """ Read every annotation xml file from the directory corresponding to this test's pdf,
         assuming one xml file per article page
         """

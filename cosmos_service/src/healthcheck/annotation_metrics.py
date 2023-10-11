@@ -23,6 +23,11 @@ class AnnotationComparator:
         self.manual_annotations = manual_annotations
         self.cosmos_annotations = self._splice_equations_and_text_parquet()
 
+        for m1 in self.cosmos_annotations:
+            for m2 in self.cosmos_annotations:
+                if m1.overlap(m2) > 0 and m1.page_num == m2.page_num and m1.postprocess_cls == m2.postprocess_cls and m1 != m2:
+                    print(m1.bounding_box, m2.bounding_box, m1.overlap(m2))
+
 
     def _read_cosmos_parquet(self, parquet_file, bb_label='bounding_box'):
         """Extract the given parquet file from the cosmos output zip, then convert it to a dict"""
