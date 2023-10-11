@@ -7,7 +7,7 @@ ENV API_VERSION=$VERSION
 ENV GIT_HASH=$GIT_HASH
 
 WORKDIR /src/
-RUN pip3.8 install fastapi[all]==0.99.0 rocketry
+RUN pip3.8 install fastapi[all] apscheduler
 COPY cosmos_service/src/ /src/
 COPY htcosmos/make_parquet.py /src/util/
 

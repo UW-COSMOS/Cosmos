@@ -3,22 +3,21 @@ import glob
 import configparser
 import requests
 import time
+import json
 import xmltodict
 import pandas as pd
 from zipfile import ZipFile
 from ..util.cosmos_client import submit_pdf_to_cosmos, poll_for_cosmos_output
-from .page_metrics import *
+from ....src.healthcheck.annotation_metrics import AnnotationComparator, AnnotationBounds, AREA_BOUNDS, DEFAULT_REGION_TYPES
+from .error_printer import DocumentExpectedCountPrinter, DocumentExpectedOverlapPrinter
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),'../..'))
-
-AREA_BOUNDS=(0.9,1.1)
 
 class BaseAnnotationComparisonTest:
     pdf_name: str
     pdf_remote_url: str
+    comparator: AnnotationComparator
     config: configparser.ConfigParser
-    manual_annotations: dict
-    cosmos_annotations: dict
 
     def _setup(self, pdf_name, pdf_remote_url = None):
         self.pdf_name = pdf_name
@@ -32,8 +31,13 @@ class BaseAnnotationComparisonTest:
         
         # Read in both the manually annotated xml files and cosmos generated annotations
         # as dictionaries with a common schema
-        self.manual_annotations = self._load_annotation_xml()
-        self.cosmos_annotations = self._splice_equations_and_text_parquet()
+        manual_annotations = self._load_annotation_xml()
+        with open(self.pdf_path+'.json','w') as json_out:
+            data = [a.model_dump() for a in manual_annotations if a.postprocess_cls in DEFAULT_REGION_TYPES]
+            data.sort(key=lambda x: x['page_num'])
+            json_out.write(json.dumps(data, indent=2))
+        
+        self.comparator = AnnotationComparator(ZipFile(self.cosmos_path), manual_annotations)
 
     def _get_config(self):
         """ Read test behavior configuration parameters from a config file """
@@ -41,41 +45,42 @@ class BaseAnnotationComparisonTest:
         config.read(os.path.join(BASE_DIR, 'config.ini'))
         return config
     
-    def _get_pdf_path(self):
+    @property
+    def pdf_path(self):
         """ Get the expected location of the input PDF on disk """
         return os.path.join(BASE_DIR,'resources', 'pdfs', f'{self.pdf_name}.pdf')
 
-    def _get_cosmos_path(self):
+    @property
+    def cosmos_path(self):
         """ Get the expected location of the stored COSMOS output on disk """
         return os.path.join(BASE_DIR,'resources', 'cosmos_output', f'{self.pdf_name}.zip')
 
 
     def _get_pdf(self):
         """Confirm the existence of the source PDF, and download it if it doesn't exist"""
-        pdf_path = self._get_pdf_path()
-        if self.pdf_remote_url is None and not os.path.exists(pdf_path):
+        if self.pdf_remote_url is None and not os.path.exists(self.pdf_path):
             # PDF doesn't exist and no way to attain it, error out
-            raise ValueError(f"No PDF found at {pdf_path} and no remote URL given")
+            raise ValueError(f"No PDF found at {self.pdf_path} and no remote URL given")
         
-        elif os.path.exists(pdf_path) and (
+        elif os.path.exists(self.pdf_path) and (
                 self.pdf_remote_url is None or self.config['cache'].getboolean('CACHE_PDFS')):
             # PDF exists and config enables using a cached PDF
             return
         
         else:
-            with open(pdf_path, 'wb') as pdf_writer:
+            with open(self.pdf_path, 'wb') as pdf_writer:
                 pdf_writer.write(requests.get(self.pdf_remote_url).content)
 
     
     def _get_cosmos_output(self):
         """Confirm the existence of COSMOS output for the source PDF, and download it if it doesn't exist"""
-        cosmos_path = self._get_cosmos_path()
+        cosmos_path = self.cosmos_path
         if os.path.exists(cosmos_path) and self.config['cache'].getboolean('CACHE_COSMOS_OUTPUT'):
             # output already exists, return
             return
         
-        status_endpoint, results_endpoint = submit_pdf_to_cosmos(self._get_pdf_path())
-        poll_for_cosmos_output(status_endpoint, results_endpoint, self._get_cosmos_path())
+        status_endpoint, results_endpoint = submit_pdf_to_cosmos(self.pdf_path)
+        poll_for_cosmos_output(status_endpoint, results_endpoint, self.cosmos_path)
 
     def _cosmos_obj_from_manual_obj(self, page_num, obj):
         """Convert the extracted XML of a manual annotation to use the same keys/data types as 
@@ -85,13 +90,13 @@ class BaseAnnotationComparisonTest:
         bounds = [int(float(b)) 
             for b in [bbox['xmin'],bbox['ymin'],bbox['xmax'],bbox['ymax']]]
         
-        return {
-            'page_num': page_num,
-            'postprocess_cls': obj['name'],
-            'bounding_box': bounds
-        }
+        return AnnotationBounds(
+            page_num = page_num,
+            postprocess_cls = obj['name'],
+            bounding_box= bounds
+        )
 
-    def _load_annotation_xml(self):
+    def _load_annotation_xml(self) -> list[AnnotationBounds]:
         """ Read every annotation xml file from the directory corresponding to this test's pdf,
         assuming one xml file per article page
         """
@@ -107,72 +112,23 @@ class BaseAnnotationComparisonTest:
         return annotations
 
 
-    def _load_cosmos_parquet(self, parquet_file):
-        """Extract the given parquet file from the cosmos output zip, then convert it to a dict"""
-        with ZipFile(self._get_cosmos_path()) as zipf:
-            with zipf.open(parquet_file) as parquet_file:
-                df = pd.read_parquet(parquet_file)
-                return df.to_dict('records')
-    
-    def _load_equations_parquet(self, parquet_file):
-        equations_list = self._load_cosmos_parquet(parquet_file)
-        for equation_dict in equations_list:
-            equation_dict['postprocess_cls'] = 'Equation'
-            equation_dict['page_num'] = equation_dict.pop('equation_page')
-            equation_dict['bounding_box'] = equation_dict.pop('equation_bb')
-        
-        return equations_list
-
-    def _splice_equations_and_text_parquet(self):
-        # TODO this special-casing for equations is a bit clunky
-        cosmos_annotations = self._load_cosmos_parquet(f'{self.pdf_name}.parquet')
-        equation_annotations = self._load_equations_parquet(f'{self.pdf_name}_equations.parquet')
-
-        return [
-            *[c for c in cosmos_annotations if c['postprocess_cls'] != 'Equation'],
-            *equation_annotations
-        ]
-
-
-    def _get_labeled_item_per_page(self, annotations, label_class, page):
-        return [a for a in annotations if a['postprocess_cls'] == label_class and a['page_num'] == page]
-
-    def _compare_area_bounds_per_page(self, label_class, page):
-        manual_annotations = self._get_labeled_item_per_page(self.manual_annotations, label_class, page) 
-        cosmos_annotations = self._get_labeled_item_per_page(self.cosmos_annotations, label_class, page) 
-        return PageAnnotationComparison.from_bounds(manual_annotations, cosmos_annotations)
-
-    def compare_pages_for_label(self, label_class):
-        page_count = max(a['page_num'] for a in self.manual_annotations)
-        page_comparisons = [
-            self._compare_area_bounds_per_page(label_class, page_num)
-            for page_num in range(1, page_count+1) # 1-indexed
-        ]
-
-        return DocumentAnnotationComparison(page_comparisons)
-
     def check_count_per_page(self, label_class):
-        fc = self.compare_pages_for_label(label_class)
-        failures = fc.get_failures_per_page(
-            f"{label_class} count", fc.expected_counts, fc.cosmos_counts, equals_comparator)
+        comparison = self.comparator.compare_for_label(label_class)
+        failures = DocumentExpectedCountPrinter(f"{label_class} count", comparison.page_comparisons)
         assert failures.ok(), failures.error_message()
 
     def check_overlap_per_page(self, label_class):
-        fc = self.compare_pages_for_label(label_class)
-        failures = fc.get_failures_per_page(
-            f"{label_class} overlap percentage",
-            [AREA_BOUNDS for _ in fc.expected_counts],
-            fc.overlap_percents, 
-            in_bounds_comparator)
+        comparison = self.comparator.compare_for_label(label_class)
+        failures = DocumentExpectedOverlapPrinter(f"{label_class} overlap percentage", comparison.page_comparisons)
         assert failures.ok(), failures.error_message()
 
     def check_document_count(self, label_class):
-        fc = self.compare_pages_for_label(label_class)
-        assert fc.document_expected_count == fc.document_cosmos_count, \
-            f"Incorrect {label_class} count: expected={fc.document_expected_count} actual={fc.document_cosmos_count}"
+        comparison = self.comparator.compare_for_label(label_class)
+        assert comparison.count_in_bounds, \
+            f"Incorrect {label_class} count: expected={comparison.document_expected_count} actual={comparison.document_cosmos_count}"
 
     def check_document_overlap(self, label_class):
-        fc = self.compare_pages_for_label(label_class)
-        assert fc.document_overlap_percent >= AREA_BOUNDS[0] and fc.document_overlap_percent <= AREA_BOUNDS[1], \
-            f"Incorrect {label_class} bounds: expected={AREA_BOUNDS} actual={fc.document_overlap_percent}"
+        comparison = self.comparator.compare_for_label(label_class)
+        assert comparison.overlap_in_bounds, \
+            f"Incorrect {label_class} bounds: expected={AREA_BOUNDS} actual={comparison.document_overlap_percent}"
 

@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field, HttpUrl
-from pydantic.schema import Optional
-from typing import Tuple
+from typing import Tuple, Optional
 from enum import Enum
 
 # Response Models
@@ -20,10 +19,10 @@ class JobStatus(BaseModel):
 
 class CosmosJSONBaseResponse(BaseModel):
     pdf_name: Optional[str] = Field(description="Name of the PDF the item was extracted from")
-    page_num: Optional[str] = Field(description="Page in the PDF the item was extracted from")
+    page_num: Optional[int] = Field(description="Page in the PDF the item was extracted from")
     bounding_box: Optional[Tuple[int, int, int, int]] = Field(description="Coordinates of the extracted item on its page")
     detect_score: Optional[float] = Field(description="Initial confidence in the label given to the extracted item")
-    content: Optional[str] = Field(description="The extracted text")
+    content: Optional[str] = Field(None, description="The extracted text")
     postprocess_score: Optional[float] = Field(description="Confidence in the label given to the extracted item after post-processing")
 
 

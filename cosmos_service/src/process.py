@@ -12,7 +12,7 @@ from db.processing_session_types import CosmosSessionJob
 from db.db import SessionLocal
 import torch
 import glob
-from app import OOM_ERROR_EXIT_CODE
+from work_queue import OOM_ERROR_EXIT_CODE
 
 import shutil
 import argparse
