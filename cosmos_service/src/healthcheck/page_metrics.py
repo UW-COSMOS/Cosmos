@@ -1,4 +1,4 @@
-""" Classes for aggregating per-page an per-document comparisons """
+""" Classes for aggregating per-page and per-document comparisons between COSMOS output and a known baseline """
 
 from pydantic import BaseModel, Field, computed_field
 from typing import List
@@ -45,7 +45,7 @@ class PageAnnotationComparison(BaseModel):
         if self.expected_area == 0 and self.cosmos_area == 0:
             return 1
         elif self.expected_area == 0 and self.cosmos_area > 0:
-            return float('inf')
+            return 999 # 'inf' and 'NaN' are not JSON serializable
         else:
             return self.overlapping_area / float(self.expected_area)
 

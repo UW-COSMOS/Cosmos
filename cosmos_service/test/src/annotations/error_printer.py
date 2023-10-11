@@ -1,4 +1,7 @@
-""" Classes for aggregating per-page an per-document comparisons """
+""" 
+Utility classes for printing detailed information about discrepancies between 
+COSMOS and manual document annotations in pytest error output
+"""
 
 from dataclasses import dataclass
 from ....src.healthcheck.annotation_metrics import PageAnnotationComparison, AREA_BOUNDS

@@ -1,3 +1,7 @@
+""" 
+Classes for comparing COSMOS output with a known baseline. Used by both unit/integration tests
+and the health check endpoints
+"""
 from zipfile import ZipFile
 from .page_metrics import PageAnnotationComparison, DocumentAnnotationComparison, AnnotationBounds
 import pandas as pd
