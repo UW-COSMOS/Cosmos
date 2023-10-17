@@ -2,7 +2,7 @@ from retrieval.retriever import Retriever
 from elasticsearch_dsl import Search, Q
 from elasticsearch_dsl.connections import connections
 from elasticsearch import RequestsHttpConnection
-from elasticsearch_dsl import Document, Text, connections, Integer, Float, Keyword, Join
+from elasticsearch_dsl import Document, Text, connections, Integer, Float, Keyword, Join, Object as ESObject
 from elasticsearch.helpers import bulk
 import hashlib
 import pandas as pd
@@ -12,6 +12,35 @@ import logging
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+def get_section_page(pages):
+    if pages==[] or pages.size == 0:
+        return -1
+    elif isinstance(pages, float):
+        return pages
+    else:
+        return pages[0]
+
+def get_poly(bb):
+    poly = []
+    try:
+        if not isinstance(bb[0], float):
+            poly = get_bbox(bb[0])
+            for subbb in bb:
+                poly.append(get_bbox(subbb))
+        else:
+            poly =  get_bbox(bb)
+    except IndexError:
+        poly=[]
+    return poly
+
+def get_bbox(bb):
+    # TODO: would be nice to make these proper geojson-style shapes, but ES makes it hard
+    try:
+        poly=bb.tolist() # hack - don't bother trying to shape-ify; just flatten it so we can write it to ES
+    except IndexError:
+        poly = []
+    return poly
 
 def get_size(bbs):
     area = 0
@@ -84,7 +113,7 @@ class Entity(EntityObjectIndex):
         '''
         return hashlib.sha1(f"{self.canonical_id}{self.name}{self.description}{self.types}{self.aliases}{self.dataset_id}".encode('utf-8')).hexdigest()
 
-    def add_object(self, cls, dataset_id, content, header_content, context_from_text, area, detect_score, postprocess_score, pdf_name, img_path=None, commit=True):
+    def add_object(self, cls, dataset_id, content, header_content, context_from_text, bbox, area, detect_score, postprocess_score, pdf_name, img_path=None, commit=True):
         obj = Object(
             # required make sure the answer is stored in the same shard
             _routing=self.meta.id,
@@ -99,10 +128,12 @@ class Entity(EntityObjectIndex):
             header_content=header_content,
             full_content=combine_content([content, header_content, context_from_text]),
             local_content=combine_content([content, header_content]),
+            bbox=bbox,
             area=area,
             detect_score=detect_score,
             postprocess_score=postprocess_score,
             pdf_name=pdf_name,
+            page_num=page_num,
             img_path=img_path
         )
         if commit:
@@ -143,6 +174,8 @@ class Object(EntityObjectIndex):
     full_content = Text()
     local_content = Text()
     area = Integer()
+    bbox = ESObject()
+    page_num = Integer()
     pdf_name = Text(fields={'raw': Keyword()})
     img_pth = Text(fields={'raw': Keyword()})
 
@@ -378,9 +411,12 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['section_header'],
+                                           combine_contents([row['content'], row['section_header']]),
+                                           get_poly(row['obj_bbs']),
                                            get_size(row['obj_bbs']),
                                            row['detect_score'],
                                            row['postprocess_score'],
+                                           row['obj_pages'][0], # hack: only grab the first bbox's page IAR - 24.Feb.2021
                                            row['pdf_name'],
                                            commit=False))
                             if len(to_add) == 100:
@@ -400,10 +436,12 @@ class ElasticRetriever(Retriever):
                                 header_content=row['section_header'],
                                 context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                                 full_content=combine_contents([row['content'], row['section_header']]),
+                                bbox=get_poly(row['obj_bbs']),
                                 local_content=combine_contents([row['content'], row['section_header']]),
                                 area=get_size(row['obj_bbs']),
                                 detect_score=row['detect_score'],
                                 postprocess_score=row['postprocess_score'],
+                                page_num= get_section_page(row['obj_pages']), # hack: only grab the first bbox's page IAR - 24.Feb.2021
                                 pdf_name=row['pdf_name'],
                            ))
                     if len(to_add) == 500:
@@ -428,9 +466,12 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['caption_content'],
+                                           combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
+                                           get_poly(row['obj_bbs']),
                                            get_size(row['obj_bbs']),
                                            row['detect_score'],
                                            row['postprocess_score'],
+                                           row['obj_page'],
                                            row['pdf_name'],
                                            row['img_pth'],
                                            commit=False))
@@ -446,12 +487,14 @@ class ElasticRetriever(Retriever):
                         dataset_id=row['dataset_id'],
                         content=row['content'],
                         header_content=row['caption_content'],
-                        context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                         full_content=combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
+                        bbox=get_poly(row['obj_bbs']),
+                        context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                         local_content=combine_contents([row['content'], row['caption_content']]),
                         area=get_size(row['obj_bbs']),
                         detect_score=row['detect_score'],
                         postprocess_score=row['postprocess_score'],
+                        page_num=row['obj_page'],
                         pdf_name=row['pdf_name'],
                         img_pth=row['img_pth'],
                         ))
@@ -477,9 +520,12 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            row['caption_content'],
+                                           combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
+                                           get_poly(row['obj_bbs']),
                                            get_size(row['obj_bbs']),
                                            row['detect_score'],
                                            row['postprocess_score'],
+                                           row['obj_page'],
                                            row['pdf_name'],
                                            row['img_pth'],
                                            commit=False))
@@ -498,9 +544,11 @@ class ElasticRetriever(Retriever):
                            context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                            full_content=combine_contents([row['content'], row['caption_content'], row['context_from_text'] if 'context_from_text' in row else None]),
                            local_content=combine_contents([row['content'], row['caption_content']]),
+                           bbox=get_poly(row['obj_bbs']),
                            area=get_size(row['obj_bbs']),
                            detect_score=row['detect_score'],
                            postprocess_score=row['postprocess_score'],
+                           page_num=row['obj_page'],
                            pdf_name=row['pdf_name'],
                            img_pth=row['img_pth'],
                            ))
@@ -526,9 +574,11 @@ class ElasticRetriever(Retriever):
                                            row['dataset_id'],
                                            row['content'],
                                            None,
+                                           get_poly(row['equation_bb']),
                                            get_size(row['equation_bb']),
                                            row['detect_score'],
                                            row['postprocess_score'],
+                                           row['equation_page'],
                                            row['pdf_name'],
                                            row['img_pth'],
                                            commit=False))
@@ -547,9 +597,11 @@ class ElasticRetriever(Retriever):
                            context_from_text=row['context_from_text'] if 'context_from_text' in row else None,
                            full_content=combine_contents([row['content']]),
                            local_content=combine_contents([row['content']]),
+                           bbox=get_poly(row['equation_bb']),
                            area=get_size(row['equation_bb']),
                            detect_score=row['detect_score'],
                            postprocess_score=row['postprocess_score'],
+                           page_num=row['equation_page'],
                            pdf_name=row['pdf_name'],
                            img_pth=row['img_pth'],
                            ))
