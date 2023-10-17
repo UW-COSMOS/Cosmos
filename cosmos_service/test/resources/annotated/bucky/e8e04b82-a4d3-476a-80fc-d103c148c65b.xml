@@ -1,0 +1,64 @@
+<annotation>
+  <page>18</page>
+  <folder>COSMOS_annotated</folder>
+  <filename>e8e04b82-a4d3-476a-80fc-d103c148c65b.png</filename>
+  <size>
+    <width>1484</width>
+    <height>1920</height>
+  </size>
+  <object>
+    <name>Reference text</name>
+    <tag_id>89f65ae7-4fe6-41a9-b2c8-b54395ca6d27</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>261.5</xmin>
+      <ymin>792.0</ymin>
+      <xmax>1215.5</xmax>
+      <ymax>1020.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Reference text</name>
+    <tag_id>f49cc2d3-23bc-448e-9fb0-7fdf0eb85bf5</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>262.5</xmin>
+      <ymin>628.0</ymin>
+      <xmax>1307.5</xmax>
+      <ymax>763.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Reference text</name>
+    <tag_id>86c80621-d1fe-420c-8d85-db5dff2dbee8</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>290.5</xmin>
+      <ymin>551.0</ymin>
+      <xmax>1158.5</xmax>
+      <ymax>601.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Reference text</name>
+    <tag_id>e8adb72d-7cb3-469c-8f5f-e6266c73b4c7</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>262.5</xmin>
+      <ymin>416.0</ymin>
+      <xmax>1157.5</xmax>
+      <ymax>527.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Reference text</name>
+    <tag_id>c2910c6b-4047-41bf-afef-7befbf2ce45e</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>386.5</xmin>
+      <ymin>309.0</ymin>
+      <xmax>1175.5</xmax>
+      <ymax>388.0</ymax>
+    </bndbox>
+  </object>
+</annotation>

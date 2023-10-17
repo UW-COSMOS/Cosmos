@@ -1,0 +1,5 @@
+jupyter
+requests
+pyarrow
+pandas
+jupytext

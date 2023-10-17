@@ -5,6 +5,7 @@ Connected components algorithm for region proposal
 import numpy as np
 import math
 import os
+from PIL import Image
 
 
 def balance_margins(bmap, img):
@@ -77,7 +78,7 @@ def get_blank_rows(inp_np, blank_row_h):
         curr_bot = curr_top + blank_row_h
     return white_rows
 
-def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, min_col_width=50):
+def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, max_obj_count = 19):
     """
      Function that handles writing of object proposals
     :param img_p: Path to image
@@ -93,12 +94,7 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, mi
     img_np = np.array(img.convert('RGB'))
     bmap_np = np.array(img.convert('L').point(remove_fn, mode='1')).astype(np.uint8)
 
-    img_np_orig = img_np
     bmap_np, img_np, left_shave = balance_margins(bmap_np, img_np)
-    img_height = bmap_np.shape[0]
-    num_sections = int(img_height / blank_row_height)
-    blank_row = np.zeros((blank_row_height, bmap_np.shape[1]))
-    curr_top = 0
     white_rows = get_blank_rows(bmap_np, blank_row_height)
     rows = []
     for i in range(len(white_rows)-1):
@@ -107,7 +103,6 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, mi
         rows.append((bmap_np[curr:nxt, :], curr, nxt))
     block_coords = set()
     block_coords2 = {}
-    blocks_list = []
     obj_count = 0
     obj_heights = 0
     for row, top_coord, bottom_coord in rows:
@@ -128,23 +123,9 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, mi
                 white_cols = get_blank_rows(rowT, col_height)
                 num_cols = len(white_cols)
 
-            cols = []
             blocks = []
             coords = []
             col_idx = []
-            curr_white_cols = []
-            # columns are fundamentally larger than rows, so we can lowerbound their width
-            #for i in range(len(white_cols)-1):
-            #    curr = white_cols[i]
-            #    nxt = white_cols[i+1]
-            #    assert nxt - curr - col_height > 0
-            #    if nxt - curr - col_height > min_col_width:
-            #        curr_white_cols.append(curr)
-            #    else:
-            #        continue
-            #curr_white_cols.append(white_cols[-1])
-            #white_cols = curr_white_cols
-
 
             for i in range(len(white_cols)-1):
                 curr = white_cols[i]
@@ -189,8 +170,9 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, mi
                     block_coords2[key] = [val]
 
     if obj_count > 0:
-        if obj_count > 19:
-            block_coords = get_proposals(img, white_thresh=white_thresh, blank_row_height=5 + blank_row_height, filter_thres=filter_thres)
+        if obj_count > max_obj_count:
+            block_coords = get_proposals(
+                img, white_thresh=white_thresh, blank_row_height=5 + blank_row_height, filter_thres=filter_thres, max_obj_count=max_obj_count)
         else:
             for key in block_coords2:
                 coords_list = block_coords2[key]

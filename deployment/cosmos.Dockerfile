@@ -1,6 +1,8 @@
-FROM nvidia/cuda:10.1-devel-ubuntu18.04
+FROM nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu22.04
 
 RUN apt-get update
+ARG DEBIAN_FRONTEND="noninteractive"
+ENV TZ=America/New_York
 RUN apt-get install -y software-properties-common
 RUN add-apt-repository ppa:deadsnakes/ppa
 
@@ -18,6 +20,7 @@ RUN apt-get install -y \
     build-essential \
     libpython3.8-dev \
     python3.8 \
+    python3.8-distutils \
     python3-pip
 
 RUN python3.8 -m pip install -U pip
@@ -27,7 +30,7 @@ RUN DEBIAN_FRONTEND="noninteractive" TZ=America/New_York apt-get install -y pyth
 
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN python3.8 -m pip install torch==1.6.0+cu101 torchvision==0.7.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+RUN python3.8 -m pip install torch torchvision
 
 # Need this first for opencv
 RUN python3.8 -m pip install scikit-build
