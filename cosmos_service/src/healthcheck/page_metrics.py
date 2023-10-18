@@ -13,7 +13,7 @@ class AnnotationBounds(BaseModel):
         (x0, y0, x1, y1) = self.bounding_box
         return (x1 - x0) * (y1 - y0)
 
-    def overlap(self, other: 'AnnotationBounds'):
+    def intersection(self, other: 'AnnotationBounds'):
         """ Get the intersecting area of two rectangles """
         # via https://stackoverflow.com/a/27162334
 
@@ -24,6 +24,16 @@ class AnnotationBounds(BaseModel):
         dy = min(my_y1, their_y1) - max(my_y0, their_y0)
 
         return dx * dy if dx > 0 and dy > 0 else 0
+
+
+    def union(self, other: 'AnnotationBounds'):
+        """ Get the union area of two rectangles """
+        return self.area() + other.area() - self.intersection(other)
+
+
+    def intersection_over_union(self, other: 'AnnotationBounds'):
+        """ Get the intersection-over-union of two rectangles """
+        return self.intersection(other) / self.union(other)
 
 class PageAnnotationComparison(BaseModel):
 
@@ -59,6 +69,16 @@ class PageAnnotationComparison(BaseModel):
     def overlap_in_bounds(self) -> bool:
         return self.overlap_percent >= 0.9 and self.overlap_percent <= 1.1
 
+
+    @staticmethod
+    def _average_iou(expected_bounds: List[AnnotationBounds], actual_bounds: List[AnnotationBounds]):
+        if len(expected_bounds) == 0 or len(actual_bounds) == 0:
+            return 0
+        # For each expected bound, find the best i-o-u ratio from among the cosmos bounds on the same page
+        best_iou_per_expected_bound = [max(e.intersection_over_union(a) for a in actual_bounds) for e in expected_bounds]
+        # return the average of all the best i-o-us on the page
+        return sum(best_iou_per_expected_bound) / len(expected_bounds)
+
     @staticmethod
     def from_bounds(page:int, expected_bounds: List[AnnotationBounds], actual_bounds: List[AnnotationBounds]):
         return PageAnnotationComparison(
@@ -67,7 +87,7 @@ class PageAnnotationComparison(BaseModel):
             cosmos_count=len(actual_bounds),
             expected_area=sum(e.area() for e in expected_bounds),
             cosmos_area=sum(a.area() for a in actual_bounds),
-            overlapping_area = sum(e.overlap(a) for e in expected_bounds for a in actual_bounds)
+            overlapping_area = sum(e.intersection(a) for e in expected_bounds for a in actual_bounds)
         )
 
 class DocumentAnnotationComparison(BaseModel):

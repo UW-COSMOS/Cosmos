@@ -25,8 +25,8 @@ class AnnotationComparator:
 
         for m1 in self.cosmos_annotations:
             for m2 in self.cosmos_annotations:
-                if m1.overlap(m2) > 0 and m1.page_num == m2.page_num and m1.postprocess_cls == m2.postprocess_cls and m1 != m2:
-                    print(m1.bounding_box, m2.bounding_box, m1.overlap(m2))
+                if m1.intersection(m2) > 0 and m1.page_num == m2.page_num and m1.postprocess_cls == m2.postprocess_cls and m1 != m2:
+                    print(m1.bounding_box, m2.bounding_box, m1.intersection(m2))
 
 
     def _read_cosmos_parquet(self, parquet_file, bb_label='bounding_box'):
