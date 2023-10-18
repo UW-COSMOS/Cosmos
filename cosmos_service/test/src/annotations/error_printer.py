@@ -18,8 +18,8 @@ class PageExpectedValuePrinter:
     def print_count_mismatch(self) -> str:
         return f"page {self.comparison.page}: expected={self.comparison.expected_count} actual={self.comparison.cosmos_count}"
 
-    def print_overlap_mismatch(self) -> str:
-        return f"page {self.comparison.page}: expected={AREA_BOUNDS} actual={self.comparison.overlap_percent}"
+    def print_iou_mismatch(self) -> str:
+        return f"page {self.comparison.page}: expected={AREA_BOUNDS} actual={self.comparison.average_iou}"
 
 class DocumentExpectedCountPrinter:
     """ Utility class for displaying all pages in a document for which the annotation count falls outside of the expected range """
@@ -36,17 +36,17 @@ class DocumentExpectedCountPrinter:
     def error_message(self):
         return f"Incorrect {self.comparison_type} on {len(self.page_values)} page(s)\n" + "\n".join([m.print_count_mismatch() for m in self.page_values])
 
-class DocumentExpectedOverlapPrinter:
+class DocumentIntersectionOverUnionPrinter:
     """ Utility class for displaying all pages in a document for which the annotation count falls outside of the expected range """
     page_values: list[PageExpectedValuePrinter]
     comparison_type: str
 
     def __init__(self, comparison_type, page_values: list[PageAnnotationComparison]):
-        self.page_values = [PageExpectedValuePrinter(p) for p in page_values if not p.overlap_in_bounds]
+        self.page_values = [PageExpectedValuePrinter(p) for p in page_values if not p.iou_in_bounds]
         self.comparison_type = comparison_type
 
     def ok(self):
         return len(self.page_values) == 0
     
     def error_message(self):
-        return f"Incorrect {self.comparison_type} on {len(self.page_values)} page(s)\n" + "\n".join([m.print_overlap_mismatch() for m in self.page_values])
+        return f"Incorrect {self.comparison_type} on {len(self.page_values)} page(s)\n" + "\n".join([m.print_iou_mismatch() for m in self.page_values])

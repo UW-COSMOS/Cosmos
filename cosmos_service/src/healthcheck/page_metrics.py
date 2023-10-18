@@ -43,21 +43,8 @@ class PageAnnotationComparison(BaseModel):
 
     expected_area: int = Field(description="Expected area of regions with the given label on the page")
     cosmos_area: int = Field(description="Area of regions with the given label identified by COSMOS on the page")
-    overlapping_area: int = Field(description="Overlapping area between expected regions and COSMOS-identified regions")
-
-    @computed_field(description="Percentage of the expected area identified by COSMOS")
-    @property
-    def overlap_percent(self) -> float:
-        """ The regions marked by cosmos that coincide with the expected regions, 
-        compared to the total expected area 
-        """
-        # avoid dividing by zero
-        if self.expected_area == 0 and self.cosmos_area == 0:
-            return 1
-        elif self.expected_area == 0 and self.cosmos_area > 0:
-            return 999 # 'inf' and 'NaN' are not JSON serializable
-        else:
-            return self.overlapping_area / float(self.expected_area)
+    average_iou: float = Field(description="Average intersection-over-union for all expected regions on the page")
+    max_ious: List[float] = Field(exclude=True) # for internal use only
 
     @computed_field(description="Whether the correct count of regions was identified by COSMOS")
     @property
@@ -66,18 +53,23 @@ class PageAnnotationComparison(BaseModel):
 
     @computed_field(description=f"Whether over 90% of the expected area was identified by COSMOS")
     @property
-    def overlap_in_bounds(self) -> bool:
-        return self.overlap_percent >= 0.9 and self.overlap_percent <= 1.1
+    def iou_in_bounds(self) -> bool:
+        return self.average_iou >= 0.9
 
 
     @staticmethod
     def _average_iou(expected_bounds: List[AnnotationBounds], actual_bounds: List[AnnotationBounds]):
-        if len(expected_bounds) == 0 or len(actual_bounds) == 0:
-            return 0
+        if len(expected_bounds) == 0 and len(actual_bounds) == 0:
+            return {'max_ious': [], 'average_iou': 1}
+        elif len(expected_bounds) == 0 or len(actual_bounds) == 0:
+            return {'max_ious': [0 for _ in expected_bounds], 'average_iou': 0}
         # For each expected bound, find the best i-o-u ratio from among the cosmos bounds on the same page
-        best_iou_per_expected_bound = [max(e.intersection_over_union(a) for a in actual_bounds) for e in expected_bounds]
+        max_ious = [max(e.intersection_over_union(a) for a in actual_bounds) for e in expected_bounds]
         # return the average of all the best i-o-us on the page
-        return sum(best_iou_per_expected_bound) / len(expected_bounds)
+        return {
+            'max_ious': max_ious,
+            'average_iou': sum(max_ious) / len(expected_bounds)
+        }
 
     @staticmethod
     def from_bounds(page:int, expected_bounds: List[AnnotationBounds], actual_bounds: List[AnnotationBounds]):
@@ -87,7 +79,7 @@ class PageAnnotationComparison(BaseModel):
             cosmos_count=len(actual_bounds),
             expected_area=sum(e.area() for e in expected_bounds),
             cosmos_area=sum(a.area() for a in actual_bounds),
-            overlapping_area = sum(e.intersection(a) for e in expected_bounds for a in actual_bounds)
+            **PageAnnotationComparison._average_iou(expected_bounds, actual_bounds)
         )
 
 class DocumentAnnotationComparison(BaseModel):
@@ -105,19 +97,11 @@ class DocumentAnnotationComparison(BaseModel):
     def document_cosmos_count(self) -> int:
         return sum([p.cosmos_count for p in self.page_comparisons])
 
-    @computed_field(description="The percentage of the expected area of regions with the given label identified by COSMOS")
+    @computed_field(description="The average of every intersection-over-union for the expected regions in the document")
     @property
-    def document_overlap_percent(self) -> float:
-        cosmos_area_per_page = [p.cosmos_area for p in self.page_comparisons]
-        expected_area_per_page = [p.expected_area for p in self.page_comparisons]
-        overlap_area_per_page = [p.overlapping_area for p in self.page_comparisons]
-
-        if sum(cosmos_area_per_page) == 0 and sum(expected_area_per_page) == 0:
-            return 1
-        elif sum(expected_area_per_page) == 0 and sum(cosmos_area_per_page) > 0:
-            return float('inf')
-        else:
-            return sum(overlap_area_per_page) / sum(expected_area_per_page)
+    def document_average_iou(self) -> float:
+        all_ious = sum([p.max_ious for p in self.page_comparisons], [])
+        return sum(all_ious) / len(all_ious)
 
     @computed_field(description="Whether the correct count of regions was identified by COSMOS")
     @property
@@ -126,5 +110,5 @@ class DocumentAnnotationComparison(BaseModel):
 
     @computed_field(description=f"Whether over 90% of the expected area was identified by COSMOS")
     @property
-    def overlap_in_bounds(self) -> bool:
-        return self.document_overlap_percent >= 0.9 and self.document_overlap_percent <= 1.1
+    def iou_in_bounds(self) -> bool:
+        return self.document_average_iou >= 0.9

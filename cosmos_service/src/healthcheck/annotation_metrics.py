@@ -7,7 +7,7 @@ from .page_metrics import PageAnnotationComparison, DocumentAnnotationComparison
 import pandas as pd
 from typing import List
 
-AREA_BOUNDS=(0.9,1.1)
+AREA_BOUNDS=(0.9,1.0)
 DEFAULT_REGION_TYPES = ["Figure", "Equation", "Table"]
 
 
