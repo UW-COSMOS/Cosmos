@@ -9,7 +9,7 @@ import pandas as pd
 from zipfile import ZipFile
 from ..util.cosmos_client import submit_pdf_to_cosmos, poll_for_cosmos_output
 from ....src.healthcheck.annotation_metrics import AnnotationComparator, AnnotationBounds, AREA_BOUNDS, DEFAULT_REGION_TYPES
-from .error_printer import DocumentExpectedCountPrinter, DocumentExpectedOverlapPrinter
+from .error_printer import DocumentExpectedCountPrinter, DocumentAveragePrecisionPrinter
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),'../..'))
 
@@ -119,7 +119,7 @@ class BaseAnnotationComparisonTest:
 
     def check_overlap_per_page(self, label_class):
         comparison = self.comparator.compare_for_label(label_class)
-        failures = DocumentExpectedOverlapPrinter(f"{label_class} overlap percentage", comparison.page_comparisons)
+        failures = DocumentAveragePrecisionPrinter(f"{label_class} average precision", comparison.page_comparisons)
         assert failures.ok(), failures.error_message()
 
     def check_document_count(self, label_class):
@@ -129,6 +129,6 @@ class BaseAnnotationComparisonTest:
 
     def check_document_overlap(self, label_class):
         comparison = self.comparator.compare_for_label(label_class)
-        assert comparison.overlap_in_bounds, \
-            f"Incorrect {label_class} bounds: expected={AREA_BOUNDS} actual={comparison.document_overlap_percent}"
+        assert comparison.average_precision > AREA_BOUNDS[0], \
+            f"Incorrect {label_class} average precision: expected={AREA_BOUNDS} actual={comparison.average_precision}"
 

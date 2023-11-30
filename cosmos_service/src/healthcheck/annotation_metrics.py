@@ -7,7 +7,7 @@ from .page_metrics import PageAnnotationComparison, DocumentAnnotationComparison
 import pandas as pd
 from typing import List
 
-AREA_BOUNDS=(0.9,1.1)
+AREA_BOUNDS=(0.9,1.0)
 DEFAULT_REGION_TYPES = ["Figure", "Equation", "Table"]
 
 
@@ -25,8 +25,8 @@ class AnnotationComparator:
 
         for m1 in self.cosmos_annotations:
             for m2 in self.cosmos_annotations:
-                if m1.overlap(m2) > 0 and m1.page_num == m2.page_num and m1.postprocess_cls == m2.postprocess_cls and m1 != m2:
-                    print(m1.bounding_box, m2.bounding_box, m1.overlap(m2))
+                if m1.intersection(m2) > 0 and m1.page_num == m2.page_num and m1.postprocess_cls == m2.postprocess_cls and m1 != m2:
+                    print(m1.bounding_box, m2.bounding_box, m1.intersection(m2))
 
 
     def _read_cosmos_parquet(self, parquet_file, bb_label='bounding_box'):
@@ -61,7 +61,7 @@ class AnnotationComparator:
             *[c for c in cosmos_annotations if c['postprocess_cls'] != 'Equation'],
             *equation_annotations
         ]
-        return [AnnotationBounds.parse_obj(sb) for sb in spliced_bounds]
+        return [AnnotationBounds.model_validate(sb) for sb in spliced_bounds]
 
 
     def _get_labeled_item_per_page(self, annotations: List[AnnotationBounds], label_class: str, page: int):
@@ -78,5 +78,5 @@ class AnnotationComparator:
             self._compare_area_bounds_per_page(label_class, page_num)
             for page_num in range(1, page_count+1) # 1-indexed
         ]
-
-        return DocumentAnnotationComparison(page_comparisons=page_comparisons, label_class=label_class)
+        non_empty_pages = [p for p in page_comparisons if p.expected_count > 0 or p.cosmos_count > 0]
+        return DocumentAnnotationComparison(page_comparisons=non_empty_pages, label_class=label_class)
