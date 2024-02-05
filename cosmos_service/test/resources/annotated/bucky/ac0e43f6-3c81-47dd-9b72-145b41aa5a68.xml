@@ -1,0 +1,163 @@
+<annotation>
+  <page>12</page>
+  <folder>COSMOS_annotated</folder>
+  <filename>ac0e43f6-3c81-47dd-9b72-145b41aa5a68.png</filename>
+  <size>
+    <width>1484</width>
+    <height>1920</height>
+  </size>
+  <object>
+    <name>Section Header</name>
+    <tag_id>25d24121-f3a7-4ac2-bd8a-418cff0cd161</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>325.5</xmin>
+      <ymin>306.0</ymin>
+      <xmax>886.5</xmax>
+      <ymax>331.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Section Header</name>
+    <tag_id>b4a5d0b6-ffac-443c-8fde-3ccd48030b78</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>323.5</xmin>
+      <ymin>762.0</ymin>
+      <xmax>601.5</xmax>
+      <ymax>787.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>e4d13d15-0d94-4fde-b5b2-be3d36b35e4f</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>324.5</xmin>
+      <ymin>353.0</ymin>
+      <xmax>1195.5</xmax>
+      <ymax>725.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>d8be9739-2ba6-4fcf-b178-9ad5ecb15190</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>324.5</xmin>
+      <ymin>807.0</ymin>
+      <xmax>1159.5</xmax>
+      <ymax>862.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>90c4788f-ff74-43d3-8733-ffb350794adf</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>325.5</xmin>
+      <ymin>896.0</ymin>
+      <xmax>1158.5</xmax>
+      <ymax>984.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>44e5d041-3672-4a9f-8897-f63f04c96d74</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>360.5</xmin>
+      <ymin>1001.0</ymin>
+      <xmax>540.5</xmax>
+      <ymax>1027.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>15674eff-25fa-4989-b77c-83ff22189e0d</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>360.5</xmin>
+      <ymin>1050.0</ymin>
+      <xmax>565.5</xmax>
+      <ymax>1076.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>ceefc678-6d9e-47b0-a8db-ceae8cf36323</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>323.5</xmin>
+      <ymin>1112.0</ymin>
+      <xmax>1159.5</xmax>
+      <ymax>1221.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>dabacb44-11a9-4ec0-ae40-d13a08b89d66</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>360.5</xmin>
+      <ymin>1247.0</ymin>
+      <xmax>950.5</xmax>
+      <ymax>1271.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>c7231a77-2f62-4c53-a4df-94b131c439bf</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>360.5</xmin>
+      <ymin>1293.0</ymin>
+      <xmax>764.5</xmax>
+      <ymax>1318.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>0fa49304-ddfe-48f6-9cc5-60eb88c624b9</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>325.5</xmin>
+      <ymin>1356.0</ymin>
+      <xmax>1158.5</xmax>
+      <ymax>1495.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>957626d4-240c-4949-9335-a37e85a093b6</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>361.5</xmin>
+      <ymin>1517.0</ymin>
+      <xmax>563.5</xmax>
+      <ymax>1543.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>6ac0fbe9-a633-4785-9ccf-0bd05f448f55</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>361.5</xmin>
+      <ymin>1566.0</ymin>
+      <xmax>584.5</xmax>
+      <ymax>1591.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Body Text</name>
+    <tag_id>657eb983-22c9-452f-85bd-fcfe90ec4b9f</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>360.5</xmin>
+      <ymin>1613.0</ymin>
+      <xmax>777.5</xmax>
+      <ymax>1637.0</ymax>
+    </bndbox>
+  </object>
+</annotation>

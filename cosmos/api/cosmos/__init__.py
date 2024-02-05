@@ -42,9 +42,9 @@ def create_app():
         api_version=os.environ['API_VERSION']
     else:
         api_version='v2_beta'
-    app.register_blueprint(retrieval.bp, url_prefix=f"{prefix}/{api_version}")
-    app.register_blueprint(retrieval.bp, url_prefix='/sets/xdd-covid-19/api') # for backward compatibility
-    app.register_blueprint(retrieval.bp, url_prefix=f'/sets/xdd-covid-19/api/{api_version}') # for backward compatibility
+    app.register_blueprint(retrieval.bp, url_prefix=f"{prefix}/{api_version}", name="prefix")
+    app.register_blueprint(retrieval.bp, url_prefix='/sets/xdd-covid-19/api', name="covid") # for backward compatibility
+    app.register_blueprint(retrieval.bp, url_prefix=f'/sets/xdd-covid-19/api/{api_version}', name="covid-versioned") # for backward compatibility
 
     #from . import extraction
     #app.register_blueprint(extraction.bp)

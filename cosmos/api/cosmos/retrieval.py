@@ -3,7 +3,7 @@ from flask import (
 )
 from functools import wraps
 import logging
-import os
+import os, sys
 import requests
 import base64
 import json
@@ -55,6 +55,11 @@ if "IMG_TYPE" in os.environ:
     IMG_TYPE=os.environ['IMG_TYPE']
 else:
     IMG_TYPE="PNG"
+
+ANNOTATIONS_ALLOWED = {"note" : "text",
+"classification" : "boolean",
+"proposal" : "boolean",
+"annotated_cls" : "text"}
 
 # NOTE: docid/doi parameters undocumented intentionally for obscurity IAR - 28.Jan.2021
 parameter_defs = {
@@ -242,7 +247,6 @@ def route_help(endpoint):
 def page(page_id):
     current_app.logger.info("Calling page_retriever.search()")
     resp = current_app.page_retriever.search(page_id)
-    current_app.logger.info("Called page_retriever.search()")
     return jsonify({'results' : resp})
 
 @bp.route('/search/tags/all')
@@ -415,6 +419,7 @@ def search():
         return {'page': 0, 'objects': [], 'v': VERSION, 'license' : LICENSE}
     image_dir = '/data/images'
     bibjsons = get_bibjsons([i['pdf_name'].replace(".pdf", "")  for i in results])
+    results = [i for i in results if (i['pdf_name'].replace(".pdf", "") in bibjsons and bibjsons[i['pdf_name'].replace(".pdf", "")] != {})] # cleaned results list
     for result in results:
         result['bibjson'] = bibjsons[result['pdf_name'].replace(".pdf", "")]
         for child in result['children']:
@@ -428,6 +433,7 @@ def search():
 
 @bp.route('/object/', defaults={'objid' : None}, endpoint='object')
 @bp.route('/object', defaults={'objid' : None}, endpoint='object')
+@bp.route('search/object/<objid>')
 @bp.route('/object/<objid>', endpoint='object')
 @require_apikey
 def object(objid):
@@ -474,6 +480,54 @@ def object(objid):
 def statistics():
     return jsonify({'n_pages': current_app.retriever.count("page", dataset_id=DATASET_ID), 'n_objects': current_app.retriever.count("eo-site", dataset_id=DATASET_ID), 'n_pdfs': current_app.retriever.count("fulldocument", dataset_id=DATASET_ID)})
 
+@bp.route('/search/detected_object/annotate', methods=['POST', 'GET'])
+def object_annotate():
+    '''
+    '''
+    if request.method == "GET":
+        return jsonify(ANNOTATIONS_ALLOWED)
+
+    if request.method == "POST":
+        data = request.get_json(force=True)
+        current_app.logger.warning(f"{data}")
+
+        object_id = data.get("object_id", None)
+        pdf_name = data.get("pdf_name", None)
+        page_num = int(data.get('page_num', -1))
+#        try:
+#            print(data.get("coords"))
+#            x, y = make_tuple(data.get("coords"))
+#        except Exception as err:
+#            print(err)
+#            print(sys.exc_info())
+#            x = None
+#            y = None
+
+        if object_id is None and (x is None or y is None or pdf_name is None or page_num==-1):
+            abort(400)
+
+        current_app.logger.warning(f"We're looking to change {object_id}")
+        current_app.logger.warning(f"Specifically, {data.items()}")
+
+
+        success = False
+        for k, v in data.items():
+            if k not in ANNOTATIONS_ALLOWED.keys(): continue
+            atype = ANNOTATIONS_ALLOWED[k]
+            if atype == "text" :
+                pass
+            elif atype == "boolean":
+                if str(v).lower() == "true" :
+                    v = True
+                elif str(v).lower() == "false" :
+                    v = False
+            try:
+                resp = current_app.page_retriever.detected_object_annotate(object_id, k, v)
+                success=True
+            except:
+                current_app.logger.warning(f"Could not update object {object_id} with {k} : {v}!")
+                current_app.logger.warning(f"{sys.exc_info()}")
+        return json.dumps({'success':success}), 200, {'ContentType':'application/json'}
 
 @bp.route('/entity', endpoint='entity', methods=['GET'])
 @require_apikey
@@ -483,3 +537,4 @@ def entity():
 @bp.errorhandler(401)
 def error_401(error):
     return jsonify({'error': "Unauthorized to access this route.", 'v' : VERSION})
+

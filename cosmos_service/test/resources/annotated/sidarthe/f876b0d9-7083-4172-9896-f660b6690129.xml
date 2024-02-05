@@ -1,0 +1,42 @@
+<annotation>
+  <folder>COSMOS_annotated</folder>
+  <page>24</page>
+  <filename>f876b0d9-7083-4172-9896-f660b6690129.png</filename>
+  <size>
+    <width>1445</width>
+    <height>1920</height>
+  </size>
+  <object>
+    <name>Figure Caption</name>
+    <tag_id>3fcd1709-7a46-45c3-9c45-2fe3eeed970e</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>99.0</xmin>
+      <ymin>132.0</ymin>
+      <xmax>1352.0</xmax>
+      <ymax>259.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Page Header</name>
+    <tag_id>e2be50dd-6bbe-43cc-8622-18f9b1e0e0bb</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>89.0</xmin>
+      <ymin>49.0</ymin>
+      <xmax>1359.0</xmax>
+      <ymax>108.0</ymax>
+    </bndbox>
+  </object>
+  <object>
+    <name>Page Footer</name>
+    <tag_id>3f3b5cbe-bacd-4315-8562-4fa6468990fe</tag_id>
+    <linked_to></linked_to>
+    <bndbox>
+      <xmin>962.0</xmin>
+      <ymin>1842.0</ymin>
+      <xmax>1350.0</xmax>
+      <ymax>1860.0</ymax>
+    </bndbox>
+  </object>
+</annotation>
