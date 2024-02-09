@@ -288,7 +288,7 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         # get proposed coords for use by the inference model
         if make_proposals:
             tlog(f'{page_name} get proposals')
-            proposals = get_proposals(img)
+            proposals = get_lp_proposals(img, 0.5)
             # tlog(f'Cosmos proposals:')
             # tlog(proposals)
             lp_proposals = get_lp_proposals(img, 0.5)
