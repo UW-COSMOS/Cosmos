@@ -216,75 +216,18 @@ def get_lp_proposals(img, lp_threshold):
                                     '/weights/lp_genseg_improvement_model_final.pth',
                                     extra_config=["MODEL.ROI_HEADS.SCORE_THRESH_TEST", lp_threshold],
                                     label_map={0: "text", 1: "title", 2: "list", 3: "table", 4: "figure", 5: "Equation"})
-    color_map_publaynet = {
-	'text': 'red',
-	'title': 'blue',
-	'list': 'green',
-	'table': 'purple',
-	'figure': 'pink',
-	'Equation': 'orange',
-	}
-
-    color_map_mfd = {
-	'equation': 'blue',
-	}
 
     image = np.array(img)
     layout_predicted = model.detect(image)
 
-    text_blocks = lp.Layout([b for b in layout_predicted if b.type=='text'])
-    figure_blocks = lp.Layout([b for b in layout_predicted if b.type=='figure'])
-    title_blocks = lp.Layout([b for b in layout_predicted if b.type=='title'])
-    table_blocks = lp.Layout([b for b in layout_predicted if b.type=='table'])
-    list_blocks = lp.Layout([b for b in layout_predicted if b.type=='list'])
-    equation_blocks = lp.Layout([b for b in layout_predicted if b.type=='Equation'])
-
-    text_blocks = clean_text_blocks(image, text_blocks)
-
-    text_block_list = create_text_block_list(text_blocks)
-  
-    text_block_list = iterative_merge(text_block_list)
-    figure_blocks = iterative_merge(figure_blocks)
-    title_blocks = iterative_merge(title_blocks)
-    table_blocks = iterative_merge(table_blocks)
-    list_blocks = iterative_merge(list_blocks)
-    equation_blocks = iterative_merge(equation_blocks)
-
-    layout_predicted_text_blocks = lp.elements.layout.Layout(blocks=text_block_list)
-    text_blocks = lp.Layout([b for b in layout_predicted_text_blocks if b.type=='text'])
-
-    blocks = []
-    for i in range(len(text_blocks)):
-        blocks.append(text_blocks[i])
-
-    for i in range(len(title_blocks)):
-        blocks.append(title_blocks[i])
-
-    for i in range(len(list_blocks)):
-        blocks.append(list_blocks[i])
-
-    for i in range(len(table_blocks)):
-        blocks.append(table_blocks[i])
-
-    for i in range(len(figure_blocks)):
-        blocks.append(figure_blocks[i])
-
-    for i in range(len(equation_blocks)):
-        blocks.append(equation_blocks[i])
+    equation_blocks = iterative_merge(lp.Layout([b for b in layout_predicted if b.type=='Equation']))
 
     coord_list = []
-    for bbox in blocks:
+    for bbox in equation_blocks:
         coord_set = (bbox.block.x_1, bbox.block.y_1, bbox.block.x_2, bbox.block.y_2)
         coord_list.append(coord_set)
 
-
-    cropped_coords_list = []
-    for bb in coord_list:
-        cropped_img = img.crop(bb)
-
-        cropped_coords_list.extend([offset(bb2, bb[0], bb[1]) for bb2 in get_proposals(cropped_img)])
-
-    return cropped_coords_list
+    return coord_list
 
 def clean_text_blocks(image, text_blocks):
     h, w = image.shape[:2]

@@ -288,14 +288,14 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         # get proposed coords for use by the inference model
         if make_proposals:
             tlog(f'{page_name} get proposals')
-            proposals = get_lp_proposals(img, 0.5)
+            proposals = get_proposals(img)
             # tlog(f'Cosmos proposals:')
             # tlog(proposals)
-            lp_proposals = get_lp_proposals(img, 0.5)
+            lp_equation_proposals = get_lp_proposals(img, 0.5)
             # tlog(f'LayoutParser proposals:')
             # tlog(lp_proposals)
             #obj['proposals'] = proposals
-            obj['proposals'] = lp_proposals
+            obj['proposals'] = proposals
             if just_propose:
                 pkl_path = f'{page_info_dir}/{image_name}.pkl'
                 #tlog_flush(f'writing {page_name} proposals to {pkl_path}')
@@ -312,12 +312,13 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         tlog(f'   proposals: {proposals}')
 
         #detect_obj = {'id': model_id, 'proposals': proposals, 'img': padded_img}
-        detect_obj = {'id': model_id, 'proposals': lp_proposals, 'img': padded_img}
+        detect_obj = {'id': model_id, 'proposals': proposals, 'img': padded_img}
         detected_objs, softmax_detected_objs = run_inference(model, [detect_obj], model_config, device_str, session)
 
         tlog(f'{page_name} inference complete')
 
         detected = detected_objs[model_id]
+        tlog(f'   detected objects: {detected}')
         softmax = softmax_detected_objs[model_id]
 
         # save results and clear any lingering post-processing data
