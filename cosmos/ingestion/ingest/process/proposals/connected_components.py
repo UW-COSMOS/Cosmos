@@ -204,6 +204,8 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
     block_coords = list(block_coords)
     return block_coords
 
+def offset(bounding_box, offset_x, offset_y):
+    return (bounding_box[0] + offset_x, bounding_box[1] + offset_y, bounding_box[2] + offset_x, bounding_box[3] + offset_y)
 
 def get_lp_proposals(img, lp_threshold):
     """
@@ -279,9 +281,10 @@ def get_lp_proposals(img, lp_threshold):
     cropped_coords_list = []
     for bb in coord_list:
         cropped_img = img.crop(bb)
-        cropped_coords_list.extend(get_proposals(cropped_img))
 
-    return coord_list
+        cropped_coords_list.extend([offset(bb2, bb[0], bb[1]) for bb2 in get_proposals(cropped_img)])
+
+    return cropped_coords_list
 
 def clean_text_blocks(image, text_blocks):
     h, w = image.shape[:2]
