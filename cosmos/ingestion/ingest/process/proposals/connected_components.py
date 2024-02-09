@@ -275,6 +275,12 @@ def get_lp_proposals(img, lp_threshold):
         coord_set = (bbox.block.x_1, bbox.block.y_1, bbox.block.x_2, bbox.block.y_2)
         coord_list.append(coord_set)
 
+
+    cropped_coords_list = []
+    for bb in coord_list:
+        cropped_img = img.crop(bb)
+        cropped_coords_list.extend(get_proposals(cropped_img))
+
     return coord_list
 
 def clean_text_blocks(image, text_blocks):
