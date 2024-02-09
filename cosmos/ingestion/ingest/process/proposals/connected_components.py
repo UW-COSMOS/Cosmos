@@ -227,7 +227,9 @@ def get_lp_proposals(img, lp_threshold):
         coord_set = (bbox.block.x_1, bbox.block.y_1, bbox.block.x_2, bbox.block.y_2)
         coord_list.append(coord_set)
 
-    return coord_list
+    obj_proposals = [[coord, [(1, 'Equation')]] for coord in coord_list]
+
+    return obj_proposals
 
 def clean_text_blocks(image, text_blocks):
     h, w = image.shape[:2]

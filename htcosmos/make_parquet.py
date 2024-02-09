@@ -291,7 +291,7 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
             proposals = get_proposals(img)
             # tlog(f'Cosmos proposals:')
             # tlog(proposals)
-            lp_equation_proposals = get_lp_proposals(img, 0.5)
+            lp_equations = get_lp_proposals(img, 0.5)
             # tlog(f'LayoutParser proposals:')
             # tlog(lp_proposals)
             #obj['proposals'] = proposals
@@ -315,9 +315,13 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         detect_obj = {'id': model_id, 'proposals': proposals, 'img': padded_img}
         detected_objs, softmax_detected_objs = run_inference(model, [detect_obj], model_config, device_str, session)
 
+
         tlog(f'{page_name} inference complete')
 
         detected = detected_objs[model_id]
+        # Discard cosmos' equation detections and use Layoutparser's
+        detected_no_eqns = [d for d in detected if d[1][0][1] != 'Equation']
+        detected = detected_no_eqns + lp_equations
         tlog(f'   detected objects: {detected}')
         softmax = softmax_detected_objs[model_id]
 
