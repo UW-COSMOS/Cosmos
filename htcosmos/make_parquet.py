@@ -356,7 +356,11 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
     # return a list of temprary files to be returned or deleted
     return (True, objs, infofiles)
 
+class PageProcessingException(Exception):
+    pass
+
 def aggregate_page(image_path, detected_key, postprocess_model, pp_classes):
+    """ Perform postprocessing and aggregation on a single page of a document """
     use_text_normalization = True
     image_name = os.path.basename(image_path)
     infofiles = {}
@@ -375,8 +379,7 @@ def aggregate_page(image_path, detected_key, postprocess_model, pp_classes):
         with open(pkl_path, 'rb') as rf:
             obj = pickle.load(rf)
     except Exception as e:
-        tlog(f'ERROR: failed to read pickle {pkl_path} - aborting this pdf')
-        raise Exception(f'ERROR: failed to read pickle {pkl_path} - aborting this pdf')
+        raise PageProcessingException(f'ERROR: failed to read pickle {pkl_path} - aborting this pdf')
         # return (False, objs, infofiles)
 
     # refresh the page path
@@ -386,8 +389,7 @@ def aggregate_page(image_path, detected_key, postprocess_model, pp_classes):
     if detected_key in obj.keys():
         detected = obj[detected_key]
     else:
-        tlog_flush(f'ERROR: no detected_objs in {pkl_path} - aborting this pdf')
-        raise Exception(f'ERROR: no detected_objs in {pkl_path} - aborting this pdf')
+        raise PageProcessingException(f'ERROR: no detected_objs in {pkl_path} - aborting this pdf')
 
     # the aggregation code needs access to the padded image, so if
     # it does not exist, we need to make it now
@@ -395,8 +397,7 @@ def aggregate_page(image_path, detected_key, postprocess_model, pp_classes):
     if not os.path.isfile(pad_img_path):
         img = load_image(image_path)
         if img is None:
-            tlog_flush(f'ERROR: failed to read image {image_path} - aborting this pdf')
-            raise Exception(f'ERROR: failed to read image {image_path} - aborting this pdf')
+            raise PageProcessingException(f'ERROR: failed to read image {image_path} - aborting this pdf')
 
         img, img_size = resize_png(img, return_size=True)
         padded_img = pad_image(img)
@@ -510,10 +511,15 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
     tlog(f'post-processing {pdf_name} and files matching it from {page_info_dir}')
 
     for image_path in pages:
-        page_results, obj, page_info = aggregate_page(image_path, 'detected_objs', postprocess_model, pp_classes)
-        lp_results, _, _ = aggregate_page(image_path, 'lp_objs', postprocess_model, pp_classes)
-        results.extend([r for r in page_results if r['posprocess_cls'] != 'Equation'])
-        results.extend([l for l in lp_results if l['posprocess_cls'] == 'Equation'])
+        try:
+            page_results, obj, page_info = aggregate_page(image_path, 'detected_objs', postprocess_model, pp_classes)
+            lp_results, _, _ = aggregate_page(image_path, 'lp_objs', postprocess_model, pp_classes)
+        except PageProcessingException as e:
+            tlog_flush(e)
+            return (False, objs, infofiles)
+
+        results.extend([r for r in page_results if r['postprocess_cls'] != 'Equation'])
+        results.extend([l for l in lp_results if l['postprocess_cls'] == 'Equation'])
 
         objs.append(obj)
         infofiles = {**infofiles, **page_info}
