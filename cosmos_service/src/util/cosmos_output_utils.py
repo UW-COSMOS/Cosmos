@@ -12,7 +12,7 @@ from typing import List
 import re
 
 PARQUET_COLUMN_NAMES = {
-    "equations": ("equation_bb", "equation_page", ["content"]),
+    "equations": ("equation_bb", "equation_page", []),
     "figures": ("obj_bbs", "obj_page", []),
     "tables": ("obj_bbs", "obj_page", []),
 }
@@ -46,7 +46,8 @@ def _update_json_entry(json_entry: dict, request_path:str , bb_column: str, page
         json_entry["img_pth"] = path.join(request_path, path.split(json_entry["img_pth"])[1])
 
     # Each parquet file has a different column name for bounding box and page, standardize them
-    json_entry["bounding_box"] = json_entry.pop(bb_column)
+    # Layoutparser gives BBs as floats while Cosmos gives ints, standardize to int here
+    json_entry["bounding_box"] = [int(bb) for bb in json_entry.pop(bb_column)]
     json_entry["page_num"] = json_entry.pop(page_column)
     
     return json_entry

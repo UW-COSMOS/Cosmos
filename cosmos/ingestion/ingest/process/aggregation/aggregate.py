@@ -35,7 +35,7 @@ def aggregate_equations(page_group, write_images_pth):
                     'postprocess_score': t['postprocess_score'],
                     'equation_bb': full_page_bounds,
                     'equation_page': t['page_num'],
-                    'content': page_content,
+                    'content': t['content'],
                     'img_pth': pth}
             final_objs.append(eq_obj)
     return final_objs
