@@ -3,14 +3,14 @@ import functools
 from PIL import Image
 import uuid
 import os
-from .reaggregate_equations import split_equation_system
+from .reaggregate_equations import split_equation_system, find_label_for_equation
 
 def check_y_overlap(bb1, bb2):
     _, x1, _, x2 = bb1
     _, y1, _, y2 = bb2
     return y2 >= x1 and x2 >= x1
 
-def aggregate_equations(page_group, write_images_pth):
+def aggregate_equations(page_group, write_images_pth, source_pdf):
     targets = []
     objs = []
     for ind, p in page_group.iterrows():
@@ -35,7 +35,7 @@ def aggregate_equations(page_group, write_images_pth):
                     'postprocess_score': t['postprocess_score'],
                     'equation_bb': full_page_bounds,
                     'equation_page': t['page_num'],
-                    'content': t['content'],
+                    'content': find_label_for_equation(source_pdf, t['page_num'], full_page_bounds),
                     'img_pth': pth}
             final_objs.append(eq_obj)
     return final_objs
@@ -232,20 +232,20 @@ association_types = ['tables', 'figures']
 full_page_types = ['equations']
 
 
-def aggregate_router(ddf, aggregate_type, write_images_pth):
+def aggregate_router(ddf, aggregate_type, write_images_pth, source_pdf=None):
     if aggregate_type in stream_types:
         return stream_aggregate(ddf, aggregate_type)
     elif aggregate_type in association_types:
         return association_aggregate(ddf, aggregate_type, write_images_pth)
     elif aggregate_type in full_page_types:
-        return full_page_aggregate(ddf, aggregate_type, write_images_pth)
+        return full_page_aggregate(ddf, aggregate_type, write_images_pth, source_pdf)
     else:
         raise ValueError(f'Passed type not support for aggregation. Supported types are {stream_types + association_types}')
 
 
-def full_page_aggregate(ddf, aggregate_type, write_images_pth):
+def full_page_aggregate(ddf, aggregate_type, write_images_pth,source_pdf=None):
     if aggregate_type == 'equations':
-        ae = functools.partial(aggregate_equations, write_images_pth=write_images_pth)
+        ae = functools.partial(aggregate_equations, write_images_pth=write_images_pth, source_pdf=source_pdf)
         result = ddf.groupby('pdf_name').apply(ae)
         results = []
         for pdf_name, sections in result.items():

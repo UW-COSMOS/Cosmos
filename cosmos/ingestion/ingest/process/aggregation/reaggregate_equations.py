@@ -6,6 +6,8 @@ from typing import List, Tuple, Dict
 from collections import namedtuple
 from ..proposals.connected_components import get_proposals
 from PIL import Image
+import fitz
+import re
 
 
 RIGHT_JUSTIFY_EDGE = 15 # Farthest from an image's right edge that a label can be
@@ -49,21 +51,14 @@ def group_equations_by_nearest_label(img_width: int, segments: List[Bounds]):
     named_segments = [Bounds(*s) for s in segments]
 
     label_segments = [s for s in named_segments if is_label(img_width, s)]
-    # label images can be excluded from final bounds
-    non_label_segments = [s for s in named_segments if not is_label(img_width, s)]
 
     # backup in case there are no labels in the image
     if len(label_segments) == 0:
         label_segments.append(Bounds(0, 0, 0, 0))
 
-    # If the whole image was flagged as a label for some reason, treat the labels as non-labels
-    if len(non_label_segments) == 0:
-        non_label_segments = label_segments
-
-
     label_groups : Dict[Bounds, List[Bounds]] = {s: [] for s in label_segments}
 
-    for segment in non_label_segments:
+    for segment in named_segments:
         # find the nearest vertical label
         nearest_label = sorted(label_segments, key = lambda ls: abs(middle(ls) - middle(segment)))[0]
         label_groups[nearest_label].append(segment)
@@ -93,3 +88,27 @@ def split_equation_system(target) -> Tuple[Image.Image, Bounds, List[Bounds]]:
     # smaller whitespace margin
     all_sub_regions = get_proposals(img_base, blank_row_height=3, max_obj_count=50)
     return img_base, padded_bb, group_equations_by_nearest_label(img_base.width, all_sub_regions)
+
+
+COSMOS_DOC_SIZE=1920
+LABEL_PATTERN=re.compile(r'\(([1-9A-Z]+.?[0-9A-Z]+)\)',re.MULTILINE)
+
+def _extract_text_near(source_pdf, page, bounds):
+    pymu_doc = fitz.Document(source_pdf)
+    pymu_page = pymu_doc[page]
+    # Cosmos documents are scaled to a uniform height,
+    # need to scale back to original reference frame
+    height_ratio = (pymu_page.rect[3] - pymu_page.rect[1]) / COSMOS_DOC_SIZE
+    return pymu_page.get_textbox(fitz.Rect(*bounds) * height_ratio)
+
+
+def _find_eqn_label(text):
+    match = re.search(LABEL_PATTERN, text)
+    if match:
+        return match[1]
+
+def find_label_for_equation(source_pdf, page, bounds: Bounds):
+    # Extend bounds to the left and right
+    bounds.left, bounds.right = (0, COSMOS_DOC_SIZE)
+    eqn_text = _extract_text_near(source_pdf, page - 1, bounds)
+    return _find_eqn_label(eqn_text)
