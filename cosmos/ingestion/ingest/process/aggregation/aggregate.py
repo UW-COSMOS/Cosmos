@@ -35,7 +35,7 @@ def aggregate_equations(page_group, write_images_pth, source_pdf):
                     'postprocess_score': t['postprocess_score'],
                     'equation_bb': full_page_bounds,
                     'equation_page': t['page_num'],
-                    'content': find_label_for_equation(source_pdf, t['page_num'], full_page_bounds),
+                    'content': find_label_for_equation(source_pdf, t['page_num'] - 1, full_page_bounds),
                     'img_pth': pth}
             final_objs.append(eq_obj)
     return final_objs
