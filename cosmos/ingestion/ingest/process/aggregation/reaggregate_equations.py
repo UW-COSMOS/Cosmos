@@ -112,7 +112,7 @@ def find_label_for_equation(source_pdf, page, bounds: Bounds):
     pymu_page, rect = _get_page_and_scaled_rect(source_pdf, page, bounds)
     # guess which "half" of the page the equation is on, then look for a label
     # across the whole column
-    col_width = page.rect[2] / 2
+    col_width = pymu_page.rect[2] / 2
     if rect.x1 < col_width:
         extended_bounds = fitz.Rect(0, rect.y0, col_width, rect.y1)
     elif rect.x0 > col_width:
