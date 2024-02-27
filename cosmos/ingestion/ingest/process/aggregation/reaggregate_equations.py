@@ -92,6 +92,7 @@ def split_equation_system(target) -> Tuple[Image.Image, Bounds, List[Bounds]]:
 
 COSMOS_DOC_SIZE=1920
 LABEL_PATTERN=re.compile(r'\(([1-9A-Z]+.?[0-9A-Z]+)\)',re.MULTILINE)
+HI_RES_DPI=300
 
 def _extract_text_near(source_pdf, page, bounds):
     pymu_doc = fitz.Document(source_pdf)
@@ -109,6 +110,15 @@ def _find_eqn_label(text):
 
 def find_label_for_equation(source_pdf, page, bounds: Bounds):
     # Extend bounds to the left and right
-    bounds.left, bounds.right = (0, COSMOS_DOC_SIZE)
-    eqn_text = _extract_text_near(source_pdf, page - 1, bounds)
+    extended_bounds = Bounds(0, bounds[1], COSMOS_DOC_SIZE, bounds[3])
+    eqn_text = _extract_text_near(source_pdf, page - 1, extended_bounds)
     return _find_eqn_label(eqn_text)
+
+
+def save_high_res_img(source_pdf, page, bounds: Bounds, path):
+    pymu_doc = fitz.Document(source_pdf)
+    pymu_page = pymu_doc[page]
+    # Cosmos documents are scaled to a uniform height,
+    # need to scale back to original reference frame
+    height_ratio = (pymu_page.rect[3] - pymu_page.rect[1]) / COSMOS_DOC_SIZE
+    pymu_page.get_pixmap(dpi=HI_RES_DPI, clip=fitz.Rect(*bounds) * height_ratio).save(path)
