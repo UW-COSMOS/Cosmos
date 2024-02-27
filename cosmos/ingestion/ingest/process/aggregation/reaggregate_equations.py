@@ -91,7 +91,7 @@ def split_equation_system(target) -> Tuple[Image.Image, Bounds, List[Bounds]]:
 
 
 COSMOS_DOC_SIZE=1920
-LABEL_PATTERN=re.compile(r'\(([1-9A-Z]+.?[0-9A-Z]+)\)',re.MULTILINE)
+LABEL_PATTERN=re.compile(r'\(([1-9A-Z]+.?[0-9A-Za-z]*)\)',re.MULTILINE)
 HI_RES_DPI=300
 
 def _extract_text_near(source_pdf, page, bounds):
