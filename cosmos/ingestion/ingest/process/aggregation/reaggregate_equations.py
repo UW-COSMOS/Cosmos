@@ -91,34 +91,38 @@ def split_equation_system(target) -> Tuple[Image.Image, Bounds, List[Bounds]]:
 
 
 COSMOS_DOC_SIZE=1920
-LABEL_PATTERN=re.compile(r'\(([1-9A-Z]+.?[0-9A-Za-z]*)\)',re.MULTILINE)
+LABEL_PATTERN=re.compile(r'[\(ð]([1-9A-Z]+.?[0-9A-Z]*)[\)Þ]',re.MULTILINE)
 HI_RES_DPI=300
-
-def _extract_text_near(source_pdf, page, bounds):
-    pymu_doc = fitz.Document(source_pdf)
-    pymu_page = pymu_doc[page]
-    # Cosmos documents are scaled to a uniform height,
-    # need to scale back to original reference frame
-    height_ratio = (pymu_page.rect[3] - pymu_page.rect[1]) / COSMOS_DOC_SIZE
-    return pymu_page.get_textbox(fitz.Rect(*bounds) * height_ratio)
-
 
 def _find_eqn_label(text):
     match = re.search(LABEL_PATTERN, text)
     if match:
         return match[1]
 
-def find_label_for_equation(source_pdf, page, bounds: Bounds):
-    # Extend bounds to the left and right
-    extended_bounds = Bounds(0, bounds[1], COSMOS_DOC_SIZE, bounds[3])
-    eqn_text = _extract_text_near(source_pdf, page - 1, extended_bounds)
-    return _find_eqn_label(eqn_text)
-
-
-def save_high_res_img(source_pdf, page, bounds: Bounds, path):
+def _get_page_and_scaled_rect(source_pdf, page, bounds: Bounds) -> Tuple[fitz.Page, fitz.Rect]:
     pymu_doc = fitz.Document(source_pdf)
     pymu_page = pymu_doc[page]
     # Cosmos documents are scaled to a uniform height,
     # need to scale back to original reference frame
     height_ratio = (pymu_page.rect[3] - pymu_page.rect[1]) / COSMOS_DOC_SIZE
-    pymu_page.get_pixmap(dpi=HI_RES_DPI, clip=fitz.Rect(*bounds) * height_ratio).save(path)
+
+    return pymu_page, fitz.Rect(*bounds) * height_ratio
+
+def find_label_for_equation(source_pdf, page, bounds: Bounds):
+    pymu_page, rect = _get_page_and_scaled_rect(source_pdf, page, bounds)
+    # guess which "half" of the page the equation is on, then look for a label
+    # across the whole column
+    col_width = page.rect[2] / 2
+    if rect.x1 < col_width:
+        extended_bounds = fitz.Rect(0, rect.y0, col_width, rect.y1)
+    elif rect.x0 > col_width:
+        extended_bounds = fitz.Rect(col_width, rect.y0, 2 * col_width, rect.y1)
+    else:
+        extended_bounds = fitz.Rect(0, rect.y0, 2 * col_width, rect.y1)
+    eqn_text = pymu_page.get_textbox(extended_bounds)
+    return _find_eqn_label(eqn_text)
+
+
+def save_high_res_img(source_pdf, page, bounds: Bounds, path):
+    pymu_page, rect = _get_page_and_scaled_rect(source_pdf, page, bounds)
+    pymu_page.get_pixmap(dpi=HI_RES_DPI, clip=rect).save(path)
