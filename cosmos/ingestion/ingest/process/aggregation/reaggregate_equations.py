@@ -61,7 +61,7 @@ def _overlaps_with_label(bounds: Bounds, label_bounds: List[Bounds]):
 def find_labels_for_equation(pymu_page: fitz.Page, bounds: Bounds):
     """ Find the text in the text layer matching `(X.Y)` that is in close proximity 
     to the equation bounding box """
-    rect = _get_scaled_rect(bounds)
+    rect = _get_scaled_rect(pymu_page, bounds)
     # guess which "half" of the page the equation is on, then look for a label
     # across the whole column
     col_width = pymu_page.rect[2] / 2
@@ -128,7 +128,7 @@ def split_equation_system(pymu_page: fitz.Page, target) -> Tuple[Image.Image, Bo
     img_base = Image.open(target['img_pth']).convert('RGB').crop(reference_bb)
 
     label_texts = find_labels_for_equation(pymu_page, reference_bb)
-    label_bbs = _get_label_bbs(pymu_page, label_texts, reference_bb.left, reference_bb.top)
+    label_bbs = _get_label_bbs(pymu_page, label_texts, reference_bb)
     # Systems of equations are frequently closely grouped, need to find regions again with a
     # smaller whitespace margin
     all_sub_regions = get_proposals(img_base, blank_row_height=3, max_obj_count=50)
