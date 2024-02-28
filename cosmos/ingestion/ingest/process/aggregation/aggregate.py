@@ -21,7 +21,7 @@ def aggregate_equations(page_group, write_images_pth, source_pdf):
     page_content = ' '.join([p['content'] for p in objs])
     final_objs = []
     for t in targets:
-        img, padded_bounds, sub_regions = split_equation_system(t)
+        img, padded_bounds, sub_regions = split_equation_system(source_pdf, t['page_num'] - 1, t)
         left, top, *_ = padded_bounds
         for region in sub_regions:
             sub_img = img.crop(region)
