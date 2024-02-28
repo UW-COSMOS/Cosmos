@@ -3,7 +3,7 @@ import functools
 from PIL import Image
 import uuid
 import os
-from .reaggregate_equations import split_equation_system, find_label_for_equation, save_high_res_img
+from .reaggregate_equations import split_equation_system, find_labels_for_equation, save_high_res_img
 
 def check_y_overlap(bb1, bb2):
     _, x1, _, x2 = bb1
@@ -18,13 +18,11 @@ def aggregate_equations(page_group, write_images_pth, source_pdf):
             targets.append(p)
         else:
             objs.append(p)
-    page_content = ' '.join([p['content'] for p in objs])
     final_objs = []
     for t in targets:
-        img, padded_bounds, sub_regions = split_equation_system(source_pdf, t['page_num'] - 1, t)
+        img, padded_bounds, sub_regions = split_equation_system(source_pdf, t)
         left, top, *_ = padded_bounds
         for region in sub_regions:
-            sub_img = img.crop(region)
             full_page_bounds = (region.left + left, region.top + top, region.right + left, region.bottom + top)
             imgid = uuid.uuid4()
             pth = os.path.join(write_images_pth, f'{imgid}.png')
@@ -35,7 +33,7 @@ def aggregate_equations(page_group, write_images_pth, source_pdf):
                     'postprocess_score': t['postprocess_score'],
                     'equation_bb': full_page_bounds,
                     'equation_page': t['page_num'],
-                    'content': find_label_for_equation(source_pdf, t['page_num'] - 1, full_page_bounds),
+                    'content': ','.join(find_labels_for_equation(source_pdf, t['page_num'] - 1, full_page_bounds)),
                     'img_pth': pth}
             final_objs.append(eq_obj)
     return final_objs
