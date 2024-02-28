@@ -322,8 +322,6 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
 
         detected = detected_objs[model_id]
         lp_detected = lp_detected_objs[model_id]
-        # Discard cosmos' equation detections and use Layoutparser's
-        tlog(f'   detected objects: {detected}')
         softmax = softmax_detected_objs[model_id]
 
         # save results and clear any lingering post-processing data

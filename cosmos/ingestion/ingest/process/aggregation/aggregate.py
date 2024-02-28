@@ -3,6 +3,7 @@ import functools
 from PIL import Image
 import uuid
 import os
+import fitz
 from .reaggregate_equations import split_equation_system, find_labels_for_equation, save_high_res_img
 
 def check_y_overlap(bb1, bb2):
@@ -19,21 +20,21 @@ def aggregate_equations(page_group, write_images_pth, source_pdf):
         else:
             objs.append(p)
     final_objs = []
+    pymu_pdf = fitz.Document(source_pdf)
     for t in targets:
-        img, padded_bounds, sub_regions = split_equation_system(source_pdf, t)
-        left, top, *_ = padded_bounds
+        pymu_page = pymu_pdf[t['page_num'] - 1]
+        sub_regions = split_equation_system(pymu_page, t)
         for region in sub_regions:
-            full_page_bounds = (region.left + left, region.top + top, region.right + left, region.bottom + top)
             imgid = uuid.uuid4()
             pth = os.path.join(write_images_pth, f'{imgid}.png')
-            save_high_res_img(source_pdf, t['page_num'] - 1, full_page_bounds, pth)
+            save_high_res_img(pymu_page, region, pth)
             eq_obj = {'pdf_name': t['pdf_name'],
                     'dataset_id': t['dataset_id'],
                     'detect_score': t['detect_score'],
                     'postprocess_score': t['postprocess_score'],
-                    'equation_bb': full_page_bounds,
+                    'equation_bb': region,
                     'equation_page': t['page_num'],
-                    'content': ','.join(find_labels_for_equation(source_pdf, t['page_num'] - 1, full_page_bounds)),
+                    'content': ','.join(find_labels_for_equation(pymu_page, region)),
                     'img_pth': pth}
             final_objs.append(eq_obj)
     return final_objs
