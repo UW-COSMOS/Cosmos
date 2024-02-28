@@ -25,7 +25,7 @@ Bounds = namedtuple("Bounds", ("left", "top", "right", "bottom"))
 def _find_eqn_labels(text):
     return re.findall(LABEL_PATTERN, text)
 
-def _get_label_bbs(pymu_page: fitz.Page, labels: list[str], x0, y0) -> list[Bounds]:
+def _get_label_bbs(pymu_page: fitz.Page, labels: List[str], x0, y0) -> List[Bounds]:
     height_ratio = (pymu_page.rect[3] - pymu_page.rect[1]) / COSMOS_DOC_SIZE
     label_bbs = []
     for label in labels:
@@ -51,7 +51,7 @@ def _overlap(r1: Bounds, r2: Bounds):
 def _area(r1: Bounds):
     return (r1.right - r1.left) * (r1.bottom - r1.top)
 
-def _overlaps_with_label(bounds: Bounds, label_bounds: list[Bounds]):
+def _overlaps_with_label(bounds: Bounds, label_bounds: List[Bounds]):
     area = _area(bounds)
     return any(_overlap(bounds, lb) > 0.9 * area for lb in label_bounds)
 
