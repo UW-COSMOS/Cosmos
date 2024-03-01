@@ -10,6 +10,7 @@ import json
 from os import path
 from typing import List
 import re
+import fitz
 
 PARQUET_COLUMN_NAMES = {
     "equations": ("equation_bb", "equation_page", []),
@@ -90,3 +91,23 @@ def convert_parquet_to_json_file(parquet_path: str):
     updated_data = [_update_json_entry(e, '', bb_column, page_column, exclude) for e in json_data]
     with open(parquet_path.replace('.parquet','.json'), 'w') as output_json:
         output_json.write(json.dumps(updated_data, indent=2))
+
+def _pymupdf_to_cosmos_coords(page: fitz.Page, bounds: list[float]):
+    COSMOS_HEIGHT = 1920
+    height_ratio = page.rect[3] / COSMOS_HEIGHT
+    return [int(b/height_ratio) for b in bounds]
+
+def convert_full_text_layer_to_json(job):
+    """ Get the full text layer of the input PDF, regardless of COSMOS labelling """
+    pdf_path = f"{job.output_dir}/{job.pdf_name}.pdf"
+    text_layer_entries = []
+    pdf_doc = fitz.Document(pdf_path)
+    for page_num, page in enumerate(pdf_doc):
+        text_blocks = page.get_text('dict')['blocks']
+        text_layer_entries.extend([{
+            "page": page_num + 1,
+            "pdf_name": job.pdf_name,
+            "bounding_box": _pymupdf_to_cosmos_coords(page, span['bbox']),
+            "content": span['text']
+        } for block in text_blocks for line in block['lines'] for span in line['spans'] if span.strip()])
+
