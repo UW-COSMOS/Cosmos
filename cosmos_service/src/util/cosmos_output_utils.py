@@ -113,6 +113,6 @@ def convert_full_text_layer_to_json(job):
             "detect_cls": None,
             "postprocess_score": None,
             "postprocess_cls": None,
-        } for block in text_blocks for line in block['lines'] for span in line['spans'] if span.strip()])
+        } for block in text_blocks for line in block.get('lines',[]) for span in line.get('spans',[]) if span.get('text','').strip()])
     return text_layer_entries
 
