@@ -111,6 +111,10 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
 
     bmap_np, img_np, left_shave = balance_margins(bmap_np, img_np)
     white_rows = get_blank_rows(bmap_np, blank_row_height)
+
+    # the list 'rows' stores slices of bmap corresponding to the area between
+    # consecutive starts of regions (stores each region including the whitespace
+    # beneath it till the next region)
     rows = []
     for i in range(len(white_rows)-1):
         curr = white_rows[i]
@@ -128,6 +132,8 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
             blocks, coords, col_idx = divide_row_into_columns(row, num_cols)
         else:
             # New way
+            # Performs same white row detection, but on columns instead of rows (hence
+            # the transpose of row). marks left boundary of each region
             rowT = row.T
             col_height = blank_row_height
             white_cols = get_blank_rows(rowT, col_height)
@@ -142,6 +148,10 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
             coords = []
             col_idx = []
 
+            # spl is each vertical slice of the horizontal slices stored in rows
+            # then, spl is transposed, and added to blocks, so blocks stores the
+            # transposes of the vertical slices (the original horizontal slices, now
+            # with set top and left boundaries)
             for i in range(len(white_cols)-1):
                 curr = white_cols[i]
                 nxt = white_cols[i+1]
@@ -162,11 +172,18 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
                 curr = white_rows[i]
                 nxt = white_rows[i+1]
                 rows2.append((b[curr:nxt, :], curr, nxt))
+
+            # establishing right and bottom boundary for each region to finalize
+            # the bounding box creation
             for r, c2, n in rows2:
-                # Replacing components with finding the proper pixel vals
+                # argwhere() finds nonzero elements in the region (to be used to eliminate
+                # the whitespace on the bottom and right side)
                 one_inds = np.argwhere(r)
-                if len(one_inds) == 0:
+                if len(one_inds) == 0: # if all whitespace already removed in the region, bounding box is good to go
                     continue
+
+                # splitting coordinates by axis (row vs. col) to obtain
+                # coordinates of bounding box's corners
                 h_one_inds = np.hsplit(one_inds, 2)
 
                 x1 = int(np.min(h_one_inds[1]))
@@ -175,6 +192,8 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
                 y2 = int(np.max(h_one_inds[0]))
 
                 key = (num_cols, column_index)
+
+                # obtaining absolute coordinates from relative coordinates
                 val = (top_coord + c2 + y1, c[0] + x1, top_coord + c2 + y2, c[0]+x2)
                 obj_count += 1
                 obj_heights += y2 - y1
@@ -185,6 +204,8 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
                     block_coords2[key] = [val]
 
     if obj_count > 0:
+        # if there are too many objects on the page, re-run the process with a greater blank row height (less lenience with
+        # regard to creating distinct regions/boxes)
         if obj_count > max_obj_count:
             block_coords = get_proposals(
                 img, white_thresh=white_thresh, blank_row_height=5 + blank_row_height, filter_thres=filter_thres, max_obj_count=max_obj_count)
@@ -198,6 +219,8 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
                     width = br_x1 - tl_x1
                     if height <= filter_thres or width <= filter_thres:
                         continue
+                    
+                    # accounting for margin width in absolute coordinates
                     adjusted = (left_shave + tl_x1, tl_y1, left_shave + br_x1, br_y1)
                     block_coords.add(adjusted)
 
@@ -207,9 +230,14 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
 
 def get_lp_proposals(img, lp_threshold):
     """
-    Function that generates object proposals with layoutparser
+     Function that generates object proposals with layoutparser
+    :param img: Path to image
+    :param lp_threshold: Threshold for region detection
+    :return: list of coordinates of the bounding boxes in the format: (TL x, TL y, BR x, BR y)
     """
 
+    # loading deep layout model from API with specified config.yaml and model.pth files
+    # setting threshold for region detection, as well as region classification labels
     model = lp.Detectron2LayoutModel('/configs/lp_genseg_improvement_config.yaml',
                                     '/weights/lp_genseg_improvement_model_final.pth',
                                     extra_config=["MODEL.ROI_HEADS.SCORE_THRESH_TEST", lp_threshold],
@@ -228,8 +256,11 @@ def get_lp_proposals(img, lp_threshold):
 	}
 
     image = np.array(img)
+
+    # detecting layout of input image
     layout_predicted = model.detect(image)
 
+    # getting layouts of each class type's regions
     text_blocks = lp.Layout([b for b in layout_predicted if b.type=='text'])
     figure_blocks = lp.Layout([b for b in layout_predicted if b.type=='figure'])
     title_blocks = lp.Layout([b for b in layout_predicted if b.type=='title'])
@@ -237,10 +268,13 @@ def get_lp_proposals(img, lp_threshold):
     list_blocks = lp.Layout([b for b in layout_predicted if b.type=='list'])
     equation_blocks = lp.Layout([b for b in layout_predicted if b.type=='Equation'])
 
+    # refining text blocks
     text_blocks = clean_text_blocks(image, text_blocks)
 
+    # converting text blocks Layout object to list of text blocks
     text_block_list = create_text_block_list(text_blocks)
   
+    # 
     text_block_list = iterative_merge(text_block_list)
     figure_blocks = iterative_merge(figure_blocks)
     title_blocks = iterative_merge(title_blocks)
@@ -277,7 +311,15 @@ def get_lp_proposals(img, lp_threshold):
 
     return coord_list
 
+# cleaning of text blocks
 def clean_text_blocks(image, text_blocks):
+    """
+     Function that postprocesses/cleans text blocks
+    :param image: Path to image
+    :param text_blocks: list of blocks classified as text regions
+    :return: cleaned text blocks
+    """
+
     h, w = image.shape[:2]
 
     left_interval = lp.Interval(0, w/2*1.05, axis='x').put_on_canvas(image)
@@ -294,17 +336,30 @@ def clean_text_blocks(image, text_blocks):
 
     return text_blocks
 
+
 def create_text_block_list(text_blocks):
+    """
+     Function that creates list of text blocks from Layout object of text blocks
+    :param text_blocks: Layout object containing text block regions
+    :return: list of text blocks
+    """
     text_block_list = []
     for i in range(len(text_blocks)):
         text_block_list.append(text_blocks[i])
     return text_block_list
 
 def iterative_merge(block_list):
+    """
+     Function that merges boxes if they are within certain proximity of each other
+    :param block_list: List of boxes
+    :return: list of blocks after blocks have been merged as necessary
+    """
     i = 0
     while i < len(block_list) - 1:
         j = i+1
         while j < len(block_list):
+            # create merged box from 2 boxes, add merged box to block list, remove the 2
+            # original individual boxes from block list
             if check_proximity(block_list[i], block_list[j]):
                 merged_box = merge_boxes(block_list[i], block_list[j])
                 block_list.pop(i)
@@ -316,8 +371,13 @@ def iterative_merge(block_list):
     
     return block_list
 
-# Checks if two boxes are close enough (distance < threshold) to merge together
 def check_proximity(box1, box2):
+    """
+     Function that checks if two boxes are close enough (distance < threshold) to merge together
+    :param box1: First box
+    :param box2: Second box
+    :return: true if two boxes are within close proximity of each other, false otherwise
+    """
     adjacent_box_threshold_x = 10
     adjacent_box_threshold_y = 10
     if box1.block.y_2 + adjacent_box_threshold_y >= box2.block.y_1:
@@ -327,6 +387,12 @@ def check_proximity(box1, box2):
 
 # Merges two boxes into one larger box
 def merge_boxes(box1, box2):
+    """
+     Function that merges two boxes into one larger box
+    :param box1: First box
+    :param box2: Second box
+    :return: merged box
+    """
     x_1_new = min(box1.block.x_1, box2.block.x_1)
     y_1_new = min(box1.block.y_1, box2.block.y_1)
     x_2_new = max(box1.block.x_2, box2.block.x_2)
