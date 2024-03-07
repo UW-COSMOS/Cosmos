@@ -112,8 +112,7 @@ def get_processing_result_text_segments(job_id: str, request: Request) -> List[C
     Return every text segment in the PDF and their bounding boxes as a list of JSON objects
     """
     job = get_job_details(job_id)
-    response_json = convert_full_text_layer_to_json(job)
-    return [ CosmosJSONTextResponse(**p) for p in response_json ]
+    return convert_full_text_layer_to_json(job)
 
 @router.get("/{job_id}/result/extractions/{extraction_type}")
 def get_processing_result_extraction(job_id: str, extraction_type: ExtractionType, request: Request) -> List[CosmosJSONImageResponse]:

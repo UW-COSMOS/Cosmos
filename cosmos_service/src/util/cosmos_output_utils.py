@@ -93,12 +93,6 @@ def convert_parquet_to_json_file(parquet_path: str):
     with open(parquet_path.replace('.parquet','.json'), 'w') as output_json:
         output_json.write(json.dumps(updated_data, indent=2))
 
-def _pymupdf_to_cosmos_coords(page: fitz.Page, bounds: List[float]):
-    COSMOS_HEIGHT = 1920
-    height_ratio = page.rect[3] / COSMOS_HEIGHT
-    return [int(b/height_ratio) for b in bounds]
-
-
 class _PyMuPDFGetTextArgs:
     """ Duck-type copy of the argparser used for pymupdf's command line arguments to gettext """
     mode = 'layout'
@@ -121,7 +115,7 @@ class _PyMuPDFGetTextArgs:
 def convert_full_text_layer_to_json(job) -> List[str]:
     """ Get the full text layer of the input PDF, regardless of COSMOS labelling """
     pdf_path = f"{job.output_dir}/{job.pdf_name}.pdf"
-    with NamedTemporaryFile(mode='rb+') as tf:
+    with NamedTemporaryFile(mode='r+') as tf:
         args = _PyMuPDFGetTextArgs(pdf_path, tf.name)
         gettext(args)
         tf.seek(0)
