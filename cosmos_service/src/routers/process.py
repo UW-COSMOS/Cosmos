@@ -107,7 +107,7 @@ def get_processing_result_text_segments(job_id: str, request: Request) -> List[C
     return [ CosmosJSONTextResponse(**p) for p in response_json ]
 
 @router.get("/{job_id}/result/text-layer")
-def get_processing_result_text_segments(job_id: str, request: Request) -> List[CosmosJSONTextResponse]:
+def get_processing_result_text_segments(job_id: str, request: Request) -> List[str]:
     """
     Return every text segment in the PDF and their bounding boxes as a list of JSON objects
     """

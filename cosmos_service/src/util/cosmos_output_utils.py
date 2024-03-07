@@ -94,7 +94,9 @@ def convert_parquet_to_json_file(parquet_path: str):
         output_json.write(json.dumps(updated_data, indent=2))
 
 class _PyMuPDFGetTextArgs:
-    """ Duck-type copy of the argparser used for pymupdf's command line arguments to gettext """
+    """ Duck-type copy of the argparser used for pymupdf's command line arguments to gettext 
+    TODO this is very fragile since the API for gettext might change
+    """
     mode = 'layout'
     pages = '1-N'
     noligatures = False
@@ -113,7 +115,9 @@ class _PyMuPDFGetTextArgs:
         self.output = output
 
 def convert_full_text_layer_to_json(job) -> List[str]:
-    """ Get the full text layer of the input PDF, regardless of COSMOS labelling """
+    """ Get the full text layer of the input PDF, regardless of COSMOS labelling. PyMuPDF provides
+        the `gettext` command line utility to arrange the text layer of a PDF in reading-order.
+    """
     pdf_path = f"{job.output_dir}/{job.pdf_name}.pdf"
     with NamedTemporaryFile(mode='r+') as tf:
         args = _PyMuPDFGetTextArgs(pdf_path, tf.name)
