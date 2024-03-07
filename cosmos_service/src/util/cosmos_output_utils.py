@@ -10,7 +10,8 @@ import json
 from os import path
 from typing import List
 import re
-import fitz
+from fitz.__main__ import gettext
+from tempfile import NamedTemporaryFile
 
 PARQUET_COLUMN_NAMES = {
     "equations": ("equation_bb", "equation_page", []),
@@ -97,22 +98,32 @@ def _pymupdf_to_cosmos_coords(page: fitz.Page, bounds: List[float]):
     height_ratio = page.rect[3] / COSMOS_HEIGHT
     return [int(b/height_ratio) for b in bounds]
 
-def convert_full_text_layer_to_json(job):
+
+class _PyMuPDFGetTextArgs:
+    """ Duck-type copy of the argparser used for pymupdf's command line arguments to gettext """
+    mode = 'layout'
+    pages = '1-N'
+    noligatures = False
+    convert_white = False
+    extra_spaces = False
+    password = None
+    noformfeed=False
+    skip_empty=False
+    grid=2
+    fontsize=3
+
+    input: str
+    ouput: str
+    def __init__(self, _input, output):
+        self.input = _input
+        self.output = output
+
+def convert_full_text_layer_to_json(job) -> List[str]:
     """ Get the full text layer of the input PDF, regardless of COSMOS labelling """
     pdf_path = f"{job.output_dir}/{job.pdf_name}.pdf"
-    text_layer_entries = []
-    pdf_doc = fitz.Document(pdf_path)
-    for page_num, page in enumerate(pdf_doc):
-        text_blocks = page.get_text('dict')['blocks']
-        text_layer_entries.extend([{
-            "page_num": page_num + 1,
-            "pdf_name": job.pdf_name,
-            "bounding_box": _pymupdf_to_cosmos_coords(page, span['bbox']),
-            "content": span['text'],
-            "detect_score": None,
-            "detect_cls": None,
-            "postprocess_score": None,
-            "postprocess_cls": None,
-        } for block in text_blocks for line in block.get('lines',[]) for span in line.get('spans',[]) if span.get('text','').strip()])
-    return text_layer_entries
+    with NamedTemporaryFile(mode='rb+') as tf:
+        args = _PyMuPDFGetTextArgs(pdf_path, tf.name)
+        gettext(args)
+        tf.seek(0)
+        return tf.read().split('\f')
 
