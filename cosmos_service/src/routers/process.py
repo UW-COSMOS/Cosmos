@@ -111,7 +111,7 @@ def get_processing_result_text_segments(job_id: str, request: Request) -> List[s
     """
     Return every text segment in the PDF and their bounding boxes as a list of JSON objects
     """
-    job = get_job_details(job_id)
+    job = get_job_details(job_id, complete_only=False)
     return convert_full_text_layer_to_json(job)
 
 @router.get("/{job_id}/result/extractions/{extraction_type}")

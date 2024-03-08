@@ -5,13 +5,12 @@ Used to serve various /results endpoints
 
 from zipfile import ZipFile
 from .parquet_to_json import parquet_to_json
+from .text_layer_utils import *
 from fastapi import Request
 import json
 from os import path
 from typing import List
 import re
-from fitz.__main__ import gettext
-from tempfile import NamedTemporaryFile
 
 PARQUET_COLUMN_NAMES = {
     "equations": ("equation_bb", "equation_page", []),
@@ -93,35 +92,14 @@ def convert_parquet_to_json_file(parquet_path: str):
     with open(parquet_path.replace('.parquet','.json'), 'w') as output_json:
         output_json.write(json.dumps(updated_data, indent=2))
 
-class _PyMuPDFGetTextArgs:
-    """ Duck-type copy of the argparser used for pymupdf's command line arguments to gettext 
-    TODO this is very fragile since the API for gettext might change
-    """
-    mode = 'layout'
-    pages = '1-N'
-    noligatures = False
-    convert_white = False
-    extra_spaces = False
-    password = None
-    noformfeed=False
-    skip_empty=False
-    grid=2
-    fontsize=3
-
-    input: str
-    ouput: str
-    def __init__(self, _input, output):
-        self.input = _input
-        self.output = output
-
 def convert_full_text_layer_to_json(job) -> List[str]:
     """ Get the full text layer of the input PDF, regardless of COSMOS labelling. PyMuPDF provides
         the `gettext` command line utility to arrange the text layer of a PDF in reading-order.
     """
     pdf_path = f"{job.output_dir}/{job.pdf_name}.pdf"
-    with NamedTemporaryFile(mode='r+') as tf:
-        args = _PyMuPDFGetTextArgs(pdf_path, tf.name)
-        gettext(args)
-        tf.seek(0)
-        return tf.read().split('\f')
+    return PyMuPDFGetTextWrapper(pdf_path).text.split('\f')
 
+def extract_urls_from_text_layer(job) -> List[str]:
+    """ """
+    pdf_path = f"{job.output_dir}/{job.pdf_name}.pdf"
+    return PyMuPDFGetTextWrapper(pdf_path).search_text([GITHUB_RE, ANY_SITE_RE])
