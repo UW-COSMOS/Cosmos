@@ -15,18 +15,18 @@ OOM_ERROR_EXIT_CODE = 2
 async def _cosmos_worker(work_queue: asyncio.Queue):
     """
     Cosmos worker process. Continually poll from the work queue for new parameters to the pipeline,
-    and run the cosmos pipeline in a separate process. A separate process is necessary to avoid I/O 
+    and run the cosmos pipeline in a separate process. A separate process is necessary to avoid I/O
     blocking issues in Python's async framework
     """
     while True:
-        (job_output_dir, job_id, compress_images) = await work_queue.get()
-        proc = await asyncio.create_subprocess_exec(sys.executable, COSMOS_SCRIPT, job_output_dir, job_id, str(compress_images))
+        (job_output_dir, job_id, compress_images, extract_tables) = await work_queue.get()
+        proc = await asyncio.create_subprocess_exec(sys.executable, COSMOS_SCRIPT, job_output_dir, job_id, str(compress_images), str(extract_tables))
         result = await proc.wait()
         queue.task_done()
-        
+
         if result == OOM_ERROR_EXIT_CODE:
             await asyncio.sleep(OOM_SLEEP_TIME)
-            await queue.put((job_output_dir, job_id, compress_images))
+            await queue.put((job_output_dir, job_id, compress_images, extract_tables))
 
 
 def setup_workers(worker_count):
