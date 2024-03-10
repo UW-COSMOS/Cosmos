@@ -30,13 +30,13 @@ RUN DEBIAN_FRONTEND="noninteractive" TZ=America/New_York apt-get install -y pyth
 
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN python3.8 -m pip install torch torchvision
+RUN python3.8 -m pip install torch torchvision torchaudio 
 
 # Need this first for opencv
 RUN python3.8 -m pip install scikit-build
 RUN python3.8 -m pip install cmake
 
-RUN python3.8 -m pip install \
+RUN python3.8 -m pip install --ignore-installed \
     pandas \
     dask['complete'] \
     scikit-learn \
