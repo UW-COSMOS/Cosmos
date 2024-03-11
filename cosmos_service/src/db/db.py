@@ -18,7 +18,8 @@ SessionLocal = sessionmaker(bind=engine)
 def get_job_details(job_id: str, complete_only=True) -> CosmosSessionJob:
     """
     Utility for results-reading endpoints. Read a job from the database, 
-    throwing http errors depending on its status if it's not complete
+    throwing http errors depending on its status if it's not complete. 
+    If complete_only=False, return the job regardless of its completion
     """
     with SessionLocal() as session:
         job = session.get(CosmosSessionJob, job_id)
