@@ -13,7 +13,7 @@ from typing import List
 import re
 
 PARQUET_COLUMN_NAMES = {
-    "equations": ("equation_bb", "equation_page", []),
+    "equations": ("equation_bb", "equation_page", ["content"]),
     "figures": ("obj_bbs", "obj_page", []),
     "tables": ("obj_bbs", "obj_page", []),
 }
