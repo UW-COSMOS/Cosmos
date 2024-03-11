@@ -18,7 +18,9 @@ import shutil
 import argparse
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+#os.environ['MODEL_CONFIG']="/configs/lp_genseg_improvement_config.yaml"
 os.environ['MODEL_CONFIG']="/configs/model_config.yaml"
+#os.environ["WEIGHTS_PTH"]="/weights/lp_genseg_improvement_model_final.pth"
 os.environ["WEIGHTS_PTH"]="/weights/model_weights.pth"
 os.environ["PP_WEIGHTS_PTH"]="/weights/pp_model_weights.pth"
 os.environ["AGGREGATIONS"]="pdfs,sections,tables,figures,equations"

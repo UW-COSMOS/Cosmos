@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:11.7.1-cudnn8-devel-ubuntu22.04
 
 RUN apt-get update
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -36,7 +36,7 @@ RUN python3.8 -m pip install torch torchvision
 RUN python3.8 -m pip install scikit-build
 RUN python3.8 -m pip install cmake
 
-RUN python3.8 -m pip install \
+RUN python3.8 -m pip install --ignore-installed \
     pandas \
     dask['complete'] \
     scikit-learn \
