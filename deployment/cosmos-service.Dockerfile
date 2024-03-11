@@ -1,6 +1,11 @@
 ARG VERSION=latest
 FROM uwcosmos/cosmos-ingestion:$VERSION
 
+ARG VERSION
+ARG GIT_HASH
+ENV API_VERSION=$VERSION
+ENV GIT_HASH=$GIT_HASH
+
 ENV MODEL_CONFIG=/configs/model_config.yaml
 ENV WEIGHTS_PTH=/weights/model_weights.pth
 ENV PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
