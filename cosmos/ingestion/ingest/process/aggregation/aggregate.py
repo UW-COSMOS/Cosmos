@@ -34,7 +34,8 @@ def aggregate_equations(page_group, write_images_pth, source_pdf):
                     'postprocess_score': t['postprocess_score'],
                     'equation_bb': region,
                     'equation_page': t['page_num'],
-                    'content': ','.join(find_labels_for_equation(pymu_page, region)),
+                    'label': ','.join(find_labels_for_equation(pymu_page, region)),
+                    'content': pymu_page.get_text(sort=True),
                     'img_pth': pth}
             final_objs.append(eq_obj)
     return final_objs

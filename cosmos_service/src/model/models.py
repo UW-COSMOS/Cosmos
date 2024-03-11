@@ -28,6 +28,7 @@ class CosmosJSONBaseResponse(BaseModel):
 
 class CosmosJSONImageResponse(CosmosJSONBaseResponse):
     img_pth: Optional[HttpUrl] = Field(description="Temporary URL from which the extracted image can be retrieved")
+    label: Optional[str] = Field(None, description="The caption associated with the extracted image")
 
 class CosmosJSONTextResponse(CosmosJSONBaseResponse):
     detect_cls: Optional[str] = Field(description="Initial label given to the extracted item")
