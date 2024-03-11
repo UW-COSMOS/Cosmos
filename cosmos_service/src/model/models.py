@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, HttpUrl
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 from enum import Enum
 
 # Response Models
@@ -32,6 +32,10 @@ class CosmosJSONImageResponse(CosmosJSONBaseResponse):
 class CosmosJSONTextResponse(CosmosJSONBaseResponse):
     detect_cls: Optional[str] = Field(description="Initial label given to the extracted item")
     postprocess_cls: Optional[str] = Field(description="Label given to the extracted item after post-processing")
+
+class TextLayerExtractions(BaseModel):
+    pages: List[str]  = Field(description="Full text layer of the PDF, with one string per page")
+    urls: List[str]  = Field(description="URLs extracted frm the text layer")
 
 # Request Models
 
