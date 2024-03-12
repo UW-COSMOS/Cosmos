@@ -29,7 +29,7 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
 from ingest.utils.visualize import write_regions
-from ingest.process.proposals.connected_components import get_proposals
+from ingest.process.proposals.connected_components import get_proposals, get_lp_proposals
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.utils.preprocess import resize_png
 from ingest.utils.table_extraction import TableLocationProcessor
@@ -289,10 +289,17 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         if make_proposals:
             tlog(f'{page_name} get proposals')
             proposals = get_proposals(img)
+            # tlog(f'Cosmos proposals:')
+            # tlog(proposals)
+            lp_proposals = get_lp_proposals(img, 0.5)
+            # tlog(f'LayoutParser proposals:')
+            # tlog(lp_proposals)
+            #obj['proposals'] = proposals
             obj['proposals'] = proposals
             if just_propose:
                 pkl_path = f'{page_info_dir}/{image_name}.pkl'
-                tlog_flush(f'writing {page_name} proposals to {pkl_path}')
+                #tlog_flush(f'writing {page_name} proposals to {pkl_path}')
+                tlog_flush(f'writing {page_name} lp_proposals to {pkl_path}')
                 with open(pkl_path, 'wb') as wf:
                     pickle.dump(obj, wf)
                 # tj's debugging stuff - write proposals and meta also as json
@@ -305,17 +312,23 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         tlog(f'   proposals: {proposals}')
 
         detect_obj = {'id': model_id, 'proposals': proposals, 'img': padded_img}
+        lp_detect_obj = {'id': model_id, 'proposals': lp_proposals, 'img': padded_img}
+
         detected_objs, softmax_detected_objs = run_inference(model, [detect_obj], model_config, device_str, session)
+        lp_detected_objs, _ = run_inference(model, [lp_detect_obj], model_config, device_str, session)
+
 
         tlog(f'{page_name} inference complete')
 
         detected = detected_objs[model_id]
+        lp_detected = lp_detected_objs[model_id]
         softmax = softmax_detected_objs[model_id]
 
         # save results and clear any lingering post-processing data
         # to indicate post-processing is still needed
         obj['detected_objs'] = detected
         obj['softmax_objs'] = softmax
+        obj['lp_objs'] = lp_detected
         obj.pop('content', None)
         obj.pop('xgboost_content', None)
         obj.pop('rules_content', None)
@@ -340,6 +353,124 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
 
     # return a list of temprary files to be returned or deleted
     return (True, objs, infofiles)
+
+class PageProcessingException(Exception):
+    pass
+
+def aggregate_page(image_path, detected_key, postprocess_model, pp_classes):
+    """ Perform postprocessing and aggregation on a single page of a document """
+    use_text_normalization = True
+    image_name = os.path.basename(image_path)
+    infofiles = {}
+    try:
+        page_num = get_page_num(image_name)
+    except ValueError:
+        raise Exception(f'cannot extract page number from {image_path}')
+
+    page_name = f'pdf_{page_num}'
+    pkl_path = f'{image_path}.pkl'
+    tlog(f'post-processing {page_name} from {pkl_path}')
+
+    # get or create the metadata (we need the proposals)
+    #
+    try:
+        with open(pkl_path, 'rb') as rf:
+            obj = pickle.load(rf)
+    except Exception as e:
+        raise PageProcessingException(f'ERROR: failed to read pickle {pkl_path} - aborting this pdf')
+        # return (False, objs, infofiles)
+
+    # refresh the page path
+    obj['page_path'] = image_path
+
+    # we need the result of the inference model in order to proceed
+    if detected_key in obj.keys():
+        detected = obj[detected_key]
+    else:
+        raise PageProcessingException(f'ERROR: no detected_objs in {pkl_path} - aborting this pdf')
+
+    # the aggregation code needs access to the padded image, so if
+    # it does not exist, we need to make it now
+    pad_img_path = f'{image_path}_pad'
+    if not os.path.isfile(pad_img_path):
+        img = load_image(image_path)
+        if img is None:
+            raise PageProcessingException(f'ERROR: failed to read image {image_path} - aborting this pdf')
+
+        img, img_size = resize_png(img, return_size=True)
+        padded_img = pad_image(img)
+        padded_img.save(pad_img_path, "PNG")
+
+    # refresh the padded image path, and let the KEEP_INFO code know about it
+    obj['pad_img'] = pad_img_path
+    infofiles[pad_img_path] = 'pad'
+
+    # --- post-processing work ---
+    # regroup
+    detected = group_cls(detected, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
+    detected = group_cls(detected, 'Figure')
+    tlog(f'{page_name} regroup complete')
+
+    # pool_text
+    if "meta" in obj and obj['meta'] is not None:
+        text_map = _pool_text_meta(obj['meta'], obj['dims'][3], detected, obj['page_num'])
+    #elif not skip_ocr:
+    #    text_map = _pool_text_ocr(image_path, detected)
+    else:
+        text_map = _placeholder_map(detected)
+    obj['content'] = text_map
+    tlog(f'{page_name} pool_text complete')
+
+    # xgboost_postprocess
+    xgboost_content = postprocess(postprocess_model, pp_classes, text_map)
+    # remove empty strings returned from postprocess
+    xgboost_content = [i for i in xgboost_content if i != '']
+    obj['xgboost_content'] = xgboost_content
+    tlog(f'{page_name} xgboost_postprocess complete')
+
+    # rules postprocess
+    rules_content = postprocess_rules(xgboost_content)
+    obj['rules_content'] = rules_content
+    tlog(f'{page_name} rules_postprocess complete')
+
+    # put output pickles into an ouput directory
+    tlog_flush(f'writing {page_name} post-processing results to {pkl_path}')
+    with open(pkl_path, 'wb') as wf:
+        pickle.dump(obj, wf)
+    infofiles[pkl_path] = 'pickle'
+
+    # add to the list of intermediate objects that we return
+
+    # aggregate
+    results = []
+    for ind, c in enumerate(obj['content']):
+        bb, cls, text = c
+        if use_text_normalization:
+            text = normalize_text(text)
+        scores, classes = zip(*cls)
+        scores = list(scores)
+        classes = list(classes)
+        postprocess_cls = postprocess_score = None
+        if 'xgboost_content' in obj:
+            _, postprocess_cls, _, postprocess_score = obj['xgboost_content'][ind]
+            if 'rules_content' in obj:
+                _, postprocess_cls, _, postprocess_score = obj['rules_content'][ind]
+        final_obj = {'pdf_name': obj['pdf_name'],
+                        'dataset_id': obj['dataset_id'],
+                        'page_num': obj['page_num'],
+                        'img_pth': obj['pad_img'],
+                        'pdf_dims': list(obj['pdf_limit']),
+                        'bounding_box': list(bb),
+                        'classes': classes,
+                        'scores': scores,
+                        'content': text,
+                        'postprocess_cls': postprocess_cls,
+                        'postprocess_score': postprocess_score
+                    }
+        results.append(final_obj)
+
+    tlog(f'done post-processing {pkl_path}\n')
+    return results, obj, infofiles
 
 """
     Post inference aggregation of the page metadata and creation of parquet files and png files needed by them
@@ -369,8 +500,6 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
 """
 def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, pp_classes, aggregations):
 
-    use_text_normalization = True
-
     pdf_name = os.path.basename(filename)
     dataset_id = Path(filename).stem
     results = [] # result list, saved as parquet
@@ -380,119 +509,19 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
     tlog(f'post-processing {pdf_name} and files matching it from {page_info_dir}')
 
     for image_path in pages:
-
-        image_name = os.path.basename(image_path)
         try:
-            page_num = get_page_num(image_name)
-        except ValueError:
-            raise Exception(f'cannot extract page number from {image_path}')
-
-        page_name = f'pdf_{page_num}'
-        pkl_path = f'{image_path}.pkl'
-        tlog(f'post-processing {page_name} from {pkl_path}')
-
-        # get or create the metadata (we need the proposals)
-        #
-        try:
-            with open(pkl_path, 'rb') as rf:
-                obj = pickle.load(rf)
-        except Exception as e:
-            tlog(f'ERROR: failed to read pickle {pkl_path} - aborting this pdf')
+            page_results, obj, page_info = aggregate_page(image_path, 'detected_objs', postprocess_model, pp_classes)
+            lp_results, _, _ = aggregate_page(image_path, 'lp_objs', postprocess_model, pp_classes)
+        except PageProcessingException as e:
+            tlog_flush(e)
             return (False, objs, infofiles)
 
-        # refresh the page path
-        obj['page_path'] = image_path
+        results.extend([r for r in page_results if r['postprocess_cls'] != 'Equation'])
+        results.extend([l for l in lp_results if l['postprocess_cls'] == 'Equation'])
 
-        # we need the result of the inference model in order to proceed
-        if 'detected_objs' in obj.keys():
-            detected = obj['detected_objs']
-        else:
-            tlog_flush(f'ERROR: no detected_objs in {pkl_path} - aborting this pdf')
-            return (False, objs, infofiles)
-
-        # the aggregation code needs access to the padded image, so if
-        # it does not exist, we need to make it now
-        pad_img_path = f'{image_path}_pad'
-        if not os.path.isfile(pad_img_path):
-            img = load_image(image_path)
-            if img is None:
-                tlog_flush(f'ERROR: failed to read image {image_path} - aborting this pdf')
-                return (False, objs, infofiles)
-
-            img, img_size = resize_png(img, return_size=True)
-            padded_img = pad_image(img)
-            padded_img.save(pad_img_path, "PNG")
-
-        # refresh the padded image path, and let the KEEP_INFO code know about it
-        obj['pad_img'] = pad_img_path
-        infofiles[pad_img_path] = 'pad'
-
-        # --- post-processing work ---
-        # regroup
-        detected = group_cls(detected, 'Table', do_table_merge=True, merge_over_classes=['Figure', 'Section Header', 'Page Footer', 'Page Header'])
-        detected = group_cls(detected, 'Figure')
-        tlog(f'{page_name} regroup complete')
-
-        # pool_text
-        if "meta" in obj and obj['meta'] is not None:
-            text_map = _pool_text_meta(obj['meta'], obj['dims'][3], detected, obj['page_num'])
-        #elif not skip_ocr:
-        #    text_map = _pool_text_ocr(image_path, detected)
-        else:
-            text_map = _placeholder_map(detected)
-        obj['content'] = text_map
-        tlog(f'{page_name} pool_text complete')
-
-        # xgboost_postprocess
-        xgboost_content = postprocess(postprocess_model, pp_classes, text_map)
-        # remove empty strings returned from postprocess
-        xgboost_content = [i for i in xgboost_content if i != '']
-        obj['xgboost_content'] = xgboost_content
-        tlog(f'{page_name} xgboost_postprocess complete')
-
-        # rules postprocess
-        rules_content = postprocess_rules(xgboost_content)
-        obj['rules_content'] = rules_content
-        tlog(f'{page_name} rules_postprocess complete')
-
-        # put output pickles into an ouput directory
-        tlog_flush(f'writing {page_name} post-processing results to {pkl_path}')
-        with open(pkl_path, 'wb') as wf:
-            pickle.dump(obj, wf)
-        infofiles[pkl_path] = 'pickle'
-
-        # add to the list of intermediate objects that we return
         objs.append(obj)
+        infofiles = {**infofiles, **page_info}
 
-        # aggregate
-        for ind, c in enumerate(obj['content']):
-            bb, cls, text = c
-            if use_text_normalization:
-                text = normalize_text(text)
-            scores, classes = zip(*cls)
-            scores = list(scores)
-            classes = list(classes)
-            postprocess_cls = postprocess_score = None
-            if 'xgboost_content' in obj:
-                _, postprocess_cls, _, postprocess_score = obj['xgboost_content'][ind]
-                if 'rules_content' in obj:
-                    _, postprocess_cls, _, postprocess_score = obj['rules_content'][ind]
-            final_obj = {'pdf_name': obj['pdf_name'],
-                         'dataset_id': obj['dataset_id'],
-                         'page_num': obj['page_num'],
-                         'img_pth': obj['pad_img'],
-                         'pdf_dims': list(obj['pdf_limit']),
-                         'bounding_box': list(bb),
-                         'classes': classes,
-                         'scores': scores,
-                         'content': text,
-                         'postprocess_cls': postprocess_cls,
-                         'postprocess_score': postprocess_score
-                        }
-            results.append(final_obj)
-
-
-        tlog(f'done post-processing {pkl_path}\n')
 
     if len(results) > 0:
         tlog(f'creating parquet files')
@@ -502,7 +531,7 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
         result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
         result_df.to_parquet(os.path.join(out_dir, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
         for aggregation in aggregations:
-            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=out_dir)
+            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=out_dir, source_pdf=filename)
             name = f'{dataset_id}_{aggregation}.parquet'
             aggregate_df.to_parquet(os.path.join(out_dir, name), engine='pyarrow', compression='gzip')
 
@@ -811,4 +840,3 @@ if __name__ == '__main__':
     if failed > 0:
         tlog(f'Failed to process {failed} pdf files.')
         sys.exit(1)
-

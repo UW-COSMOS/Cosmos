@@ -5,6 +5,7 @@ Used to serve various /results endpoints
 
 from zipfile import ZipFile
 from .parquet_to_json import parquet_to_json
+from .text_layer_utils import *
 from fastapi import Request
 import json
 from os import path
@@ -46,7 +47,8 @@ def _update_json_entry(json_entry: dict, request_path:str , bb_column: str, page
         json_entry["img_pth"] = path.join(request_path, path.split(json_entry["img_pth"])[1])
 
     # Each parquet file has a different column name for bounding box and page, standardize them
-    json_entry["bounding_box"] = json_entry.pop(bb_column)
+    # Layoutparser gives BBs as floats while Cosmos gives ints, standardize to int here
+    json_entry["bounding_box"] = [int(bb) for bb in json_entry.pop(bb_column)]
     json_entry["page_num"] = json_entry.pop(page_column)
     
     return json_entry
@@ -89,3 +91,15 @@ def convert_parquet_to_json_file(parquet_path: str):
     updated_data = [_update_json_entry(e, '', bb_column, page_column, exclude) for e in json_data]
     with open(parquet_path.replace('.parquet','.json'), 'w') as output_json:
         output_json.write(json.dumps(updated_data, indent=2))
+
+def convert_full_text_layer_to_json(job) -> List[str]:
+    """ Get the full text layer of the input PDF, regardless of COSMOS labelling. PyMuPDF provides
+        the `gettext` command line utility to arrange the text layer of a PDF in reading-order.
+    """
+    pdf_path = f"{job.output_dir}/{job.pdf_name}.pdf"
+    return PyMuPDFGetTextWrapper(pdf_path).text.split('\f')
+
+def extract_urls_from_text_layer(job) -> List[str]:
+    """ """
+    pdf_path = f"{job.output_dir}/{job.pdf_name}.pdf"
+    return PyMuPDFGetTextWrapper(pdf_path).search_text([GITHUB_RE, ANY_SITE_RE])

@@ -14,5 +14,5 @@ seg*
 training*
 rosa*
 xaa*
-deployment/weights
+#deployment/weights
 outputs*

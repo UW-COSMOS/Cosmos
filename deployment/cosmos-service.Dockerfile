@@ -6,9 +6,15 @@ ARG GIT_HASH
 ENV API_VERSION=$VERSION
 ENV GIT_HASH=$GIT_HASH
 
-WORKDIR /src/
-RUN pip3.8 install fastapi[all] apscheduler
-COPY cosmos_service/src/ /src/
-COPY htcosmos/make_parquet.py /src/util/
+ENV MODEL_CONFIG=/configs/model_config.yaml
+ENV WEIGHTS_PTH=/weights/model_weights.pth
+ENV PP_WEIGHTS_PTH=/weights/pp_model_weights.pth
 
+WORKDIR /src/
+RUN mkdir /pdfs /pages /output
+COPY cosmos_service/src/ /src/
+COPY deployment/configs/lp_genseg_improvement_config.yaml /configs/
+COPY deployment/weights/lp_genseg_improvement_model_final.pth /weights/
+ENV AGGREGATIONS=pdfs,sections,tables,figures,equations
+COPY htcosmos/make_parquet.py /src/util/
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8089"]

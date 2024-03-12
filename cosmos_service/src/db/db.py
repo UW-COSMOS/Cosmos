@@ -15,16 +15,17 @@ engine = create_engine('sqlite:///sessions.db', echo=False)
 Base.metadata.create_all(engine)
 SessionLocal = sessionmaker(bind=engine)
 
-def get_job_details(job_id: str) -> CosmosSessionJob:
+def get_job_details(job_id: str, complete_only=True) -> CosmosSessionJob:
     """
     Utility for results-reading endpoints. Read a job from the database, 
-    throwing http errors depending on its status if it's not complete
+    throwing http errors depending on its status if it's not complete. 
+    If complete_only=False, return the job regardless of its completion
     """
     with SessionLocal() as session:
         job = session.get(CosmosSessionJob, job_id)
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
-        elif not job.is_completed:
+        elif complete_only and not job.is_completed:
             raise HTTPException(status_code=400, detail="Job not finished")
         return job
 

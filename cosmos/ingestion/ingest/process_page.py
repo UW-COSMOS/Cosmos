@@ -1,4 +1,3 @@
-
 """
 Route to handle decomposition of pages into page objects
 """
@@ -36,6 +35,9 @@ def propose_and_pad(obj, visualize=False):
             logging.error(f'Pickle path: {pkl_path}')
             raise e
     coords = get_proposals(img)
+
+    coords_lp = get_lp_proposals(img)
+    
     padded_img = pad_image(img)
     obj['id'] = '0'
     obj['proposals'] = coords
