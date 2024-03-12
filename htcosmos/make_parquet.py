@@ -322,8 +322,6 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
 
         detected = detected_objs[model_id]
         lp_detected = lp_detected_objs[model_id]
-        # Discard cosmos' equation detections and use Layoutparser's
-        tlog(f'   detected objects: {detected}')
         softmax = softmax_detected_objs[model_id]
 
         # save results and clear any lingering post-processing data
@@ -533,7 +531,7 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
         result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
         result_df.to_parquet(os.path.join(out_dir, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
         for aggregation in aggregations:
-            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=out_dir)
+            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=out_dir, source_pdf=filename)
             name = f'{dataset_id}_{aggregation}.parquet'
             aggregate_df.to_parquet(os.path.join(out_dir, name), engine='pyarrow', compression='gzip')
 

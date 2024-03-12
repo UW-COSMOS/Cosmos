@@ -5,7 +5,7 @@ from fastapi import UploadFile, File, Form, HTTPException, Request, APIRouter
 from fastapi.responses import FileResponse, Response
 import uuid
 from util.cosmos_output_utils import *
-from model.models import JobCreationResponse, JobStatus, CosmosJSONTextResponse, CosmosJSONImageResponse, ExtractionType
+from model.models import *
 from db.db import SessionLocal, CosmosSessionJob, get_cached_job_for_pdf, get_job_details
 from work_queue import queue
 
@@ -105,6 +105,15 @@ def get_processing_result_text_segments(job_id: str, request: Request) -> List[C
     job = get_job_details(job_id)
     response_json = convert_parquet_to_json(job, f'{job.pdf_name}.parquet', request)
     return [ CosmosJSONTextResponse(**p) for p in response_json ]
+
+@router.get("/{job_id}/result/text-layer")
+def get_processing_result_text_segments(job_id: str, request: Request) -> TextLayerExtractions:
+    """ Return extractions from the article based on just the text layer with no COSMOS classifications """
+    job = get_job_details(job_id, complete_only=False)
+    return TextLayerExtractions(
+        pages=convert_full_text_layer_to_json(job), 
+        urls=extract_urls_from_text_layer(job))
+
 
 @router.get("/{job_id}/result/extractions/{extraction_type}")
 def get_processing_result_extraction(job_id: str, extraction_type: ExtractionType, request: Request) -> List[CosmosJSONImageResponse]:
