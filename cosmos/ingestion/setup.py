@@ -31,7 +31,7 @@ setup(
         "torchvision",
         "sqlalchemy",
         "pascal-voc-writer",
-        "pdfminer",
+        "pdfminer-six",
         "pytesseract",
         "scikit-learn",
         "camelot-py[cv]",

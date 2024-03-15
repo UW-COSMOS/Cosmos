@@ -30,7 +30,7 @@ RUN DEBIAN_FRONTEND="noninteractive" TZ=America/New_York apt-get install -y pyth
 
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN python3.8 -m pip install torch torchvision
+RUN python3.8 -m pip install torch torchvision torchaudio 
 
 # Need this first for opencv
 RUN python3.8 -m pip install scikit-build

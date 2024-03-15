@@ -33,18 +33,19 @@ def _save_request_pdf(job_id: str, pdf: UploadFile):
         raise HTTPException("Unable to save PDF for processing")
     finally:
         pdf.file.close()
-    
+
     return job_output_dir
 
 @router.post("/", status_code=202)
-async def process_document( 
-    request: Request, 
-    pdf: UploadFile = File(..., description="The document to process with COSMOS", media_type="application/pdf"), 
-    compress_images: bool = Form(True, description="Whether to generate compressed or full-resolution images of extractions"), 
+async def process_document(
+    request: Request,
+    pdf: UploadFile = File(..., description="The document to process with COSMOS", media_type="application/pdf"),
+    compress_images: bool = Form(True, description="Whether to generate compressed or full-resolution images of extractions"),
+    extract_tables: bool = Form(False, description="Whether to attempt to extract detected tables as dataframes"),
     use_cache: bool = Form(True, description="Whether to reuse cached results for the given PDF, if present")
     ) -> JobCreationResponse:
     """
-    Accept a new PDF document for COSMOS processing. Saves the PDF to disk, 
+    Accept a new PDF document for COSMOS processing. Saves the PDF to disk,
     then adds it to a queue for subsequent processing
     """
     if not pdf.file or not pdf.filename:
@@ -64,7 +65,7 @@ async def process_document(
         session.add(CosmosSessionJob(job_id, pdf.filename.replace('.pdf', ''), pdf_hash, pdf_len, job_output_dir))
         session.commit()
 
-    await queue.put((job_output_dir, job_id, compress_images))
+    await queue.put((job_output_dir, job_id, compress_images, extract_tables))
 
     return _build_process_response("PDF Processing in Background", job_id, request.url)
 
@@ -78,7 +79,7 @@ def get_processing_status(job_id: str) -> JobStatus:
         job : CosmosSessionJob = session.get(CosmosSessionJob, job_id)
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
-        
+
         return JobStatus(
             job_started=job.is_started,
             job_completed=job.is_completed,
@@ -90,7 +91,7 @@ def get_processing_status(job_id: str) -> JobStatus:
 @router.get("/{job_id}/result")
 def get_processing_result(job_id: str) -> FileResponse:
     """
-    Return the zip file containing the results of a completed COSMOS pipeline. Return status 400 if the 
+    Return the zip file containing the results of a completed COSMOS pipeline. Return status 400 if the
     job is in a not-complete state
     """
     job = get_job_details(job_id)
@@ -118,7 +119,7 @@ def get_processing_result_text_segments(job_id: str, request: Request) -> TextLa
 @router.get("/{job_id}/result/extractions/{extraction_type}")
 def get_processing_result_extraction(job_id: str, extraction_type: ExtractionType, request: Request) -> List[CosmosJSONImageResponse]:
     """
-    Return COSMOS figure/table/equation extractions and their bounding boxes as a list of JSON objects, 
+    Return COSMOS figure/table/equation extractions and their bounding boxes as a list of JSON objects,
     as well as links to their images
     """
     job = get_job_details(job_id)
