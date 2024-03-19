@@ -50,18 +50,19 @@ def _update_json_entry(json_entry: dict, request_path:str , bb_column: str, page
     # Layoutparser gives BBs as floats while Cosmos gives ints, standardize to int here
     json_entry["bounding_box"] = [int(bb) for bb in json_entry.pop(bb_column)]
     json_entry["page_num"] = json_entry.pop(page_column)
-    
+
     return json_entry
 
-def _get_parquet_read_parameters(parquet_path: str):
+def _get_parquet_read_parameters(parquet_path: str, pdf_name: str):
     """
     Helper function to get the relevant names of columns to include and exclude from an output
     parquet file. Each output file contains slightly different column names.
     """
     for key, values in PARQUET_COLUMN_NAMES.items():
-        if parquet_path.endswith(f"{key}.parquet"):
+        print(f'Checking *{key}.parquet and {path.basename(parquet_path)} against {pdf_name}.parquet')
+        if parquet_path.endswith(f"{key}.parquet") and path.basename(parquet_path) != f"{pdf_name}.parquet":
             return values
-    
+
     return DEFAULT_PARQUET_COLUMN_NAMES
 
 def convert_parquet_to_json(job, parquet_path: str, request: Request):
@@ -70,23 +71,23 @@ def convert_parquet_to_json(job, parquet_path: str, request: Request):
     to extract based on which parquet file is being parsed, then correct extracted
     image paths to match the full request URL
     """
-    
+
     image_base_url = replace_url_suffix(request.url, f"{job.id}/result/images")
-    (bb_column, page_column, exclude) = _get_parquet_read_parameters(parquet_path)
-    
+    (bb_column, page_column, exclude) = _get_parquet_read_parameters(parquet_path, job.pdf_name)
+
     with extract_file_from_job(job, parquet_path) as parquet:
         json_data = parquet_to_json(parquet, bb_column, page_column) or []
 
     return [_update_json_entry(e, image_base_url, bb_column, page_column, exclude) for e in json_data]
 
 
-def convert_parquet_to_json_file(parquet_path: str):
+def convert_parquet_to_json_file(parquet_path: str, pdf_name: str):
     """
-    Convert a parquet file to JSON using the SKEMA bounding box method, prior to 
+    Convert a parquet file to JSON using the SKEMA bounding box method, prior to
     archiving it as a zip file
     """
 
-    (bb_column, page_column, exclude) = _get_parquet_read_parameters(parquet_path)
+    (bb_column, page_column, exclude) = _get_parquet_read_parameters(parquet_path, pdf_name)
     json_data = parquet_to_json(parquet_path, bb_column, page_column) or []
     updated_data = [_update_json_entry(e, '', bb_column, page_column, exclude) for e in json_data]
     with open(parquet_path.replace('.parquet','.json'), 'w') as output_json:

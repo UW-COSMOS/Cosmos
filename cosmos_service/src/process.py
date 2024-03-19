@@ -60,7 +60,7 @@ def process_document(pdf_dir: str, job_id: str, compress_images: bool = True, ex
             if extract_tables:
                 mp.extract_tables(pdf_dir, cosmos_out_dir)
             for parquet_path in _get_parquet_files_to_convert(cosmos_out_dir, pdf_name):
-                convert_parquet_to_json_file(parquet_path)
+                convert_parquet_to_json_file(parquet_path, pdf_name)
             shutil.make_archive(archive_out_dir, "zip", cosmos_out_dir)
         except Exception as e:
             cosmos_error = e
