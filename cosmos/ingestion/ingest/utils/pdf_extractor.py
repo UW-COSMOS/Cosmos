@@ -71,7 +71,7 @@ def parse_pdf(fp):
                         #        text = ''
                         #        pos = (10000,10000,-1,-1)
     if len(positions) == 0:
-        return None, None                      
+        return None, layout.bbox
     x1, y1, x2, y2 = list(zip(*positions))
     df = pd.DataFrame({
         "text": texts,
