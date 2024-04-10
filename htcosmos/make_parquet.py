@@ -798,7 +798,16 @@ def resize_files(out_dir):
         im.thumbnail((200,200))
         im.save(path.replace(".png","_thumb.jpg"), quality=40, optimize=True)
         os.remove(path)
-    tlog("PNG to JPG converstion complete.")
+    tlog("PNG to JPG conversion complete.")
+
+    # Rename all referenced image files in parquet
+    parquet_files = glob.glob(os.path.join(out_dir, "*.parquet"))
+    for path in parquet_files:
+        df = pd.read_parquet(path)
+        if 'img_pth' in df:
+            df['img_pth'] = df['img_pth'].str.replace('.png','.jpg')
+            df.to_parquet(path, engine='pyarrow', compression='gzip')
+    tlog("Parquet file JPG path update complete.")
 
 def extract_tables(pdf_dir, out_dir):
     tlog(f"Extracting tables")
