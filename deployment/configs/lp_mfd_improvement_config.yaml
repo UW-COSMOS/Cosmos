@@ -269,8 +269,8 @@ MODEL:
     NAME: SemSegFPNHead
     NORM: GN
     NUM_CLASSES: 54
-  WEIGHTS: /content/drive/MyDrive/layoutparser_mfd_improvement/model_0044999.pth
-OUTPUT_DIR: /content/drive/MyDrive/layoutparser_mfd_improvement
+  WEIGHTS: /hdd/kbalaji3/Cosmos/deployment/weights/lp_mfd_improvement_model_final.pth
+OUTPUT_DIR: /hdd/kbalaji3/Cosmos/deployment/configs/
 SEED: -1
 SOLVER:
   AMP:
