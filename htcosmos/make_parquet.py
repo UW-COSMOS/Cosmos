@@ -29,7 +29,7 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
 from ingest.utils.visualize import write_regions
-from ingest.process.proposals.connected_components import get_proposals, get_lp_proposals
+from ingest.process.proposals.connected_components import get_proposals, get_lp_proposals, get_mfd_lp_proposals
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.utils.preprocess import resize_png
 from ingest.utils.table_extraction import TableLocationProcessor
@@ -291,7 +291,8 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
             proposals = get_proposals(img)
             # tlog(f'Cosmos proposals:')
             # tlog(proposals)
-            lp_proposals = get_lp_proposals(img, 0.5)
+            # lp_proposals = get_lp_proposals(img, 0.5)
+            mfd_lp_proposals = get_mfd_lp_proposals(img, 0.85)
             # tlog(f'LayoutParser proposals:')
             # tlog(lp_proposals)
             #obj['proposals'] = proposals
@@ -299,7 +300,8 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
             if just_propose:
                 pkl_path = f'{page_info_dir}/{image_name}.pkl'
                 #tlog_flush(f'writing {page_name} proposals to {pkl_path}')
-                tlog_flush(f'writing {page_name} lp_proposals to {pkl_path}')
+                # tlog_flush(f'writing {page_name} lp_proposals to {pkl_path}')
+                tlog_flush(f'writing {page_name} mfd_lp_proposals to {pkl_path}')
                 with open(pkl_path, 'wb') as wf:
                     pickle.dump(obj, wf)
                 # tj's debugging stuff - write proposals and meta also as json
@@ -312,23 +314,26 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         tlog(f'   proposals: {proposals}')
 
         detect_obj = {'id': model_id, 'proposals': proposals, 'img': padded_img}
-        lp_detect_obj = {'id': model_id, 'proposals': lp_proposals, 'img': padded_img}
+        # lp_detect_obj = {'id': model_id, 'proposals': lp_proposals, 'img': padded_img}
+        mfd_lp_detect_obj = {'id': model_id, 'proposals': mfd_lp_proposals, 'img': padded_img}
 
         detected_objs, softmax_detected_objs = run_inference(model, [detect_obj], model_config, device_str, session)
-        lp_detected_objs, _ = run_inference(model, [lp_detect_obj], model_config, device_str, session)
-
+        # lp_detected_objs, _ = run_inference(model, [lp_detect_obj], model_config, device_str, session)
+        mfd_lp_detected_objs, _ = run_inference(model, [mfd_lp_detect_obj], model_config, device_str, session)
 
         tlog(f'{page_name} inference complete')
 
         detected = detected_objs[model_id]
-        lp_detected = lp_detected_objs[model_id]
+        # lp_detected = lp_detected_objs[model_id]
+        mfd_lp_detected = mfd_lp_detected_objs[model_id]
         softmax = softmax_detected_objs[model_id]
 
         # save results and clear any lingering post-processing data
         # to indicate post-processing is still needed
         obj['detected_objs'] = detected
         obj['softmax_objs'] = softmax
-        obj['lp_objs'] = lp_detected
+        # obj['lp_objs'] = lp_detected
+        obj['mfd_lp_objs'] = mfd_lp_detected
         obj.pop('content', None)
         obj.pop('xgboost_content', None)
         obj.pop('rules_content', None)
@@ -511,13 +516,15 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
     for image_path in pages:
         try:
             page_results, obj, page_info = aggregate_page(image_path, 'detected_objs', postprocess_model, pp_classes)
-            lp_results, _, _ = aggregate_page(image_path, 'lp_objs', postprocess_model, pp_classes)
+            # lp_results, _, _ = aggregate_page(image_path, 'lp_objs', postprocess_model, pp_classes)
+            mfd_lp_results, _, _ = aggregate_page(image_path, 'mfd_lp_objs', postprocess_model, pp_classes)
         except PageProcessingException as e:
             tlog_flush(e)
             return (False, objs, infofiles)
 
         results.extend([r for r in page_results if r['postprocess_cls'] != 'Equation'])
-        results.extend([l for l in lp_results if l['postprocess_cls'] == 'Equation'])
+        # results.extend([l for l in lp_results if l['postprocess_cls'] == 'Equation'])
+        results.extend([l for l in mfd_lp_results if l['postprocess_cls'] == 'Equation'])
 
         objs.append(obj)
         infofiles = {**infofiles, **page_info}
