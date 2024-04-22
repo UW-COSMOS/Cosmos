@@ -279,6 +279,36 @@ def get_lp_proposals(img, lp_threshold):
 
     return coord_list
 
+def get_mfd_lp_proposals(img, lp_threshold):
+    """
+    Function that generates object proposals with layoutparser
+    """
+
+    modelMFD = lp.Detectron2LayoutModel('/configs/lp_mfd_improvement_config.yaml',
+                                    '/weights/lp_mfd_improvement_model_final.pth',
+                                    extra_config=["MODEL.ROI_HEADS.SCORE_THRESH_TEST", lp_threshold],
+                                    label_map={1: "Equation"})
+
+    color_map_mfd = {
+	'equation': 'blue',
+	}
+
+    image = np.array(img)
+    layout_predicted = modelMFD.detect(image)
+
+    equation_blocks = lp.Layout([b for b in layout_predicted])
+
+    blocks = []
+    for i in range(len(equation_blocks)):
+        blocks.append(equation_blocks[i])
+
+    coord_list = []
+    for bbox in blocks:
+        coord_set = (bbox.block.x_1, bbox.block.y_1, bbox.block.x_2, bbox.block.y_2)
+        coord_list.append(coord_set)
+
+    return coord_list
+
 def clean_text_blocks(image, text_blocks):
     h, w = image.shape[:2]
 
