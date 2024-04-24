@@ -292,7 +292,7 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
             # tlog(f'Cosmos proposals:')
             # tlog(proposals)
             # lp_proposals = get_lp_proposals(img, 0.5)
-            mfd_lp_proposals = get_mfd_lp_proposals(img, 0.85)
+            mfd_lp_proposals = get_mfd_lp_proposals(img, 0.5)
             # tlog(f'LayoutParser proposals:')
             # tlog(lp_proposals)
             #obj['proposals'] = proposals
