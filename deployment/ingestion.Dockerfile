@@ -1,7 +1,6 @@
 ARG VERSION=latest
 FROM uwcosmos/cosmos-base:$VERSION
 
-COPY deployment/weights/lp_genseg_improvement_model_final.pth /weights/lp_genseg_improvement_model_final.pth
 COPY deployment/weights/lp_mfd_improvement_model_final.pth /weights/lp_mfd_improvement_model_final.pth
 COPY deployment/weights/model_weights.pth /weights/model_weights.pth
 COPY deployment/weights/pp_model_weights.pth /weights/pp_model_weights.pth
