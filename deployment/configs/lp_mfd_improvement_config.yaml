@@ -11,9 +11,9 @@ DATASETS:
   PROPOSAL_FILES_TEST: []
   PROPOSAL_FILES_TRAIN: []
   TEST:
-  - General Segmentation Improvement-val
+  - MFD Improvement-val
   TRAIN:
-  - General Segmentation Improvement-train
+  - MFD Improvement-train
 GLOBAL:
   HACK: 1.0
 INPUT:
@@ -193,7 +193,7 @@ MODEL:
     - 0.5
     NAME: StandardROIHeads
     NMS_THRESH_TEST: 0.5
-    NUM_CLASSES: 6
+    NUM_CLASSES: 1
     POSITIVE_FRACTION: 0.25
     PROPOSAL_APPEND_GT: true
     SCORE_THRESH_TEST: 0.05
@@ -269,7 +269,7 @@ MODEL:
     NAME: SemSegFPNHead
     NORM: GN
     NUM_CLASSES: 54
-  WEIGHTS: /hdd/kbalaji3/Cosmos/deployment/weights/lp_genseg_improvement_model_final.pth
+  WEIGHTS: /hdd/kbalaji3/Cosmos/deployment/weights/lp_mfd_improvement_model_final.pth
 OUTPUT_DIR: /hdd/kbalaji3/Cosmos/deployment/configs/
 SEED: -1
 SOLVER:
@@ -286,7 +286,7 @@ SOLVER:
   GAMMA: 0.1
   IMS_PER_BATCH: 2
   LR_SCHEDULER_NAME: WarmupMultiStepLR
-  MAX_ITER: 80000
+  MAX_ITER: 50000
   MOMENTUM: 0.9
   NESTEROV: false
   REFERENCE_WORLD_SIZE: 0
