@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.7.1-cudnn8-devel-ubuntu22.04
+FROM nvidia/cuda:12.4.1-devel-ubuntu20.04
 
 RUN apt-get update
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -9,10 +9,9 @@ RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update
 
 RUN apt-get install -y --allow-unauthenticated tesseract-ocr
-RUN apt-get install -y \
+RUN apt-get install -y --fix-missing \
     ghostscript \
     gcc \
-    libmysqlclient-dev \
     wget \
     tesseract-ocr \
     apt-transport-https \
@@ -39,24 +38,18 @@ RUN python3.8 -m pip install cmake
 RUN python3.8 -m pip install --ignore-installed \
     pandas \
     dask['complete'] \
-    scikit-learn \
-    sqlalchemy \
     click \
     beautifulsoup4 \
     tqdm \
     pyarrow \
     tensorboard \
-    scikit-image \
     xgboost \
     pdfminer.six \
     tensorboardx \
     gunicorn \
     flask \
-    pascal-voc-writer \
     pytesseract \
-    hyperyaml \
     transformers \
     elasticsearch_dsl \
     opencv-python \
-    fasttext \
     ftfy

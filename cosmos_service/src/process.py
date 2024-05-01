@@ -17,7 +17,8 @@ from work_queue import OOM_ERROR_EXIT_CODE
 import shutil
 import argparse
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+if torch.cuda.is_available():
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 #os.environ['MODEL_CONFIG']="/configs/lp_genseg_improvement_config.yaml"
 os.environ['MODEL_CONFIG']="/configs/model_config.yaml"
 #os.environ["WEIGHTS_PTH"]="/weights/lp_genseg_improvement_model_final.pth"
