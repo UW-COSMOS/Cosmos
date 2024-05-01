@@ -15,7 +15,7 @@ setup(
     python_requires='>=3.8',
     install_requires=[
         "click",
-        "Pillow==9.5.0",
+        "Pillow==10.3.0",
         "opencv-python",
         "matplotlib",
         "tqdm",
