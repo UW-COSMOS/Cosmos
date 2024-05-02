@@ -22,5 +22,6 @@ esac
 
 
 echo "Creating image $IMAGE tagged with $VERSION"
-#docker buildx build --push --platform linux/arm64  --build-arg="VERSION=$VERSION" --build-arg="GIT_HASH=$GIT_HASH" -t uwcosmos/$IMAGE:$VERSION -f deployment/$DOCKERFILE.Dockerfile .
+#docker build --network=host --build-arg="VERSION=$VERSION" --build-arg="GIT_HASH=$GIT_HASH" -t uwcosmos/$IMAGE:$VERSION -f deployment/$DOCKERFILE.Dockerfile .
+#docker buildx build --load --platform linux/arm64  --build-arg="VERSION=$VERSION" --build-arg="GIT_HASH=$GIT_HASH" -t uwcosmos/$IMAGE:$VERSION -f deployment/$DOCKERFILE.Dockerfile .
 docker buildx build --push --platform linux/amd64,linux/arm64  --build-arg="VERSION=$VERSION" --build-arg="GIT_HASH=$GIT_HASH" -t uwcosmos/$IMAGE:$VERSION -f deployment/$DOCKERFILE.Dockerfile .
