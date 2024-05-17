@@ -5,6 +5,7 @@ import os
 from PIL import Image
 from ingest.utils.visualize import write_regions
 from ingest.process.proposals.connected_components import get_proposals
+from ingest.process.proposals.connected_components import get_mfd_lp_proposals
 from ingest.process.detection.src.preprocess import pad_image
 from ingest.process.postprocess.xgboost_model.inference import run_inference as postprocess
 from ingest.process.postprocess.pp_rules import apply_rules as postprocess_rules
@@ -35,12 +36,12 @@ def propose_and_pad(obj, visualize=False):
             logging.error(f'Pickle path: {pkl_path}')
             raise e
     coords = get_proposals(img)
+    coords_mfd = get_mfd_lp_proposals(img, 0.85)
 
-    coords_lp = get_lp_proposals(img)
-    
     padded_img = pad_image(img)
     obj['id'] = '0'
     obj['proposals'] = coords
+    obj['mfd_proposals'] = coords_mfd
     if visualize:
         write_regions(image_path, coords)
     obj['page_id'] = f'{pdf_name}_{page_num}'

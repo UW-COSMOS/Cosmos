@@ -11,7 +11,7 @@ def check_y_overlap(bb1, bb2):
     _, y1, _, y2 = bb2
     return y2 >= x1 and x2 >= x1
 
-def aggregate_equations(page_group, write_images_pth, source_pdf):
+def aggregate_equations(page_group, write_images_pth, source_pdf, pdf_directory='./'):
     targets = []
     objs = []
     for ind, p in page_group.iterrows():
@@ -22,6 +22,8 @@ def aggregate_equations(page_group, write_images_pth, source_pdf):
     final_objs = []
     pymu_pdf = fitz.Document(source_pdf)
     for t in targets:
+        print(f"{pdf_directory}/{t['pdf_name']}")
+        pymu_pdf = fitz.Document(f"{pdf_directory}/{t['pdf_name']}")
         pymu_page = pymu_pdf[t['page_num'] - 1]
         sub_regions = split_equation_system(pymu_page, t)
         for region in sub_regions:
@@ -232,20 +234,20 @@ association_types = ['tables', 'figures']
 full_page_types = ['equations']
 
 
-def aggregate_router(ddf, aggregate_type, write_images_pth, source_pdf=None):
+def aggregate_router(ddf, aggregate_type, write_images_pth, source_pdf=None, pdf_directory="./"):
     if aggregate_type in stream_types:
         return stream_aggregate(ddf, aggregate_type)
     elif aggregate_type in association_types:
         return association_aggregate(ddf, aggregate_type, write_images_pth)
     elif aggregate_type in full_page_types:
-        return full_page_aggregate(ddf, aggregate_type, write_images_pth, source_pdf)
+        return full_page_aggregate(ddf, aggregate_type, write_images_pth, source_pdf, pdf_directory)
     else:
         raise ValueError(f'Passed type not support for aggregation. Supported types are {stream_types + association_types}')
 
 
-def full_page_aggregate(ddf, aggregate_type, write_images_pth,source_pdf=None):
+def full_page_aggregate(ddf, aggregate_type, write_images_pth,source_pdf=None,pdf_directory="./"):
     if aggregate_type == 'equations':
-        ae = functools.partial(aggregate_equations, write_images_pth=write_images_pth, source_pdf=source_pdf)
+        ae = functools.partial(aggregate_equations, write_images_pth=write_images_pth, source_pdf=source_pdf, pdf_directory=pdf_directory)
         result = ddf.groupby('pdf_name').apply(ae)
         results = []
         for pdf_name, sections in result.items():

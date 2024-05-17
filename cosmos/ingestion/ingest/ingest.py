@@ -21,7 +21,6 @@ from ingest.utils.normalize_text import normalize_text
 from ingest.utils.pdf_extractor import parse_pdf
 from ingest.process.ocr.ocr import regroup, pool_text
 from ingest.process.aggregation.aggregate import aggregate_router
-from ingest.process.representation_learning.compute_word_vecs import make_vecs
 from ingest.process.enrich.context_enrichment import context_enrichment
 import pandas as pd
 import signal
@@ -206,11 +205,9 @@ class Ingest:
         result_df['detect_cls'] = result_df['classes'].apply(lambda x: x[0])
         result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
         for aggregation in aggregations:
-            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=images_pth)
+            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=images_pth, pdf_directory=pdf_directory)
             name = f'{dataset_id}_{aggregation}.parquet'
             aggregate_df.to_parquet(os.path.join(result_path, name), engine='pyarrow', compression='gzip')
-        if compute_word_vecs:
-            make_vecs(result_df, ngram)
         result_df.to_parquet(os.path.join(result_path, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
 
         if self.use_table_context_enrichment:
