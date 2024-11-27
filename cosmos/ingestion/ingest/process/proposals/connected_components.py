@@ -93,7 +93,7 @@ def get_blank_rows(inp_np, blank_row_h):
         curr_bot = curr_top + blank_row_h
     return white_rows
 
-def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, max_obj_count = 19):
+def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, max_obj_count = 19, mask_region = None, filter_watermarks=False):
     """
      Function that handles writing of object proposals
     :param img_p: Path to image
@@ -110,6 +110,12 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
     bmap_np = np.array(img.convert('L').point(remove_fn, mode='1')).astype(np.uint8)
 
     bmap_np, img_np, left_shave = balance_margins(bmap_np, img_np)
+    if mask_region is not None:
+        print(f"Applying mask. Coordinates to mask are {mask_region}")
+        # np.set_printoptions(threshold=np.inf)
+        # print(bmap_np[mask_region[1]:mask_region[3], mask_region[0]:mask_region[2]])
+        bmap_np[mask_region[1]:mask_region[3], mask_region[0]:mask_region[2]] = 0
+        print(bmap_np[mask_region[1]:mask_region[3], mask_region[0]:mask_region[2]])
     white_rows = get_blank_rows(bmap_np, blank_row_height)
     rows = []
     for i in range(len(white_rows)-1):
@@ -187,7 +193,7 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
     if obj_count > 0:
         if obj_count > max_obj_count:
             block_coords = get_proposals(
-                img, white_thresh=white_thresh, blank_row_height=5 + blank_row_height, filter_thres=filter_thres, max_obj_count=max_obj_count)
+                img, white_thresh=white_thresh, blank_row_height=5 + blank_row_height, filter_thres=filter_thres, max_obj_count=max_obj_count, filter_watermarks = filter_watermarks)
         else:
             for key in block_coords2:
                 coords_list = block_coords2[key]
@@ -200,7 +206,16 @@ def get_proposals(img, white_thresh=245, blank_row_height=15, filter_thres=5, ma
                         continue
                     adjusted = (left_shave + tl_x1, tl_y1, left_shave + br_x1, br_y1)
                     block_coords.add(adjusted)
-
+                    # if filter_watermarks, then attempt to recognize + mask them
+                    if filter_watermarks and width < 20 and height > 800: # arbitrary size based on single sample IAR (27.November.2024)
+                        block_coords = get_proposals(
+                            img, white_thresh=white_thresh, 
+                            blank_row_height=blank_row_height, 
+                            filter_thres=filter_thres,
+                            max_obj_count=max_obj_count,
+                            mask_region=(tl_x1, tl_y1, br_x1, br_y1),
+                            filter_watermarks = filter_watermarks)
+                        return block_coords
     block_coords = list(block_coords)
     return block_coords
 
