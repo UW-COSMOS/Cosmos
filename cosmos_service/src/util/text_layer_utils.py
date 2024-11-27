@@ -1,4 +1,4 @@
-from fitz.__main__ import gettext
+from pymupdf.__main__ import gettext
 from tempfile import NamedTemporaryFile
 from typing import List
 import re
@@ -29,7 +29,7 @@ r"""(
 )""", re.VERBOSE)
 
 class PyMuPDFGetTextWrapper:
-    """ Duck-type copy of the argparser used for pymupdf's command line arguments to gettext 
+    """ Duck-type copy of the argparser used for pymupdf's command line arguments to gettext
     TODO this is very fragile since the API for gettext might change
     """
     mode: str
