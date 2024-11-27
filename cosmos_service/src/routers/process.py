@@ -42,6 +42,7 @@ async def process_document(
     pdf: UploadFile = File(..., description="The document to process with COSMOS", media_type="application/pdf"),
     compress_images: bool = Form(True, description="Whether to generate compressed or full-resolution images of extractions"),
     extract_tables: bool = Form(False, description="Whether to attempt to extract detected tables as dataframes"),
+    filter_watermarks: bool = Form(False, description="Whether to attempt to detect and filter watermarks"),
     use_cache: bool = Form(True, description="Whether to reuse cached results for the given PDF, if present")
     ) -> JobCreationResponse:
     """
@@ -65,7 +66,7 @@ async def process_document(
         session.add(CosmosSessionJob(job_id, pdf.filename.replace('.pdf', ''), pdf_hash, pdf_len, job_output_dir))
         session.commit()
 
-    await queue.put((job_output_dir, job_id, compress_images, extract_tables))
+    await queue.put((job_output_dir, job_id, compress_images, extract_tables, filter_watermarks))
 
     return _build_process_response("PDF Processing in Background", job_id, request.url)
 

@@ -39,7 +39,7 @@ OOM_ERROR_MESSAGES = [
 def _get_parquet_files_to_convert(cosmos_out_dir, pdf_name):
     return [f'{cosmos_out_dir}/{pdf_name}{suffix}.parquet' for suffix in PARQUET_SUFFIXES]
 
-def process_document(pdf_dir: str, job_id: str, compress_images: bool = True, extract_tables: bool = False):
+def process_document(pdf_dir: str, job_id: str, compress_images: bool = True, extract_tables: bool = False, filter_watermarks = False):
     """
     Run a single document through the COSMOS pipeline.
     TODO: This adds the significant overhead of loading the model into memory with each run
@@ -55,7 +55,7 @@ def process_document(pdf_dir: str, job_id: str, compress_images: bool = True, ex
 
         cosmos_error : Exception = None
         try:
-            mp.main_process(pdf_dir, page_info_dir, cosmos_out_dir)
+            mp.main_process(pdf_dir, page_info_dir, cosmos_out_dir, filter_watermarks)
             if compress_images:
                 mp.resize_files(cosmos_out_dir)
             if extract_tables:
@@ -86,5 +86,6 @@ if __name__ == '__main__':
     parser.add_argument("job_id")
     parser.add_argument("compress_images", type=lambda v: v.lower() == 'true', default=True)
     parser.add_argument("extract_tables", type=lambda v: v.lower() == 'true', default=False)
+    parser.add_argument("filter_watermarks", type=lambda v: v.lower() == 'true', default=False)
     args = parser.parse_args()
-    process_document(args.pdf_dir, args.job_id, args.compress_images, args.extract_tables)
+    process_document(args.pdf_dir, args.job_id, args.compress_images, args.extract_tables, args.filter_watermarks)

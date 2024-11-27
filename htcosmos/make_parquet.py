@@ -168,7 +168,7 @@ def pull_meta(meta, limit, page_num, scale_w, scale_h):
     The model, model_config and device_str values can be None if processing is just doing the propose step
 
 """
-def process_pages(filename, pages, page_info_dir, meta, limit, model, model_config, device_str):
+def process_pages(filename, pages, page_info_dir, meta, limit, model, model_config, device_str, filter_watermarks):
 
     just_propose = os.environ.get("JUST_PROPOSE") is not None
 
@@ -288,7 +288,8 @@ def process_pages(filename, pages, page_info_dir, meta, limit, model, model_conf
         # get proposed coords for use by the inference model
         if make_proposals:
             tlog(f'{page_name} get proposals')
-            proposals = get_proposals(img)
+            proposals = get_proposals(img, filter_watermarks=filter_watermarks)
+            write_regions(image_path, proposals)
             mfd_lp_proposals = get_mfd_lp_proposals(img, 0.85)
             obj['proposals'] = proposals
             if just_propose:
@@ -495,6 +496,7 @@ def aggregate_page(image_path, detected_key, postprocess_model, pp_classes):
 def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, pp_classes, aggregations):
 
     pdf_name = os.path.basename(filename)
+    pdf_dir = os.path.dirname(filename)
     dataset_id = Path(filename).stem
     results = [] # result list, saved as parquet
     objs = []    # intermediate page dicts
@@ -525,7 +527,7 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
         result_df['detect_score'] = result_df['scores'].apply(lambda x: x[0])
         result_df.to_parquet(os.path.join(out_dir, f'{dataset_id}.parquet'), engine='pyarrow', compression='gzip')
         for aggregation in aggregations:
-            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=out_dir, source_pdf=filename)
+            aggregate_df = aggregate_router(result_df, aggregate_type=aggregation, write_images_pth=out_dir, source_pdf=filename, pdf_directory=pdf_dir)
             name = f'{dataset_id}_{aggregation}.parquet'
             aggregate_df.to_parquet(os.path.join(out_dir, name), engine='pyarrow', compression='gzip')
 
@@ -549,7 +551,7 @@ def aggregate_pages(filename, pages, page_info_dir, out_dir, postprocess_model, 
         stats         - dict of counts of processing successes and failures
 
 """
-def main_process(pdf_dir, page_info_dir, out_dir):
+def main_process(pdf_dir, page_info_dir, out_dir, filter_watermarks=False):
     resume_mode = False # True if may be resuming from an previous run
     # counts of stuff we do or failed to do
     stats = {'gs':0, 'gs_error':0,
@@ -742,7 +744,7 @@ def main_process(pdf_dir, page_info_dir, out_dir):
 
                 success, objs, infofiles = process_pages(filename, pages, page_info_dir,
                                                             meta, limit,
-                                                            model, model_config, device_str)
+                                                            model, model_config, device_str, filter_watermarks)
                 if success:
                     num = len(objs)
                     if just_propose:

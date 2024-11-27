@@ -19,8 +19,8 @@ async def _cosmos_worker(work_queue: asyncio.Queue):
     blocking issues in Python's async framework
     """
     while True:
-        (job_output_dir, job_id, compress_images, extract_tables) = await work_queue.get()
-        proc = await asyncio.create_subprocess_exec(sys.executable, COSMOS_SCRIPT, job_output_dir, job_id, str(compress_images), str(extract_tables))
+        (job_output_dir, job_id, compress_images, extract_tables, filter_watermarks) = await work_queue.get()
+        proc = await asyncio.create_subprocess_exec(sys.executable, COSMOS_SCRIPT, job_output_dir, job_id, str(compress_images), str(extract_tables), str(filter_watermarks))
         result = await proc.wait()
         queue.task_done()
 
