@@ -5,8 +5,9 @@ Arizona
 Licensed under the Apache 2 License
 """
 
-import json 
+import json
 import pandas as pd
+import zipfile
 
 def parquet_to_json(path, bb_column = "bounding_box", page_column = "page_num"):
     parquet_df = pd.read_parquet(path)
@@ -29,6 +30,15 @@ def parquet_to_json(path, bb_column = "bounding_box", page_column = "page_num"):
         # Sorts the content sections by page number and then by
         # bounding box location. Use x-pos first to account for
         # multi-column documents and then sort by y-pos.
+
+        if "sections" in path or (isinstance(path, zipfile.ZipExtFile) and "sections" in path.name):
+            for i in row_order_parquet_data:
+                if i[bb_column] == []:
+                    i[bb_column] = [i['section_header_bb']]
+                    i['content'] = i['section_header']
+                    i['page_num'] = i['section_header_page']
+                if isinstance(i[bb_column], list):
+                    i[bb_column] = i[bb_column][0]
         row_order_parquet_data.sort(
             key=lambda d: (
                 d[page_column],
