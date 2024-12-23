@@ -6,6 +6,7 @@ Used to serve various /results endpoints
 from zipfile import ZipFile
 from .parquet_to_json import parquet_to_json
 from .text_layer_utils import *
+from fastapi.logger import logger
 from fastapi import Request
 import json
 from os import path
@@ -16,6 +17,7 @@ PARQUET_COLUMN_NAMES = {
     "equations": ("equation_bb", "equation_page", ["content"]),
     "figures": ("obj_bbs", "obj_page", []),
     "tables": ("obj_bbs", "obj_page", []),
+    "sections": ("obj_bbs", "obj_pages", []),
 }
 
 PARQUET_SUFFIXES = ['', *[f'_{suffix}' for suffix in PARQUET_COLUMN_NAMES.keys()]]

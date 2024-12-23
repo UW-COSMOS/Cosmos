@@ -30,6 +30,10 @@ class CosmosJSONImageResponse(CosmosJSONBaseResponse):
     img_pth: Optional[HttpUrl] = Field(description="Temporary URL from which the extracted image can be retrieved")
     label: Optional[str] = Field(None, description="The caption associated with the extracted image")
 
+class CosmosJSONSectionResponse(CosmosJSONBaseResponse):
+    page_num: Optional[List[int]] = Field(description="Page in the PDF the item was extracted from")
+    label: Optional[str] = Field(None, description="The caption associated with the extracted image")
+
 class CosmosJSONTextResponse(CosmosJSONBaseResponse):
     detect_cls: Optional[str] = Field(description="Initial label given to the extracted item")
     postprocess_cls: Optional[str] = Field(description="Label given to the extracted item after post-processing")
@@ -44,3 +48,4 @@ class ExtractionType(Enum):
     Equations = "equations"
     Tables = "tables"
     Figures = "figures"
+    Sections = "sections"

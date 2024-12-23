@@ -117,6 +117,16 @@ def get_processing_result_text_segments(job_id: str, request: Request) -> TextLa
         urls=extract_urls_from_text_layer(job))
 
 
+@router.get("/{job_id}/result/extractions/sections")
+def get_processing_result_section_extraction(job_id: str, request: Request) -> List[CosmosJSONSectionResponse]:
+    """
+    Return COSMOS figure/table/equation extractions and their bounding boxes as a list of JSON objects,
+    as well as links to their images
+    """
+    job = get_job_details(job_id)
+    response_json = convert_parquet_to_json(job, f'{job.pdf_name}_sections.parquet', request)
+    return [ CosmosJSONSectionResponse(**p) for p in response_json ]
+
 @router.get("/{job_id}/result/extractions/{extraction_type}")
 def get_processing_result_extraction(job_id: str, extraction_type: ExtractionType, request: Request) -> List[CosmosJSONImageResponse]:
     """
